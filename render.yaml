@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: autopilot-ai-trading
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: singapore
+    envVars:
+      - key: APP_NAME
+        value: AutoPilot AI Trading Platform
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: PORT
+        value: "8000"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: INITIAL_VIRTUAL_CAPITAL_INR
+        value: "500.00"
+      - key: STRICT_PAPER_TRADING_ONLY
+        value: "true"
+      - key: MARKET_DATA_PROVIDER
+        value: "live_nse"
+      - key: MARKET_DATA_IS_DEMO
+        value: "false"
+      - key: MARKET_HOURS_GATE_ENABLED
+        value: "true"
+      - key: DATABASE_URL
+        value: "sqlite:///./backend/data/autopilot.db"

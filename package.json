@@ -1,0 +1,22 @@
+{
+  "name": "autopilot-ai-trading-platform",
+  "version": "1.0.0",
+  "description": "AutoPilot AI Trading Platform - Automated Quantitative Paper Trading Engine",
+  "scripts": {
+    "start": "./start.sh",
+    "backend": "backend/.venv/bin/python backend/run.py",
+    "frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "test": "backend/.venv/bin/pytest backend/tests -v && npm --prefix frontend test"
+  },
+  "keywords": [
+    "trading",
+    "paper-trading",
+    "quantitative",
+    "stocks",
+    "nse",
+    "algorithmic-trading"
+  ],
+  "author": "",
+  "license": "MIT"
+}

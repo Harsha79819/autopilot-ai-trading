@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend Engine
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=AutoPilot AI Trading Platform
+      - APP_ENV=production
+      - DEBUG=false
+      - PORT=8000
+      - HOST=0.0.0.0
+      - INITIAL_VIRTUAL_CAPITAL_INR=100.00
+      - STRICT_PAPER_TRADING_ONLY=true
+      - MARKET_DATA_PROVIDER=demo
+      - MARKET_DATA_IS_DEMO=true
+      - DATABASE_URL=sqlite:///./backend/data/autopilot.db
+    volumes:
+      - autopilot-data:/app/backend/data
+    restart: unless-stopped
+
+  # Vite Frontend Dev Server (Optional for local development)
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_PORT=5173
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on:
+      - backend
+
+volumes:
+  autopilot-data:

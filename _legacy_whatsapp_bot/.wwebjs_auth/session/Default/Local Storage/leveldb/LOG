@@ -1,0 +1,16 @@
+2026/10/12-07:04:26.822 105d86e Reusing MANIFEST /Users/v.v.k/Downloads/Renux/.wwebjs_auth/session/Default/Local Storage/leveldb/MANIFEST-000001
+2026/10/12-07:04:26.822 105d86e Recovering log #38
+2026/10/12-07:04:26.823 105d86e Reusing old log /Users/v.v.k/Downloads/Renux/.wwebjs_auth/session/Default/Local Storage/leveldb/000038.log 
+2026/10/12-10:14:43.128 105d871 Level-0 table #42: started
+2026/10/12-10:14:43.131 105d871 Level-0 table #42: 13261 bytes OK
+2026/10/12-10:14:43.132 105d871 Delete type=0 #38
+2026/10/12-10:14:43.134 105d871 Compacting 4@0 + 1@1 files
+2026/10/12-10:14:43.136 105d871 Generated table #43@0: 144 keys, 8545 bytes
+2026/10/12-10:14:43.136 105d871 Compacted 4@0 + 1@1 files => 8545 bytes
+2026/10/12-10:14:43.137 105d871 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/10/12-10:14:43.137 105d871 Delete type=2 #39
+2026/10/12-10:14:43.137 105d871 Delete type=2 #35
+2026/10/12-10:14:43.137 105d871 Delete type=2 #37
+2026/10/12-10:14:43.137 105d871 Delete type=2 #32
+2026/10/12-10:14:43.137 105d871 Delete type=2 #42
+2026/10/13-17:19:40.689 105d871 Level-0 table #45: started

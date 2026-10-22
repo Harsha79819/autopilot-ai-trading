@@ -1,0 +1,12 @@
+2026/10/11-18:48:42.696 1049da7 Reusing MANIFEST /Users/v.v.k/Downloads/Renux/.wwebjs_auth/session/Default/Local Storage/leveldb/MANIFEST-000001
+2026/10/11-18:48:42.697 1049da7 Recovering log #30
+2026/10/11-18:48:42.697 1049da7 Reusing old log /Users/v.v.k/Downloads/Renux/.wwebjs_auth/session/Default/Local Storage/leveldb/000030.log 
+2026/10/11-20:28:19.952 1049daa Level-0 table #35: started
+2026/10/11-20:28:19.955 1049daa Level-0 table #35: 14866 bytes OK
+2026/10/11-20:28:19.956 1049daa Delete type=0 #30
+2026/10/12-01:52:37.286 1049daa Level-0 table #37: started
+2026/10/12-01:52:37.288 1049daa Level-0 table #37: 13456 bytes OK
+2026/10/12-01:52:37.290 1049daa Delete type=0 #34
+2026/10/12-07:02:20.525 1049daa Level-0 table #39: started
+2026/10/12-07:02:20.528 1049daa Level-0 table #39: 13520 bytes OK
+2026/10/12-07:02:20.529 1049daa Delete type=0 #36
