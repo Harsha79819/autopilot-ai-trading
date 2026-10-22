@@ -61,6 +61,13 @@ class AutoPilotRunner:
             except Exception:
                 pass
 
+    async def broadcast_ai_status_if_changed(self, new_status: dict):
+        core_keys = ["status", "message", "best_stock", "best_score", "active_positions_count", "autopilot_enabled", "target_profit", "stop_loss"]
+        changed = any(new_status.get(k) != self._last_ai_status.get(k) for k in core_keys)
+        self._last_ai_status = new_status
+        if changed and self._listeners:
+            await self.broadcast({"type": "AI_STATUS", **self._last_ai_status})
+
     def get_ai_status(self) -> dict:
         return self._last_ai_status
 
@@ -164,33 +171,48 @@ class AutoPilotRunner:
         """Execute one complete cycle of tick advancement, AI scoring, and trade execution."""
         now = datetime.utcnow()
 
-        # 1. Advance ticks for all active universe symbols
+        # 1. Check IST market session gate (09:15 to 15:30 IST Mon-Fri) at the TOP
+        is_open, session_msg = is_market_session_active()
+        if not is_open and settings.MARKET_HOURS_GATE_ENABLED:
+            new_status = {
+                "status": "MARKET_CLOSED",
+                "message": session_msg,
+                "best_stock": None,
+                "best_score": 0,
+                "active_positions_count": self._last_ai_status.get("active_positions_count", 0),
+                "autopilot_enabled": self.autopilot_enabled,
+                "updated_at": now.isoformat()
+            }
+            await self.broadcast_ai_status_if_changed(new_status)
+            return 30.0  # Conserve CPU and prevent heating when market is closed
+
+        if not self.autopilot_enabled:
+            new_status = {
+                "status": "PAUSED",
+                "message": "AI AutoPilot is PAUSED by user.",
+                "best_stock": None,
+                "best_score": 0,
+                "active_positions_count": self._last_ai_status.get("active_positions_count", 0),
+                "autopilot_enabled": False,
+                "updated_at": now.isoformat()
+            }
+            await self.broadcast_ai_status_if_changed(new_status)
+            return 10.0
+
+        # 2. Advance ticks for all active universe symbols
         latest_quotes: Dict[str, Quote] = {}
         for symbol in UNIVERSE_SYMBOLS:
             tick = market_provider.generate_next_tick(symbol)
             candle_aggregator.process_tick(tick)
             latest_quotes[symbol] = market_provider.get_quote(symbol)
 
-        # Broadcast tick feed to WebSocket subscribers
-        await self.broadcast({
-            "type": "TICK_UPDATE",
-            "quotes": [q.model_dump(mode="json") for q in latest_quotes.values()],
-            "timestamp": now.isoformat()
-        })
-
-        if not self.autopilot_enabled:
-            self._last_ai_status["status"] = "PAUSED"
-            self._last_ai_status["message"] = "AI AutoPilot is PAUSED by user."
-            await self.broadcast({"type": "AI_STATUS", **self._last_ai_status})
-            return
-
-        # Check IST market session gate (09:15 to 15:30 IST Mon-Fri)
-        is_open, session_msg = is_market_session_active()
-        if not is_open and settings.MARKET_HOURS_GATE_ENABLED:
-            self._last_ai_status["status"] = "MARKET_CLOSED"
-            self._last_ai_status["message"] = session_msg
-            await self.broadcast({"type": "AI_STATUS", **self._last_ai_status})
-            return 8.0  # Conserve CPU and prevent heating when market is closed
+        # Broadcast tick feed to WebSocket subscribers ONLY if at least one client is registered
+        if self._listeners:
+            await self.broadcast({
+                "type": "TICK_UPDATE",
+                "quotes": [q.model_dump(mode="json") for q in latest_quotes.values()],
+                "timestamp": now.isoformat()
+            })
 
         # 2. Evaluate User Portfolio & Execute AI Auto-Trading
         db = SessionLocal()
@@ -205,7 +227,7 @@ class AutoPilotRunner:
                 if kill_switch_manager.is_stopped(portfolio):
                     self._last_ai_status["status"] = "HALTED"
                     self._last_ai_status["message"] = "Emergency Kill Switch is ACTIVE. Auto-trading halted."
-                    await self.broadcast({"type": "AI_STATUS", **self._last_ai_status})
+                    await self.broadcast_ai_status_if_changed(self._last_ai_status)
                     continue
 
                 # A. Check existing positions for Target Profit or Stop Loss
@@ -416,7 +438,7 @@ class AutoPilotRunner:
                     "total_portfolio_value": metrics.total_portfolio_value
                 })
 
-                await self.broadcast({"type": "AI_STATUS", **self._last_ai_status})
+                await self.broadcast_ai_status_if_changed(self._last_ai_status)
 
         finally:
             db.close()

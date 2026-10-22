@@ -23,7 +23,7 @@ class LiveNseMarketDataProvider(MarketDataProvider):
 
     def __init__(self):
         self.provider_name = "Live NSE Public Feed"
-        self._cache_ttl_seconds = 15.0  # 15s TTL for fresh market quotes
+        self._cache_ttl_seconds = 30.0  # 30s TTL for fresh market quotes during market hours
         self._last_fetch_time = 0.0
         self._quote_cache: Dict[str, Quote] = {}
         self._candle_cache: Dict[str, List[Candle]] = {}
@@ -108,10 +108,43 @@ class LiveNseMarketDataProvider(MarketDataProvider):
 
     def _do_fetch_quotes(self):
         """Execute the HTTP fetch from Yahoo Finance in background thread."""
+        from backend.app.market_data import is_market_session_active
+        if not is_market_session_active()[0]:
+            # Do not call yf.download at all when market session is inactive; serve last cached quotes
+            return
+
         with self._fetch_lock:
             self._is_fetching = True
             current_time = time.time()
-            symbols_to_fetch = [s for s in UNIVERSE_SYMBOLS if s in NSE_STOCKS]
+
+            # Query active user cash and open positions to filter symbols
+            open_symbols = set()
+            available_cash = 500.0
+            try:
+                from backend.app.database import SessionLocal
+                from backend.app.models.user import User
+                from backend.app.models.position import Position
+                db = SessionLocal()
+                user = db.query(User).filter(User.is_active == True).first()
+                if user and user.portfolio:
+                    available_cash = user.portfolio.cash_balance
+                    positions = db.query(Position).filter(Position.portfolio_id == user.portfolio.id).all()
+                    for p in positions:
+                        open_symbols.add(p.symbol)
+                db.close()
+            except Exception:
+                pass
+
+            # Only fetch symbols priced <= available cash (Stage-1 scanner list) plus symbols with open positions
+            symbols_to_fetch = [
+                s for s in UNIVERSE_SYMBOLS
+                if s in NSE_STOCKS and (
+                    self._last_known_prices.get(s, 999999.0) <= available_cash or s in open_symbols
+                )
+            ]
+            if not symbols_to_fetch:
+                symbols_to_fetch = [s for s in UNIVERSE_SYMBOLS if s in NSE_STOCKS][:2]
+
             yahoo_tickers = [NSE_STOCKS[s]["yahoo_ticker"] for s in symbols_to_fetch]
             ticker_map = {NSE_STOCKS[s]["yahoo_ticker"]: s for s in symbols_to_fetch}
 

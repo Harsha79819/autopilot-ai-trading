@@ -49,7 +49,7 @@ const MainContent: React.FC = () => {
       {/* Risk modal trigger floating button */}
       <button
         onClick={() => setShowRiskModal(true)}
-        className="fixed right-4 sm:right-6 bottom-36 md:bottom-22 z-40 p-3 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 shadow-2xl backdrop-blur-xl transition-all cursor-pointer"
+        className="fixed right-4 sm:right-6 bottom-36 md:bottom-22 z-40 p-3 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 shadow-2xl transition-all cursor-pointer"
         title="Open Risk Settings"
       >
         <Sliders className="w-5 h-5 text-accent-cyan" />
@@ -173,6 +173,18 @@ const MainContent: React.FC = () => {
 };
 
 export const App: React.FC = () => {
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        document.body.classList.add('tab-hidden');
+      } else {
+        document.body.classList.remove('tab-hidden');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
   return (
     <AuthProvider>
       <TradingProvider>

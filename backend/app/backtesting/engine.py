@@ -26,8 +26,9 @@ class BacktestingEngine:
             raise ValueError(f"Strategy {req.strategy_name} not found in registry.")
 
         symbol = req.symbol
-        # Generate representative historical candles for backtesting
-        candles = demo_provider.get_historical_candles(symbol, timeframe="1m", limit=120)
+        # Read representative historical candles from SQLite history cache
+        from backend.app.market_data.history_cache import history_cache
+        candles = history_cache.get_cached_candles(symbol, timeframe="5m", limit=120)
         total_bars = len(candles)
         if total_bars < 30:
             raise ValueError("Insufficient candle history for reliable backtesting.")

@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "AutoPilot AI Trading Platform"
     APP_VERSION: str = "1.0.0"
     APP_ENV: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     PORT: int = 8000
     HOST: str = "0.0.0.0"
     CORS_ORIGINS: Union[str, List[str]] = [
@@ -70,7 +70,7 @@ class Settings(BaseSettings):
 
     # Continuous Auto-Pilot Service
     AUTOPILOT_RUNNER_ENABLED: bool = True
-    AUTOPILOT_INTERVAL_SECONDS: float = 2.0
+    AUTOPILOT_INTERVAL_SECONDS: float = 10.0
 
     @property
     def cors_origins_list(self) -> List[str]:

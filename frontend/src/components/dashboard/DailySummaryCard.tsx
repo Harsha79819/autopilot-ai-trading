@@ -92,7 +92,7 @@ export const DailySummaryCard: React.FC = () => {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl p-5 sm:p-6 border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-indigo-950/30 backdrop-blur-xl shadow-2xl">
+    <div className="relative overflow-hidden rounded-2xl p-5 sm:p-6 border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-indigo-950/30 shadow-2xl">
       {/* Background ambient glow */}
       <div className="absolute top-0 right-1/3 w-80 h-32 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-10 w-64 h-32 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />

@@ -79,17 +79,24 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .orb-blue, .orb-violet, .orb-cyan, .sheen-sweep {
-    animation: none !important;
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+}
+
+body.tab-hidden * {
+  animation-play-state: paused !important;
 }
 
 /* Apple Liquid Glass Cards */
 .liquid-glass {
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-radius: 26px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.20);
 }

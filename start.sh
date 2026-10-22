@@ -25,6 +25,11 @@ fi
 
 # Clean up any stale processes on ports 8000 or 5173
 lsof -ti :8000 | xargs kill -9 2>/dev/null || true
+lsof -ti :5173 | xargs kill -9 2>/dev/null || true
+
+# Build frontend production bundle for optimal performance & minimal CPU/heat
+echo "⚡ Building frontend production bundle (low CPU/heat)..."
+npm --prefix frontend run build
 
 # Start backend server in the background
 echo "⚡ Starting Python FastAPI Backend on http://127.0.0.1:8000 ..."
@@ -36,6 +41,7 @@ cleanup() {
     echo ""
     echo "Shutting down AutoPilot AI Trading Platform..."
     kill $BACKEND_PID 2>/dev/null || true
+    lsof -ti :5173 | xargs kill -9 2>/dev/null || true
     exit 0
 }
 trap cleanup INT TERM EXIT
@@ -56,9 +62,10 @@ echo "🌐 FRONTEND URL: http://localhost:5173"
 echo "👤 DEMO ACCOUNT: demo@autopilot.ai (Password: demo1234)"
 echo "💰 VIRTUAL CAPITAL: INR 100.00"
 echo "🟢 MODE: Strict Paper Trading (Zero Real Money)"
+echo "🚀 SERVED VIA: Vite Production Preview (Ultra-Low Heat/CPU)"
 echo "🛑 Press Ctrl + C to stop all servers."
 echo "=========================================================="
 echo ""
 
-# Start frontend
-npm --prefix frontend run dev -- --host
+# Start frontend in Vite preview mode (low resource consumption)
+npx --prefix frontend vite preview --host --port 5173

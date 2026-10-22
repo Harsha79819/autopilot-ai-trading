@@ -65,7 +65,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ onClose }) => {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 animate-fade-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}

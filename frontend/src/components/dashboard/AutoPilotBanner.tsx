@@ -94,7 +94,7 @@ export const AutoPilotBanner: React.FC = () => {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl p-5 border border-white/10 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-indigo-950/40 backdrop-blur-xl shadow-2xl">
+    <div className="relative overflow-hidden rounded-2xl p-5 border border-white/10 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-indigo-950/40 shadow-2xl">
       {/* Background glow effects */}
       <div className="absolute top-0 right-1/4 w-96 h-32 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-10 w-64 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />

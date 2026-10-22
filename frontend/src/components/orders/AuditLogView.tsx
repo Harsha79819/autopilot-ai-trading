@@ -4,8 +4,10 @@ import { GlassCard } from '../common/GlassCard';
 import { AuditLog } from '../../types';
 import { api } from '../../services/api';
 import { formatTimeOnly } from '../../utils/formatters';
+import { useTrading } from '../../context/TradingContext';
 
 export const AuditLogView: React.FC = () => {
+  const { lastPortfolioUpdate } = useTrading();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [filterType, setFilterType] = useState<string>('ALL');
 
@@ -19,9 +21,7 @@ export const AuditLogView: React.FC = () => {
       }
     };
     fetchLogs();
-    const interval = setInterval(fetchLogs, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [lastPortfolioUpdate]);
 
   const filteredLogs = filterType === 'ALL' ? logs : logs.filter((l) => l.event_type === filterType);
 

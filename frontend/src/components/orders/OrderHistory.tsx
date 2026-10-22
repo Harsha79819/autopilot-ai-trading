@@ -7,7 +7,10 @@ import { api } from '../../services/api';
 import { formatINR } from '../../utils/currency';
 import { formatTimeOnly } from '../../utils/formatters';
 
+import { useTrading } from '../../context/TradingContext';
+
 export const OrderHistory: React.FC = () => {
+  const { lastPortfolioUpdate } = useTrading();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,9 +26,7 @@ export const OrderHistory: React.FC = () => {
       }
     };
     fetchOrders();
-    const interval = setInterval(fetchOrders, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [lastPortfolioUpdate]);
 
   return (
     <GlassCard className="mt-4">

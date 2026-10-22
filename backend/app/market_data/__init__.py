@@ -45,17 +45,26 @@ def is_market_session_active() -> Tuple[bool, str]:
         return True, "Market Open (09:15 - 15:30 IST)"
 
 
+import logging
+logger = logging.getLogger("autopilot.market_data")
+
 def get_market_provider() -> MarketDataProvider:
     """Factory to return the configured market data provider instance."""
     provider_type = settings.MARKET_DATA_PROVIDER.lower()
 
     if provider_type == "angel_one" or (settings.ANGEL_ONE_API_KEY and settings.ANGEL_ONE_CLIENT_CODE):
-        return AngelOneSmartApiProvider()
+        provider = AngelOneSmartApiProvider()
+        logger.info(f"Market data provider selected: {provider.get_provider_name()}")
+        return provider
     elif provider_type == "demo":
-        return DemoMarketDataProvider()
+        provider = DemoMarketDataProvider()
+        logger.info(f"Market data provider selected: {provider.get_provider_name()}")
+        return provider
     else:
         # Default to real-time live NSE public feed
-        return LiveNseMarketDataProvider()
+        provider = LiveNseMarketDataProvider()
+        logger.info(f"Market data provider selected: {provider.get_provider_name()}")
+        return provider
 
 
 # Global default provider instances

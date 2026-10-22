@@ -59,7 +59,7 @@ async def websocket_stream(websocket: WebSocket):
                 try:
                     data_str = receive_task.result()
                     # Handle ping
-                    if data_str == "ping" or "ping" in data_str:
+                    if data_str == "ping":
                         await websocket.send_json({"type": "PONG"})
                 except Exception:
                     break

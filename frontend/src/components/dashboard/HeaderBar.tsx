@@ -31,21 +31,21 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenDiagnostics, onOpenC
           <button
             type="button"
             onClick={onOpenChat}
-            className="flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold border border-violet-500/40 text-violet-200 bg-gradient-to-r from-violet-950/50 to-indigo-950/50 hover:from-violet-900/60 hover:to-indigo-900/60 backdrop-blur-md transition-all cursor-pointer shadow-lg shadow-violet-950/30 active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold border border-violet-500/40 text-violet-200 bg-gradient-to-r from-violet-950/50 to-indigo-950/50 hover:from-violet-900/60 hover:to-indigo-900/60 transition-all cursor-pointer shadow-lg shadow-violet-950/30 active:scale-95"
             title="Chat with AutoPilot AI Copilot"
           >
             <Sparkles className="w-3.5 h-3.5 text-violet-400 animate-pulse" />
             <span>AI Copilot (చాట్ బాట్)</span>
           </button>
 
-          <span className="px-3.5 py-1 rounded-full text-xs font-semibold tracking-wide border border-violet-500/40 text-violet-300 bg-violet-950/30 backdrop-blur-md">
+          <span className="px-3.5 py-1 rounded-full text-xs font-semibold tracking-wide border border-violet-500/40 text-violet-300 bg-violet-950/30">
             PAPER TRADING — VIRTUAL MONEY
           </span>
 
           <button
             type="button"
             onClick={onOpenDiagnostics}
-            className={`px-3.5 py-1 rounded-full text-xs font-semibold tracking-wide border backdrop-blur-md cursor-pointer transition-all hover:scale-105 ${
+            className={`px-3.5 py-1 rounded-full text-xs font-semibold tracking-wide border cursor-pointer transition-all hover:scale-105 ${
               status === 'MARKET_CLOSED'
                 ? 'border-amber-500/40 text-amber-300 bg-amber-950/30 hover:bg-amber-900/40'
                 : 'border-emerald-500/40 text-emerald-300 bg-emerald-950/30 hover:bg-emerald-900/40'
@@ -58,7 +58,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenDiagnostics, onOpenC
           <button
             type="button"
             onClick={onOpenDiagnostics}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-cyan-500/40 text-cyan-300 bg-cyan-950/30 hover:bg-cyan-900/40 backdrop-blur-md transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-cyan-500/40 text-cyan-300 bg-cyan-950/30 hover:bg-cyan-900/40 transition-all cursor-pointer"
             title="Real-time system diagnostics and issue finder"
           >
             <Activity className="w-3.5 h-3.5 text-cyan-400" />

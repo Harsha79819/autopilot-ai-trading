@@ -15,7 +15,7 @@ export const MobileTabs: React.FC = () => {
 
   return (
     <div className="md:hidden fixed bottom-3 left-3 right-3 z-50">
-      <div className="bg-[#080B12]/85 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-1.5 flex items-center justify-around">
+      <div className="bg-[#080B12]/85 backdrop-blur-sm border border-white/10 rounded-2xl shadow-2xl p-1.5 flex items-center justify-around">
         {tabs.map(({ id, label, icon: Icon }) => {
           const isActive = activeTab === id;
           return (

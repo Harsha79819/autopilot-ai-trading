@@ -24,7 +24,7 @@ export const NoTradeReasons: React.FC<NoTradeReasonsProps> = ({ reasons, onClose
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85">
       <div className="bg-[#0D131F] border border-white/10 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">

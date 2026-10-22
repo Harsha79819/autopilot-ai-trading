@@ -22,6 +22,7 @@ interface TradingContextType {
   resetCapital: (capital?: number) => Promise<void>;
   depositCapital: (amount: number, note?: string) => Promise<void>;
   toggleKillSwitch: (activate: boolean) => Promise<void>;
+  lastPortfolioUpdate: number;
   placeOrder: (order: {
     symbol: string;
     side: 'BUY' | 'SELL';
@@ -42,6 +43,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [lastPortfolioUpdate, setLastPortfolioUpdate] = useState<number>(Date.now());
 
   const refreshPortfolio = useCallback(async () => {
     try {
@@ -126,12 +128,13 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } else if (msg.type === 'PORTFOLIO_UPDATE') {
         refreshPortfolio();
         refreshRisk();
+        setLastPortfolioUpdate(Date.now());
       } else if (msg.type === 'AI_STATUS') {
         setAiStatus(msg as unknown as AIStatus);
       }
     });
 
-    // Smart periodic poll fallback (15s instead of 4s to save CPU/battery, pauses when tab is hidden)
+    // Smart periodic poll fallback (60s poll fallback, pauses when tab is hidden)
     const interval = setInterval(() => {
       if (document.hidden) return; // Pause polling when tab is in background to keep CPU cool
       refreshPortfolio();
@@ -139,7 +142,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       refreshScanner();
       refreshRisk();
       refreshAutoPilot();
-    }, 15000);
+    }, 60000);
 
     // Refresh immediately when user returns to tab
     const handleVisibilityChange = () => {
@@ -223,6 +226,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         resetCapital,
         depositCapital,
         toggleKillSwitch,
+        lastPortfolioUpdate,
         placeOrder,
       }}
     >
