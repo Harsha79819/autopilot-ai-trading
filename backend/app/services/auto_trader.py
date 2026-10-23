@@ -14,6 +14,7 @@ from backend.app.schemas.order import OrderCreate
 from backend.app.schemas.market import Quote, Candle
 from backend.app.market_data import market_provider, candle_aggregator, is_market_session_active
 from backend.app.scanner.universe import UNIVERSE_SYMBOLS
+from backend.app.scanner.fundamental_gate import fundamental_gate
 from backend.app.strategies import STRATEGY_REGISTRY
 from backend.app.strategies.cost_gate import cost_aware_gate
 from backend.app.paper_engine import paper_broker, portfolio_ledger
@@ -223,15 +224,18 @@ class AutoPilotRunner:
                 if not portfolio:
                     continue
 
-                # Skip if kill-switch is active
-                if kill_switch_manager.is_stopped(portfolio):
-                    self._last_ai_status["status"] = "HALTED"
-                    self._last_ai_status["message"] = "Emergency Kill Switch is ACTIVE. Auto-trading halted."
-                    await self.broadcast_ai_status_if_changed(self._last_ai_status)
-                    continue
+                metrics = portfolio_ledger.calculate_metrics(
+                    db,
+                    portfolio,
+                    latest_prices={sym: q.current_price for sym, q in latest_quotes.items()}
+                )
 
-                # A. Check existing positions for Target Profit or Stop Loss
+                # A. Check existing positions for Target Profit (+2.2%) or Stop Loss (-1.5%) FIRST
+                # Note: Stop-loss must auto-sell even when risk manager or kill-switch halts new buys
                 positions = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
+                tp_pct = getattr(settings, "TAKE_PROFIT_PCT", 2.2)
+                sl_pct = getattr(settings, "STOP_LOSS_PCT", 1.5)
+
                 for pos in positions:
                     quote = latest_quotes.get(pos.symbol)
                     if not quote:
@@ -239,8 +243,8 @@ class AutoPilotRunner:
 
                     entry_info = self._position_targets.get(pos.symbol, {
                         "entry": pos.average_buy_price,
-                        "take_profit": round(pos.average_buy_price * 1.022, 2),  # +2.2% target
-                        "stop_loss": round(pos.average_buy_price * 0.985, 2)      # -1.5% stop loss
+                        "take_profit": round(pos.average_buy_price * (1.0 + tp_pct / 100.0), 2),
+                        "stop_loss": round(pos.average_buy_price * (1.0 - sl_pct / 100.0), 2)
                     })
 
                     cur_price = quote.current_price
@@ -253,7 +257,7 @@ class AutoPilotRunner:
                     hit_stop_loss = cur_price <= entry_info["stop_loss"]
 
                     if hit_take_profit or hit_stop_loss:
-                        reason = "Take-Profit Target Hit (+2.2%)" if hit_take_profit else "Stop-Loss Protection Hit (-1.5%)"
+                        reason = f"Take-Profit Target Hit (+{tp_pct}%)" if hit_take_profit else f"Stop-Loss Protection Hit (-{sl_pct}%)"
                         order_in = OrderCreate(
                             symbol=pos.symbol,
                             side="SELL",
@@ -286,27 +290,76 @@ class AutoPilotRunner:
 
                 # Re-query positions after potential sell
                 positions = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
+                metrics = portfolio_ledger.calculate_metrics(
+                    db,
+                    portfolio,
+                    latest_prices={sym: q.current_price for sym, q in latest_quotes.items()}
+                )
 
-                # B. Multi-Position Capital Deployment: If cash is available, invest in the best affordable stocks until cash is utilized
+                # B. Halt & Pause Check: Daily loss limit or emergency risk kill-switch
+                # When triggered, suppress candidate evaluation loops and sleep 30.0s
+                risk_status = risk_manager.get_risk_status(db, portfolio)
+                is_halted = kill_switch_manager.is_stopped(portfolio) or risk_status.risk_state in ("HALTED", "EMERGENCY_STOP")
+                if is_halted:
+                    halt_reason = (
+                        "Emergency Kill Switch is ACTIVE."
+                        if kill_switch_manager.is_stopped(portfolio)
+                        else "Daily loss or drawdown limit reached. Trading halted for today."
+                    )
+                    self._last_ai_status = {
+                        "status": "HALTED",
+                        "message": f"Trading halted for today: {halt_reason}",
+                        "best_stock": None,
+                        "best_score": 0,
+                        "active_positions_count": len(positions),
+                        "target_profit": None,
+                        "stop_loss": None,
+                        "autopilot_enabled": self.autopilot_enabled,
+                        "updated_at": now.isoformat()
+                    }
+                    await self.broadcast_ai_status_if_changed(self._last_ai_status)
+                    logger.info(f"AutoPilot loop throttled: {halt_reason}. Returning 30s standby.")
+                    return 30.0
+
+                # C. Screening Pipeline with Fundamental Health, Penny Stock Cutoff & 20% Position Sizing
                 held_symbols = {p.symbol for p in positions}
+                min_price_cutoff = getattr(settings, "MIN_STOCK_PRICE_INR", 100.0)
 
-                # If available cash can afford at least 1 whole share (~₹12.00) and we have room for positions (up to 6)
-                if portfolio.cash_balance >= 12.00 and len(positions) < 6:
-                    affordable_symbols = [
-                        sym for sym, q in latest_quotes.items()
-                        if sym not in held_symbols and (q.current_price * 1.005) <= portfolio.cash_balance
-                    ]
+                # Enforce position size cap: At most 20% of total portfolio value (never 100% in a single stock)
+                max_trade_budget = min(
+                    portfolio.cash_balance,
+                    metrics.total_portfolio_value * (settings.MAX_POSITION_SIZE_PCT / 100.0)
+                )
 
+                # Filter eligible candidate symbols:
+                # 1. Not already held
+                # 2. Minimum price >= ₹100 (reject penny/speculative micro-caps like IDEA)
+                # 3. Passes fundamental health checks (D/E < 1.0, ROE > 12%, positive profit trajectory)
+                # 4. Affordable whole share within the 20% position size cap
+                eligible_candidates = []
+                for sym, q in latest_quotes.items():
+                    if sym in held_symbols:
+                        continue
+                    if q.current_price < min_price_cutoff:
+                        continue
+                    fund_ok, _, _ = fundamental_gate.evaluate(sym, q.current_price)
+                    if not fund_ok:
+                        continue
+                    unit_cost = q.current_price * 1.005
+                    if unit_cost <= max_trade_budget:
+                        eligible_candidates.append(sym)
+
+                if eligible_candidates and len(positions) < 5:
                     best_candidate = None
                     highest_score = -1.0
 
-                    for sym in affordable_symbols:
+                    for sym in eligible_candidates:
                         q = latest_quotes[sym]
                         candles = market_provider.get_historical_candles(sym, limit=30)
                         score = self._score_opportunity(q, candles)
 
                         # Evaluate Cost-Aware Gate
-                        gate_res = cost_aware_gate.evaluate(q, expected_move_pct=2.2)
+                        gate_res = cost_aware_gate.evaluate(q, expected_move_pct=tp_pct)
 
                         if gate_res.passed and score > highest_score and score >= 55.0:
                             highest_score = score
@@ -314,11 +367,8 @@ class AutoPilotRunner:
 
                     if best_candidate:
                         best_sym, best_quote, score = best_candidate
-                        # Determine quantity (whole shares affordable with statutory fee and slippage buffer)
                         unit_cost_est = best_quote.current_price * 1.005
-                        qty = int(portfolio.cash_balance // unit_cost_est)
-                        if qty < 1 and portfolio.cash_balance >= (best_quote.current_price * 1.002):
-                            qty = 1
+                        qty = int(max_trade_budget // unit_cost_est)
 
                         if qty >= 1:
                             order_in = OrderCreate(
@@ -339,8 +389,8 @@ class AutoPilotRunner:
 
                             if res.status == "FILLED":
                                 fill_price = res.executed_price or best_quote.current_price
-                                tp = round(fill_price * 1.022, 2)
-                                sl = round(fill_price * 0.985, 2)
+                                tp = round(fill_price * (1.0 + tp_pct / 100.0), 2)
+                                sl = round(fill_price * (1.0 - sl_pct / 100.0), 2)
                                 self._position_targets[best_sym] = {
                                     "entry": fill_price,
                                     "take_profit": tp,
@@ -348,8 +398,9 @@ class AutoPilotRunner:
                                 }
                                 self._position_entry_times[best_sym] = now
                                 msg = (
-                                    f"AI Auto-Bought {qty} sh {best_sym} @ ₹{fill_price:.2f} (Score {score}/100). "
-                                    f"Target: ₹{tp:.2f} (+2.2%) | Stop: ₹{sl:.2f} (-1.5%)"
+                                    f"AI Auto-Bought {qty} sh {best_sym} @ ₹{fill_price:.2f} (Score {score}/100, "
+                                    f"Allocation ₹{qty*fill_price:.2f} <= 20% cap). "
+                                    f"Target: ₹{tp:.2f} (+{tp_pct}%) | Stop: ₹{sl:.2f} (-{sl_pct}%)"
                                 )
                                 self._last_ai_status = {
                                     "status": "HOLDING",
@@ -381,7 +432,11 @@ class AutoPilotRunner:
                         if len(positions) == 0:
                             self._last_ai_status = {
                                 "status": "SCANNING",
-                                "message": f"AI Scanning {len(UNIVERSE_SYMBOLS)} NSE stocks. Cash: ₹{portfolio.cash_balance:.2f}. Highest Score: {max(highest_score, 0):.1f}/100.",
+                                "message": (
+                                    f"AI Scanning {len(eligible_candidates)} quality candidates. "
+                                    f"Cash: ₹{portfolio.cash_balance:.2f} (Max Allocation: ₹{max_trade_budget:.2f}). "
+                                    f"Highest Score: {max(highest_score, 0):.1f}/100."
+                                ),
                                 "best_stock": None,
                                 "best_score": highest_score if highest_score > 0 else 0,
                                 "active_positions_count": 0,
@@ -394,7 +449,7 @@ class AutoPilotRunner:
                             pos_summary = ", ".join([f"{p.symbol} ({p.quantity}sh)" for p in positions])
                             self._last_ai_status = {
                                 "status": "HOLDING",
-                                "message": f"AI Holding {len(positions)} positions ({pos_summary}). Cash: ₹{portfolio.cash_balance:.2f}. Auto-selling on +2.2% target.",
+                                "message": f"AI Holding {len(positions)} positions ({pos_summary}). Monitoring targets and stop-losses.",
                                 "best_stock": positions[0].symbol,
                                 "best_score": 85,
                                 "active_positions_count": len(positions),
@@ -408,17 +463,32 @@ class AutoPilotRunner:
                     pos_summary = ", ".join([f"{p.symbol} ({p.quantity}sh)" for p in positions])
                     first_pos = positions[0]
                     first_targets = self._position_targets.get(first_pos.symbol, {})
-                    tp = first_targets.get("take_profit", round(first_pos.average_buy_price * 1.022, 2))
-                    sl = first_targets.get("stop_loss", round(first_pos.average_buy_price * 0.985, 2))
+                    tp = first_targets.get("take_profit", round(first_pos.average_buy_price * (1.0 + tp_pct / 100.0), 2))
+                    sl = first_targets.get("stop_loss", round(first_pos.average_buy_price * (1.0 - sl_pct / 100.0), 2))
 
                     self._last_ai_status = {
                         "status": "HOLDING",
-                        "message": f"AI Fully Invested ({len(positions)} positions: {pos_summary}). Cash: ₹{portfolio.cash_balance:.2f}. Monitoring +2.2% profit targets.",
+                        "message": f"AI Fully Invested ({len(positions)} positions: {pos_summary}). Cash: ₹{portfolio.cash_balance:.2f}. Monitoring targets & stops.",
                         "best_stock": first_pos.symbol,
                         "best_score": 85,
                         "active_positions_count": len(positions),
                         "target_profit": tp,
                         "stop_loss": sl,
+                        "autopilot_enabled": True,
+                        "updated_at": now.isoformat()
+                    }
+                else:
+                    self._last_ai_status = {
+                        "status": "SCANNING",
+                        "message": (
+                            f"AI Scanning: No candidates affordable within 20% position cap (₹{max_trade_budget:.2f}) "
+                            f"and price >= ₹{min_price_cutoff:.2f}. Cash: ₹{portfolio.cash_balance:.2f}."
+                        ),
+                        "best_stock": None,
+                        "best_score": 0,
+                        "active_positions_count": 0,
+                        "target_profit": None,
+                        "stop_loss": None,
                         "autopilot_enabled": True,
                         "updated_at": now.isoformat()
                     }

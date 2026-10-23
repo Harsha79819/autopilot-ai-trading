@@ -24,6 +24,11 @@ class RiskManager:
         quantity: int,
         price: float
     ) -> Tuple[bool, str]:
+        # For SELL orders (stop loss / take profit / emergency position liquidation):
+        # Always permit closing open positions to protect capital, even when new buys are halted.
+        if side.upper() == "SELL":
+            return True, "Pre-trade risk verification passed: position-closing SELL permitted."
+
         # 1. Kill switch check
         if kill_switch_manager.is_stopped(portfolio):
             return False, "Emergency Stop / Kill Switch is active."
@@ -55,17 +60,14 @@ class RiskManager:
                 f"(limit: ₹{max_allowed_daily_loss:.2f} / ₹{settings.MAX_DAILY_LOSS_INR:.2f}). Trading halted for today."
             )
 
-        # 5. Position Sizing
-        if side.upper() == "BUY":
-            proposed_value = quantity * price
-            # For micro accounts (<= ₹200), whole shares require flexible sizing up to 100%
-            if metrics.total_portfolio_value > 200.0:
-                max_pos_value = metrics.total_portfolio_value * (settings.MAX_POSITION_SIZE_PCT / 100.0)
-                if proposed_value > max_pos_value:
-                    return False, (
-                        f"Proposed position size ₹{proposed_value:.2f} exceeds max allowed "
-                        f"allocation of ₹{max_pos_value:.2f} ({settings.MAX_POSITION_SIZE_PCT}% of portfolio)."
-                    )
+        # 5. Position Sizing Cap (Never allocate 100% into a single instrument; capped at MAX_POSITION_SIZE_PCT)
+        proposed_value = quantity * price
+        max_pos_value = metrics.total_portfolio_value * (settings.MAX_POSITION_SIZE_PCT / 100.0)
+        if proposed_value > max_pos_value:
+            return False, (
+                f"Proposed position size ₹{proposed_value:.2f} exceeds max allowed "
+                f"allocation of ₹{max_pos_value:.2f} ({settings.MAX_POSITION_SIZE_PCT}% of portfolio value)."
+            )
 
         return True, "Pre-trade risk verification passed."
 

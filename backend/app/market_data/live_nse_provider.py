@@ -135,15 +135,20 @@ class LiveNseMarketDataProvider(MarketDataProvider):
             except Exception:
                 pass
 
-            # Only fetch symbols priced <= available cash (Stage-1 scanner list) plus symbols with open positions
+            # Only fetch quotes strictly for eligible candidate symbols and open positions
+            min_price = getattr(settings, "MIN_STOCK_PRICE_INR", 100.0)
             symbols_to_fetch = [
                 s for s in UNIVERSE_SYMBOLS
                 if s in NSE_STOCKS and (
-                    self._last_known_prices.get(s, 999999.0) <= available_cash or s in open_symbols
+                    s in open_symbols or (
+                        self._last_known_prices.get(s, 999999.0) <= available_cash
+                        and self._last_known_prices.get(s, 0.0) >= min_price
+                    )
                 )
             ]
             if not symbols_to_fetch:
-                symbols_to_fetch = [s for s in UNIVERSE_SYMBOLS if s in NSE_STOCKS][:2]
+                from backend.app.scanner.universe import PRIMARY_UNIVERSE_SYMBOLS
+                symbols_to_fetch = PRIMARY_UNIVERSE_SYMBOLS[:3]
 
             yahoo_tickers = [NSE_STOCKS[s]["yahoo_ticker"] for s in symbols_to_fetch]
             ticker_map = {NSE_STOCKS[s]["yahoo_ticker"]: s for s in symbols_to_fetch}

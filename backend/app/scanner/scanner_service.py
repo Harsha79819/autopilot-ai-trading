@@ -6,6 +6,7 @@ from backend.app.schemas.scanner import ScannerResponse, ScannerOpportunity, NoT
 from backend.app.market_data import market_provider
 from backend.app.strategies import STRATEGY_REGISTRY
 from backend.app.strategies.cost_gate import cost_aware_gate
+from backend.app.scanner.fundamental_gate import fundamental_gate
 from backend.app.paper_engine.fee_calculator import FeeCalculator
 from backend.app.scanner.universe import UNIVERSE_SYMBOLS
 
@@ -87,10 +88,26 @@ class MarketScanner:
             round_trip_cost_pct = FeeCalculator.calculate_round_trip_cost_pct(price, is_intraday=True)
             gate_res = cost_aware_gate.evaluate(quote, expected_move_pct=expected_move or 2.0)
 
-            is_actionable = (best_action == "BUY" and eligible_for_capital and gate_res.passed)
+            # Stage 1: Fundamental Health & Penny Stock Rejection Gate
+            fund_ok, fund_reason, fund_metrics = fundamental_gate.evaluate(symbol, price)
+            if not fund_ok:
+                no_trade_reasons.append(NoTradeReason(
+                    symbol=symbol,
+                    stage="STAGE_1_FUNDAMENTAL",
+                    reason=fund_reason,
+                    details={
+                        "price": price,
+                        "debt_to_equity": getattr(fund_metrics, "debt_to_equity", None),
+                        "roe_pct": getattr(fund_metrics, "roe_pct", None)
+                    }
+                ))
+
+            is_actionable = (best_action == "BUY" and eligible_for_capital and gate_res.passed and fund_ok)
 
             if eligible_for_capital and not is_actionable:
-                if not matched_strategy:
+                if not fund_ok:
+                    pass  # already recorded under STAGE_1_FUNDAMENTAL
+                elif not matched_strategy:
                     no_trade_reasons.append(NoTradeReason(
                         symbol=symbol,
                         stage="STAGE_2_TECHNICAL",
@@ -112,6 +129,8 @@ class MarketScanner:
                 reason_short = "Stale quote"
             elif not eligible_for_capital:
                 reason_short = "Price above cash"
+            elif not fund_ok:
+                reason_short = "Disqualified (Price < ₹100 or Fundamentals)"
             elif not gate_res.passed:
                 reason_short = "Edge below 3x costs"
             elif not matched_strategy:

@@ -48,8 +48,8 @@ class PaperBroker:
         ).first()
         owned_quantity = position.quantity if position else 0
 
-        # Check Emergency Stop / Kill switch
-        if portfolio.is_kill_switched or settings.EMERGENCY_STOP_ACTIVE:
+        # Check Emergency Stop / Kill switch (applies to new BUY executions; SELL/stop-loss permitted)
+        if (portfolio.is_kill_switched or settings.EMERGENCY_STOP_ACTIVE) and order_in.side.upper() != "SELL":
             order = Order(
                 portfolio_id=portfolio.id,
                 user_id=user.id,

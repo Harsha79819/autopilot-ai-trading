@@ -56,11 +56,14 @@ class Settings(BaseSettings):
     ANGEL_ONE_MPIN: str = ""
     ANGEL_ONE_TOTP_TOKEN: str = ""
 
-    # Risk Management Defaults
-    MAX_POSITION_SIZE_PCT: float = 100.0   # 100% allowed for small ₹500 account single share
+    # Risk Management Defaults & Position Sizing
+    MAX_POSITION_SIZE_PCT: float = 20.0    # Capped at 20% of total portfolio value per trade
+    MIN_STOCK_PRICE_INR: float = 100.00    # Rejects penny & speculative stocks under ₹100
     MAX_DAILY_LOSS_PCT: float = 2.0        # 2.0% daily loss limit (₹10.00 on ₹500)
     MAX_DAILY_LOSS_INR: float = 10.00      # Configurable ₹10.00 risk trigger
     MAX_PORTFOLIO_DRAWDOWN_PCT: float = 15.0 # 15% drawdown cutoff (₹75 on ₹500)
+    STOP_LOSS_PCT: float = 1.5             # -1.5% strict stop loss execution gate
+    TAKE_PROFIT_PCT: float = 2.2           # +2.2% take-profit target gate
     EMERGENCY_STOP_ACTIVE: bool = False
 
     # Strategy & Cost Gate Parameters
