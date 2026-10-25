@@ -12,14 +12,19 @@ import {
   Sparkles,
   Zap,
   Activity,
-  Layers
+  Layers,
+  BookOpen
 } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
 import { api } from '../../services/api';
 import { AuditLog } from '../../types';
 import { formatINR } from '../../utils/currency';
 
-export const DailySummaryCard: React.FC = () => {
+interface DailySummaryCardProps {
+  onOpenJournal?: () => void;
+}
+
+export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ onOpenJournal }) => {
   const { portfolio, aiStatus, refreshPortfolio, refreshAutoPilot } = useTrading();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -122,8 +127,18 @@ export const DailySummaryCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Controls: Refresh Button */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        {/* Action Controls: Journal & Refresh Button */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {onOpenJournal && (
+            <button
+              onClick={onOpenJournal}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 border border-cyan-500/30 hover:border-cyan-400 active:scale-98 transition-all cursor-pointer shadow-lg"
+              title="Open Rule 4 Trading Journal & Psychology Tracker"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-accent-cyan" />
+              <span>ట్రేడింగ్ జర్నల్ (Trade Journal)</span>
+            </button>
+          )}
           <button
             onClick={handleManualRefresh}
             disabled={isRefreshing}

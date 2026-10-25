@@ -44,7 +44,7 @@ class RiskManager:
             )
 
         # 4. Maximum Daily Loss threshold
-        today_start = datetime.combine(date.today(), datetime.min.time())
+        today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
         today_trades = db.query(Trade).filter(
             Trade.portfolio_id == portfolio.id,
             Trade.executed_at >= today_start,
@@ -76,7 +76,7 @@ class RiskManager:
         metrics = portfolio_ledger.calculate_metrics(db, portfolio)
         is_stopped = kill_switch_manager.is_stopped(portfolio)
 
-        today_start = datetime.combine(date.today(), datetime.min.time())
+        today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
         today_trades = db.query(Trade).filter(
             Trade.portfolio_id == portfolio.id,
             Trade.executed_at >= today_start,

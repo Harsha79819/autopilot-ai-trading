@@ -26,6 +26,7 @@ import { CostBreakdownModal } from './components/dashboard/CostBreakdownModal';
 import { DiagnosticsModal } from './components/modals/DiagnosticsModal';
 import { AiChatModal } from './components/chat/AiChatModal';
 import { FloatingChatButton } from './components/chat/FloatingChatButton';
+import { TradingJournalModal } from './components/journal/TradingJournalModal';
 import { StrategyInfo } from './types';
 import { api } from './services/api';
 import { Sliders } from 'lucide-react';
@@ -39,6 +40,7 @@ const MainContent: React.FC = () => {
   const [showPortfolioModal, setShowPortfolioModal] = useState(false);
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false);
   const [showAiChatModal, setShowAiChatModal] = useState(false);
+  const [showJournalModal, setShowJournalModal] = useState(false);
 
   useEffect(() => {
     api.getStrategies().then(setStrategies).catch(console.error);
@@ -91,7 +93,7 @@ const MainContent: React.FC = () => {
 
           {/* Today's Daily Summary & Trade Journal Box */}
           <div className="pt-2">
-            <DailySummaryCard />
+            <DailySummaryCard onOpenJournal={() => setShowJournalModal(true)} />
           </div>
 
           {/* AI Autonomous Bot Live Feed Banner */}
@@ -168,6 +170,7 @@ const MainContent: React.FC = () => {
       )}
       <DiagnosticsModal isOpen={showDiagnosticsModal} onClose={() => setShowDiagnosticsModal(false)} />
       <AiChatModal isOpen={showAiChatModal} onClose={() => setShowAiChatModal(false)} />
+      <TradingJournalModal isOpen={showJournalModal} onClose={() => setShowJournalModal(false)} />
     </main>
   );
 };

@@ -80,7 +80,7 @@ def build_system_context(db: Session, current_user: User) -> Dict[str, Any]:
     risk_status = RiskManager.get_risk_status(db, portfolio) if portfolio else None
 
     # 4. Today's Audit Logs
-    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
     today_logs = db.query(AuditLog).filter(
         AuditLog.user_id == current_user.id,
         AuditLog.timestamp >= today_start

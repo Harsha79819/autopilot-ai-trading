@@ -22,6 +22,7 @@ from backend.app.api import (
     autopilot_router,
     ai_chat_router
 )
+from backend.app.api.journal_router import router as journal_router
 
 # Configure logging
 logging.basicConfig(
@@ -113,6 +114,7 @@ app.include_router(backtest_router)
 app.include_router(websocket_router)
 app.include_router(autopilot_router)
 app.include_router(ai_chat_router)
+app.include_router(journal_router)
 
 
 import os

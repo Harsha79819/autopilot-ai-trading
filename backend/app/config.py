@@ -58,12 +58,14 @@ class Settings(BaseSettings):
 
     # Risk Management Defaults & Position Sizing
     MAX_POSITION_SIZE_PCT: float = 20.0    # Capped at 20% of total portfolio value per trade
+    MAX_RISK_PER_TRADE_PCT: float = 1.5    # Strict 1% - 2% rule: max 1.5% portfolio risk per trade
+    RISK_REWARD_RATIO: float = 2.0         # 1:2 Golden Rule: Take Profit = Stop Loss * 2.0
     MIN_STOCK_PRICE_INR: float = 100.00    # Rejects penny & speculative stocks under ₹100
     MAX_DAILY_LOSS_PCT: float = 2.0        # 2.0% daily loss limit (₹10.00 on ₹500)
     MAX_DAILY_LOSS_INR: float = 10.00      # Configurable ₹10.00 risk trigger
     MAX_PORTFOLIO_DRAWDOWN_PCT: float = 15.0 # 15% drawdown cutoff (₹75 on ₹500)
     STOP_LOSS_PCT: float = 1.5             # -1.5% strict stop loss execution gate
-    TAKE_PROFIT_PCT: float = 2.2           # +2.2% take-profit target gate
+    TAKE_PROFIT_PCT: float = 3.0           # +3.0% target profit gate (1:2 Risk-Reward: 1.5% * 2.0)
     EMERGENCY_STOP_ACTIVE: bool = False
 
     # Strategy & Cost Gate Parameters

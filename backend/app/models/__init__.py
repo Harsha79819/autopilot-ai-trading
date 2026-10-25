@@ -6,6 +6,7 @@ from backend.app.models.order import Order
 from backend.app.models.trade import Trade
 from backend.app.models.audit_log import AuditLog
 from backend.app.models.strategy_config import StrategyConfig
+from backend.app.models.trading_journal import TradingJournal
 
 __all__ = [
     "User",
@@ -15,4 +16,5 @@ __all__ = [
     "Trade",
     "AuditLog",
     "StrategyConfig",
+    "TradingJournal",
 ]

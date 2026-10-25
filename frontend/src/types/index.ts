@@ -291,3 +291,36 @@ export interface AIStatus {
   autopilot_enabled?: boolean;
   updated_at?: string;
 }
+
+export interface TradingJournalEntry {
+  id: number;
+  portfolio_id: number;
+  symbol: string;
+  side: string;
+  quantity: number;
+  entry_price: number;
+  exit_price: number;
+  stop_loss: number;
+  take_profit: number;
+  risk_reward_ratio: number;
+  risk_amount: number;
+  realized_pnl: number;
+  realized_pnl_pct: number;
+  setup_reason: string;
+  exit_reason: string;
+  emotion_tag: 'DISCIPLINED' | 'FOMO' | 'GREED' | 'FEAR' | 'REVENGE';
+  ai_critique?: string | null;
+  holding_seconds: number;
+  created_at: string;
+  closed_at: string;
+}
+
+export interface TradingJournalSummary {
+  total_trades_logged: number;
+  disciplined_trades_pct: number;
+  avg_risk_reward_ratio: number;
+  net_realized_pnl: number;
+  win_rate_pct: number;
+  entries: TradingJournalEntry[];
+}
+

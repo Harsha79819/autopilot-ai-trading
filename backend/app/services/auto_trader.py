@@ -36,9 +36,10 @@ class AutoPilotRunner:
         self._task: Optional[asyncio.Task] = None
         self._listeners: Set[asyncio.Queue] = set()
 
-        # Track entry timestamps and price targets per symbol to avoid rapid churning
+        # Track entry timestamps, setup reasons, and price targets per symbol to avoid rapid churning
         self._position_targets: Dict[str, Dict[str, float]] = {}  # symbol -> {entry, take_profit, stop_loss}
         self._position_entry_times: Dict[str, datetime] = {}
+        self._position_setup_reasons: Dict[str, str] = {}
         self._last_ai_status: Dict[str, Any] = {
             "status": "INITIALIZING",
             "message": "AI AutoPilot is initializing market feed...",
@@ -233,8 +234,9 @@ class AutoPilotRunner:
                 # A. Check existing positions for Target Profit (+2.2%) or Stop Loss (-1.5%) FIRST
                 # Note: Stop-loss must auto-sell even when risk manager or kill-switch halts new buys
                 positions = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
-                tp_pct = getattr(settings, "TAKE_PROFIT_PCT", 2.2)
                 sl_pct = getattr(settings, "STOP_LOSS_PCT", 1.5)
+                rr_ratio = getattr(settings, "RISK_REWARD_RATIO", 2.0)
+                tp_pct = getattr(settings, "TAKE_PROFIT_PCT", round(sl_pct * rr_ratio, 2))
 
                 for pos in positions:
                     quote = latest_quotes.get(pos.symbol)
@@ -257,7 +259,7 @@ class AutoPilotRunner:
                     hit_stop_loss = cur_price <= entry_info["stop_loss"]
 
                     if hit_take_profit or hit_stop_loss:
-                        reason = f"Take-Profit Target Hit (+{tp_pct}%)" if hit_take_profit else f"Stop-Loss Protection Hit (-{sl_pct}%)"
+                        reason = f"Take-Profit Target Hit (+{tp_pct}%, 1:{int(rr_ratio)} RR)" if hit_take_profit else f"Stop-Loss Protection Hit (-{sl_pct}%)"
                         order_in = OrderCreate(
                             symbol=pos.symbol,
                             side="SELL",
@@ -272,6 +274,47 @@ class AutoPilotRunner:
                             quote=quote,
                             risk_manager=risk_manager
                         )
+
+                        # Record trade in Trading Journal (Golden Rule 4)
+                        try:
+                            from backend.app.models.trading_journal import TradingJournal
+                            pnl_val = round((cur_price - pos.average_buy_price) * pos.quantity, 2)
+                            pnl_pct_val = round(((cur_price - pos.average_buy_price) / pos.average_buy_price) * 100.0, 2)
+                            rr_calc = round((entry_info["take_profit"] - pos.average_buy_price) / (pos.average_buy_price - entry_info["stop_loss"]), 2) if pos.average_buy_price > entry_info["stop_loss"] else rr_ratio
+                            critique = (
+                                f"Disciplined 1:{int(rr_ratio)} Risk-Reward target achieved. Zero emotion, systematic profit taking."
+                                if hit_take_profit else
+                                f"Capital protected via pre-calculated stop-loss (-{sl_pct}%). Risk strictly contained."
+                            )
+                            setup_text = self._position_setup_reasons.pop(pos.symbol, "AI Quantitative Quality Swing Setup (D/E < 1.0, ROE > 12%)")
+
+                            journal_record = TradingJournal(
+                                user_id=user.id,
+                                portfolio_id=portfolio.id,
+                                symbol=pos.symbol,
+                                side="BUY_SELL",
+                                quantity=pos.quantity,
+                                entry_price=pos.average_buy_price,
+                                exit_price=cur_price,
+                                stop_loss=entry_info["stop_loss"],
+                                take_profit=entry_info["take_profit"],
+                                risk_reward_ratio=rr_calc,
+                                risk_amount=round((pos.average_buy_price - entry_info["stop_loss"]) * pos.quantity, 2),
+                                realized_pnl=pnl_val,
+                                realized_pnl_pct=pnl_pct_val,
+                                setup_reason=setup_text,
+                                exit_reason=reason,
+                                emotion_tag="DISCIPLINED",
+                                ai_critique=critique,
+                                holding_seconds=int(holding_seconds),
+                                created_at=entry_time,
+                                closed_at=now
+                            )
+                            db.add(journal_record)
+                            db.commit()
+                        except Exception as log_err:
+                            logger.error(f"Error recording trading journal: {log_err}")
+
                         self._position_targets.pop(pos.symbol, None)
                         self._position_entry_times.pop(pos.symbol, None)
                         logger.info(f"AutoPilot SELL {pos.symbol}: {reason}")
@@ -368,7 +411,15 @@ class AutoPilotRunner:
                     if best_candidate:
                         best_sym, best_quote, score = best_candidate
                         unit_cost_est = best_quote.current_price * 1.005
-                        qty = int(max_trade_budget // unit_cost_est)
+
+                        # Golden Rule 3: Van Tharp 1.5% Account Risk Position Sizing Engine
+                        max_risk_pct = getattr(settings, "MAX_RISK_PER_TRADE_PCT", 1.5)
+                        capital_at_risk = metrics.total_portfolio_value * (max_risk_pct / 100.0)
+                        risk_per_share = best_quote.current_price * (sl_pct / 100.0)
+                        risk_qty = int(capital_at_risk // risk_per_share) if risk_per_share > 0 else 1
+
+                        budget_qty = int(max_trade_budget // unit_cost_est)
+                        qty = max(1, min(risk_qty, budget_qty)) if unit_cost_est <= max_trade_budget else 0
 
                         if qty >= 1:
                             order_in = OrderCreate(
@@ -389,7 +440,8 @@ class AutoPilotRunner:
 
                             if res.status == "FILLED":
                                 fill_price = res.executed_price or best_quote.current_price
-                                tp = round(fill_price * (1.0 + tp_pct / 100.0), 2)
+                                rr_ratio = getattr(settings, "RISK_REWARD_RATIO", 2.0)
+                                tp = round(fill_price * (1.0 + (sl_pct * rr_ratio) / 100.0), 2)
                                 sl = round(fill_price * (1.0 - sl_pct / 100.0), 2)
                                 self._position_targets[best_sym] = {
                                     "entry": fill_price,
@@ -397,10 +449,14 @@ class AutoPilotRunner:
                                     "stop_loss": sl
                                 }
                                 self._position_entry_times[best_sym] = now
+                                self._position_setup_reasons[best_sym] = (
+                                    f"AI Swing Setup: Score {score}/100, D/E < 1.0, ROE > 12%, "
+                                    f"Risk: ₹{min(capital_at_risk, qty*risk_per_share):.2f} (<= {max_risk_pct}%), Target 1:{int(rr_ratio)} RR"
+                                )
                                 msg = (
                                     f"AI Auto-Bought {qty} sh {best_sym} @ ₹{fill_price:.2f} (Score {score}/100, "
-                                    f"Allocation ₹{qty*fill_price:.2f} <= 20% cap). "
-                                    f"Target: ₹{tp:.2f} (+{tp_pct}%) | Stop: ₹{sl:.2f} (-{sl_pct}%)"
+                                    f"Risk: ₹{qty*risk_per_share:.2f} <= {max_risk_pct}% cap). "
+                                    f"Target: ₹{tp:.2f} (+{round(sl_pct * rr_ratio, 1)}%, 1:{int(rr_ratio)} RR) | Stop: ₹{sl:.2f} (-{sl_pct}%)"
                                 )
                                 self._last_ai_status = {
                                     "status": "HOLDING",

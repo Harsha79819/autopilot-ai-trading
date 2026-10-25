@@ -12,7 +12,9 @@ import {
   RiskStatus,
   AuditLog,
   BacktestResponse,
-  AIStatus
+  AIStatus,
+  TradingJournalEntry,
+  TradingJournalSummary
 } from '../types';
 
 const BASE_URL = '/api';
@@ -254,4 +256,30 @@ export const api = {
     }
     return res.json();
   },
+
+  // Trading Journal (Rule 4: Setup, Exit, 1:2 RR, Emotion & AI Critique)
+  async getTradingJournal(limit = 50): Promise<TradingJournalSummary> {
+    const res = await fetch(`${BASE_URL}/journal?limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch trading journal');
+    }
+    return res.json();
+  },
+
+  async updateJournalEmotion(entryId: number, emotionTag: string): Promise<TradingJournalEntry> {
+    const res = await fetch(`${BASE_URL}/journal/${entryId}/emotion`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ emotion_tag: emotionTag }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update journal emotion');
+    }
+    return res.json();
+  },
 };
+
