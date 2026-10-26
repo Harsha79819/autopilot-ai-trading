@@ -27,6 +27,17 @@ import { DiagnosticsModal } from './components/modals/DiagnosticsModal';
 import { AiChatModal } from './components/chat/AiChatModal';
 import { FloatingChatButton } from './components/chat/FloatingChatButton';
 import { TradingJournalModal } from './components/journal/TradingJournalModal';
+import { AiAdviserFullView } from './components/views/AiAdviserFullView';
+import { MarketsView } from './components/views/MarketsView';
+import { WatchlistView } from './components/views/WatchlistView';
+import { PortfolioDetailView } from './components/views/PortfolioDetailView';
+import { RiskCentreView } from './components/views/RiskCentreView';
+import { NewsResearchView } from './components/views/NewsResearchView';
+import { FinancialPlannerView } from './components/views/FinancialPlannerView';
+import { AlertsManagerView } from './components/views/AlertsManagerView';
+import { DocumentsView } from './components/views/DocumentsView';
+import { ReportsView } from './components/views/ReportsView';
+import { SettingsView } from './components/views/SettingsView';
 import { StrategyInfo } from './types';
 import { api } from './services/api';
 import { Sliders } from 'lucide-react';
@@ -160,6 +171,40 @@ const MainContent: React.FC = () => {
           <BacktestRunner />
         </div>
       )}
+
+      {/* Tab: AI Adviser */}
+      {activeTab === 'ai-adviser' && <AiAdviserFullView />}
+
+      {/* Tab: Markets */}
+      {activeTab === 'markets' && <MarketsView />}
+
+      {/* Tab: Watchlist */}
+      {activeTab === 'watchlist' && <WatchlistView />}
+
+      {/* Tab: Portfolio Detail */}
+      {activeTab === 'portfolio' && <PortfolioDetailView />}
+
+      {/* Tab: Risk Centre */}
+      {activeTab === 'risk-centre' && <RiskCentreView />}
+
+      {/* Tab: Research & News */}
+      {activeTab === 'research' && <NewsResearchView />}
+
+      {/* Tab: Financial Planner */}
+      {activeTab === 'planner' && <FinancialPlannerView />}
+
+      {/* Tab: Alerts Manager */}
+      {activeTab === 'alerts' && <AlertsManagerView />}
+
+      {/* Tab: Documents Intelligence */}
+      {activeTab === 'documents' && <DocumentsView />}
+
+      {/* Tab: Reports & Tax */}
+      {activeTab === 'reports' && <ReportsView />}
+
+      {/* Tab: Settings */}
+      {activeTab === 'settings' && <SettingsView />}
+
 
       {/* Modals */}
       {showRiskModal && <RiskSettingsModal onClose={() => setShowRiskModal(false)} />}

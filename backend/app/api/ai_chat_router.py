@@ -22,6 +22,9 @@ from backend.app.scanner.universe import UNIVERSE_SYMBOLS, NSE_STOCKS
 from backend.app.paper_engine.ledger import portfolio_ledger
 from backend.app.risk.risk_manager import RiskManager
 from backend.app.services.auto_trader import autopilot_runner
+from backend.app.services.financial_calculators import FinancialCalculators
+from backend.app.services.news_service import NewsResearchService
+from backend.app.services.scenario_simulator import ScenarioSimulator
 from backend.app.config import settings
 
 logger = logging.getLogger("autopilot.ai_chat")
@@ -170,6 +173,18 @@ def generate_copilot_response(query: str, ctx: Dict[str, Any]) -> str:
     is_strategy_query = any(k in q_lower for k in [
         "strategy", "rsi", "indicator", "macd", "moving average", "cost gate", "slippage", "target", "margin", "profit", "how", "rule",
         "స్ట్రాటజీ", "ప్రాఫిట్", "లాభం", "టార్గెట్", "నిబంధన"
+    ])
+    is_planning_query = any(k in q_lower for k in [
+        "sip", "emi", "loan", "budget", "save", "saving", "emergency fund", "retirement", "compound", "inflation",
+        "ఖర్చు", "పొదుపు", "రుణం", "ప్లాన్", "రిటైర్మెంట్", "ఎస్ఐపి"
+    ])
+    is_research_query = any(k in q_lower for k in [
+        "news", "article", "sentiment", "profile", "compare", "infy", "tcs", "itc", "bel", "hdfc",
+        "వార్తలు", "కంపెనీ", "పోలిక", "న్యూస్"
+    ])
+    is_stress_query = any(k in q_lower for k in [
+        "crash", "drop", "fall", "decline", "stress", "what if", "shock",
+        "మార్కెట్ పడిపోతే", "క్రాష్", "పడిపోతే"
     ])
 
     # Build Response
@@ -324,6 +339,57 @@ def generate_copilot_response(query: str, ctx: Dict[str, Any]) -> str:
             parts.append("6. **Paper Ledger & Cost Model**: `backend/app/paper_engine/ledger.py`")
             parts.append("7. **Frontend Chatbot UI**: `frontend/src/components/chat/AiChatModal.tsx` & `FloatingChatButton.tsx`")
             parts.append("8. **Dashboard Daily Summary**: `frontend/src/components/dashboard/DailySummaryCard.tsx`")
+
+    # Personal Finance & Goal Planning Intent
+    if is_planning_query:
+        sample_sip = FinancialCalculators.calculate_sip(monthly_investment=5000.0, expected_annual_return_pct=12.0, tenure_years=10, annual_inflation_pct=6.0)
+        if is_te:
+            parts.append("### 💡 వ్యక్తిగత ఫైనాన్స్ & గోల్ ప్లానింగ్ (Personal Finance Intelligence)")
+            parts.append("1. **50/30/20 బడ్జెటింగ్ సూత్రం**: మీ నెలవారీ ఆదాయంలో 50% అవసరాలకు (Needs), 30% కోరికలకు (Wants), మరియు 20% పొదుపు/పెట్టుబడులకు (Savings & SIP) కేటాయించాలి.")
+            parts.append("2. **SIP పవర్ (నెలకి ₹5,000 @ 12% for 10 Years)**:")
+            parts.append(f"   - మీ మొత్తం పెట్టుబడి: **₹{sample_sip['invested_amount']:,.2f}**")
+            parts.append(f"   - అంచనా రిటర్న్స్: **₹{sample_sip['estimated_returns']:,.2f}**")
+            parts.append(f"   - మొత్తం సంపద (Future Value): **₹{sample_sip['total_value']:,.2f}**")
+            parts.append(f"   - ద్రవ్యోల్బణం (6% Inflation) తర్వాత నిజమైన కొనుగోలు విలువ: **₹{sample_sip['inflation_adjusted_value']:,.2f}**")
+            parts.append("3. **ఎమర్జెన్సీ ఫండ్ రూల్**: కనీసం 6 నెలల ఫిక్స్‌డ్ ఖర్చులను లిక్విడ్ సేవింగ్స్/ఎఫ్డీలలో అత్యవసర నిధిగా ఉంచాలి.")
+        else:
+            parts.append("### 💡 Personal Finance & Wealth Planning Advisory")
+            parts.append("1. **50/30/20 Budgeting Rule**: Allocate 50% to essential needs, 30% to lifestyle desires, and at least 20% to high-compounding savings and equity SIPs.")
+            parts.append("2. **SIP Compounding Benchmark (₹5,000/mo @ 12% over 10 Years)**:")
+            parts.append(f"   - Total Invested: **₹{sample_sip['invested_amount']:,.2f}**")
+            parts.append(f"   - Estimated Gain: **₹{sample_sip['estimated_returns']:,.2f}**")
+            parts.append(f"   - Nominal Wealth Value: **₹{sample_sip['total_value']:,.2f}**")
+            parts.append(f"   - Inflation-Adjusted Purchasing Power (6% Inflation): **₹{sample_sip['inflation_adjusted_value']:,.2f}**")
+            parts.append("3. **Emergency Fund Buffer**: Maintain 6 months of mandatory overhead in high-yield liquid instruments before aggressive equity deployment.")
+
+    # Market Research & News Intent
+    if is_research_query:
+        news_sample = NewsResearchService.get_market_news()[:2]
+        if is_te:
+            parts.append("### 📰 మార్కెట్ రీసెర్చ్ & న్యూస్ సెంటిమెంట్ (Market News & Insights)")
+            for item in news_sample:
+                sentiment_icon = "🟢" if item['sentiment'] == "BULLISH" else ("🔴" if item['sentiment'] == "BEARISH" else "⚪")
+                parts.append(f"- {sentiment_icon} **{item['title']}** ({item['source']})")
+                parts.append(f"  *సెంటిమెంట్*: `{item['sentiment']}` | *ప్రభావం*: {item['impact_implications']}")
+        else:
+            parts.append("### 📰 Market Research & News Sentiment")
+            for item in news_sample:
+                sentiment_icon = "🟢" if item['sentiment'] == "BULLISH" else ("🔴" if item['sentiment'] == "BEARISH" else "⚪")
+                parts.append(f"- {sentiment_icon} **{item['title']}** ({item['source']})")
+                parts.append(f"  *Sentiment*: `{item['sentiment']}` | *Implication*: {item['impact_implications']}")
+
+    # Stress Testing & What-If Intent
+    if is_stress_query:
+        if is_te:
+            parts.append("### 📉 పోర్ట్‌ఫోలియో స్ట్రెస్ టెస్టింగ్ & క్రాష్ సినారియో (-10% Market Shock)")
+            parts.append(f"- **ప్రస్తుత క్యాపిటల్**: **₹{tot_val:,.2f}** (లిక్విడ్ క్యాష్: **₹{cash_val:,.2f}**)")
+            parts.append(f"- మార్కెట్ సూచీ ఒకవేళ 10% క్రాష్ అయితే, మీ క్యాష్ బఫర్ రక్షణగా నిలుస్తుంది.")
+            parts.append(f"- మన సిస్టమ్‌లోని **-1.5% స్టాప్-లాస్** రూల్ వల్ల పెద్ద నష్టాలు రాకుండా ఆటోమేటిక్‌గా క్యాపిటల్ రక్షించబడుతుంది.")
+        else:
+            parts.append("### 📉 Portfolio Stress Test & What-If Scenario (-10% Market Shock)")
+            parts.append(f"- **Starting Portfolio Value**: **₹{tot_val:,.2f}** (Liquid Cash: **₹{cash_val:,.2f}**)")
+            parts.append(f"- Under a sudden -10% Nifty shock, your unallocated liquid cash provides immediate downside insulation.")
+            parts.append(f"- Strict **-1.5% Stop-Loss** boundaries guarantee early liquidation before catastrophic drawdown occurs.")
 
     return "\n".join(parts)
 

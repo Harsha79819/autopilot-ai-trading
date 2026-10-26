@@ -281,5 +281,181 @@ export const api = {
     }
     return res.json();
   },
+
+  // Financial Planner & Calculators
+  async calculateSIP(req: { monthly_investment: number; expected_annual_return_pct: number; tenure_years: number; annual_inflation_pct?: number }) {
+    const res = await fetch(`${BASE_URL}/planner/calculate/sip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+    });
+    if (!res.ok) throw new Error('SIP calculation failed');
+    return res.json();
+  },
+
+  async calculateEMI(req: { principal: number; annual_interest_rate_pct: number; tenure_months: number }) {
+    const res = await fetch(`${BASE_URL}/planner/calculate/emi`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+    });
+    if (!res.ok) throw new Error('EMI calculation failed');
+    return res.json();
+  },
+
+  async getExpenses() {
+    const res = await fetch(`${BASE_URL}/planner/expenses`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch expenses');
+    return res.json();
+  },
+
+  async addExpense(expense: { category: string; amount: number; description?: string; is_recurring?: boolean }) {
+    const res = await fetch(`${BASE_URL}/planner/expenses`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(expense),
+    });
+    if (!res.ok) throw new Error('Failed to add expense');
+    return res.json();
+  },
+
+  async getGoals() {
+    const res = await fetch(`${BASE_URL}/planner/goals`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch savings goals');
+    return res.json();
+  },
+
+  async createGoal(goal: { goal_name: string; target_amount: number; current_amount?: number; monthly_contribution?: number; category?: string }) {
+    const res = await fetch(`${BASE_URL}/planner/goals`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(goal),
+    });
+    if (!res.ok) throw new Error('Failed to create goal');
+    return res.json();
+  },
+
+  // Watchlist & Alerts
+  async getWatchlist() {
+    const res = await fetch(`${BASE_URL}/watchlist`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch watchlist');
+    return res.json();
+  },
+
+  async addToWatchlist(item: { symbol: string; target_buy_price?: number; target_sell_price?: number; notes?: string }) {
+    const res = await fetch(`${BASE_URL}/watchlist`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(item),
+    });
+    if (!res.ok) throw new Error('Failed to add to watchlist');
+    return res.json();
+  },
+
+  async removeFromWatchlist(symbol: string) {
+    const res = await fetch(`${BASE_URL}/watchlist/${symbol}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to remove from watchlist');
+    return res.json();
+  },
+
+  async getAlerts() {
+    const res = await fetch(`${BASE_URL}/watchlist/alerts`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch alerts');
+    return res.json();
+  },
+
+  async createAlert(alert: { symbol?: string; alert_type: string; threshold_value: number }) {
+    const res = await fetch(`${BASE_URL}/watchlist/alerts`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(alert),
+    });
+    if (!res.ok) throw new Error('Failed to create alert');
+    return res.json();
+  },
+
+  async deleteAlert(alertId: number) {
+    const res = await fetch(`${BASE_URL}/watchlist/alerts/${alertId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete alert');
+    return res.json();
+  },
+
+  // Market Research & News
+  async getNews(symbol?: string) {
+    const url = symbol ? `${BASE_URL}/research/news?symbol=${symbol}` : `${BASE_URL}/research/news`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch news');
+    return res.json();
+  },
+
+  async getCompanyProfile(symbol: string) {
+    const res = await fetch(`${BASE_URL}/research/company/${symbol}`);
+    if (!res.ok) throw new Error('Failed to fetch company profile');
+    return res.json();
+  },
+
+  async compareCompanies(symbols = 'INFY,TCS,ITC,BEL') {
+    const res = await fetch(`${BASE_URL}/research/compare?symbols=${symbols}`);
+    if (!res.ok) throw new Error('Failed to compare companies');
+    return res.json();
+  },
+
+  // Scenario Simulator
+  async simulateMarketShock(dropPct = -10.0) {
+    const res = await fetch(`${BASE_URL}/scenario/market-shock`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ drop_pct: dropPct }),
+    });
+    if (!res.ok) throw new Error('Failed to run market shock scenario');
+    return res.json();
+  },
+
+  // Document Intelligence
+  async uploadDocument(file: File, docType = 'TRANSACTION_CSV') {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('doc_type', docType);
+    const token = localStorage.getItem('autopilot_token');
+    const headers: HeadersInit = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE_URL}/documents/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Failed to upload document');
+    return res.json();
+  },
+
+  async getDocuments() {
+    const res = await fetch(`${BASE_URL}/documents`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch documents');
+    return res.json();
+  },
+
+  async askDocument(documentId: number, question: string) {
+    const res = await fetch(`${BASE_URL}/documents/ask`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ document_id: documentId, question }),
+    });
+    if (!res.ok) throw new Error('Failed to query document');
+    return res.json();
+  },
+
+  // Reports
+  async getReportSummary() {
+    const res = await fetch(`${BASE_URL}/reports/summary`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch report summary');
+    return res.json();
+  },
 };
 
