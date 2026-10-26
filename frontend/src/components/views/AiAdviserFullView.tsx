@@ -8,7 +8,9 @@ import {
   TrendingUp,
   ShieldAlert,
   Calculator,
-  Newspaper
+  Newspaper,
+  Landmark,
+  Layers
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useTrading } from '../../context/TradingContext';
@@ -19,20 +21,40 @@ interface Message {
   timestamp: string;
 }
 
-const QUICK_PROMPTS = [
-  { label: '📊 Analyze My Portfolio', prompt: 'Analyze my current portfolio and explain my risk exposure.' },
-  { label: '💡 ₹5,000 SIP Wealth Plan', prompt: 'Calculate ₹5,000 monthly SIP returns for 10 years with inflation adjustment.' },
-  { label: '📉 What If Market Crashes 10%?', prompt: 'Simulate a -10% market drop on my holdings and show projected drawdown.' },
-  { label: '🏢 Compare INFY vs TCS', prompt: 'Compare fundamentals of INFY and TCS including debt and return on equity.' },
-  { label: '🇮🇳 తెలుగులో ఈరోజు సమ్మరీ', prompt: 'ఈరోజు మార్కెట్ సమ్మరీ మరియు నా పోర్ట్‌ఫోలియో అప్‌డేట్స్ తెలుగులో చెప్పు.' },
-];
+type CopilotMode = 'all' | 'market' | 'wealth';
+
+const PROMPTS_BY_MODE = {
+  all: [
+    { label: '📊 Analyze My Portfolio', prompt: 'Analyze my current portfolio and explain my risk exposure.' },
+    { label: '💡 ₹5,000 SIP Wealth Plan', prompt: 'Calculate ₹5,000 monthly SIP returns for 10 years with inflation adjustment.' },
+    { label: '📉 What If Market Crashes 10%?', prompt: 'Simulate a -10% market drop on my holdings and show projected drawdown.' },
+    { label: '🏢 Compare INFY vs TCS', prompt: 'Compare fundamentals of INFY and TCS including debt and return on equity.' },
+    { label: '🇮🇳 తెలుగులో ఈరోజు సమ్మరీ', prompt: 'ఈరోజు మార్కెట్ సమ్మరీ మరియు నా పోర్ట్‌ఫోలియో అప్‌డేట్స్ తెలుగులో చెప్పు.' },
+    { label: '⚠️ System Error Diagnostics', prompt: 'సిస్టమ్‌లో ఏదైనా ఎర్రర్ లేదా ఇష్యూ ఉందా చెక్ చేయి (Check issues & errors)' }
+  ],
+  market: [
+    { label: '📊 Today\'s Trades & PnL', prompt: 'ఈరోజు ట్రేడింగ్ సమ్మరీ ఏంటి? బాట్ ఏం చేసింది? (Today\'s summary)' },
+    { label: '📈 Top Nifty 50 Candidates', prompt: 'మార్కెట్ ఎలా ఉంది? బెస్ట్ స్టాక్స్ ఏవి? (Market analysis)' },
+    { label: '🎯 1:2 RR & Stop-Loss Check', prompt: 'Explain how our 1:2 Risk-Reward ratio and Stop-Loss (1.5%) are currently performing.' },
+    { label: '⚠️ System Diagnostics', prompt: 'Check if there are any stale quotes or risk warnings.' },
+    { label: '🤖 AutoPilot Engine State', prompt: 'What is the current state of the AutoPilot autonomous trading loop?' }
+  ],
+  wealth: [
+    { label: '💡 ₹5,000 SIP (Inflation-Adjusted)', prompt: 'Calculate ₹5,000 monthly SIP returns for 10 years with 6% inflation adjustment.' },
+    { label: '📉 -10% Market Crash Stress Test', prompt: 'Simulate a -10% market crash on my holdings and show projected drawdown.' },
+    { label: '🏠 ₹25L Home Loan EMI Plan', prompt: 'Calculate EMI for ₹25,00,000 home loan at 8.5% interest for 20 years.' },
+    { label: '🛡️ 6-Month Emergency Fund Rule', prompt: 'Explain the 6-month emergency fund rule and how much I need for ₹30,000 monthly expenses.' },
+    { label: '🏢 INFY vs TCS Fundamentals', prompt: 'Compare fundamentals of INFY and TCS including debt and ROE.' }
+  ]
+};
 
 export const AiAdviserFullView: React.FC = () => {
   const { portfolio } = useTrading();
+  const [mode, setMode] = useState<CopilotMode>('all');
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Hello! I am your **AutoPilot AI Financial Adviser & Intelligence Copilot**.\n\nI can analyze your portfolio, calculate SIP & retirement compounding, run what-if stress tests, research Nifty 50 fundamentals, and provide advice in English or Telugu.\n\nHow can I assist your financial journey today?',
+      content: 'Hello! I am your **AutoPilot Unified AI Financial & Market Copilot**.\n\nI can analyze your portfolio, calculate SIP & retirement compounding, run what-if stress tests, track live Nifty 50 trades, and provide advice in English or Telugu.\n\nHow can I assist your financial journey today?',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -99,13 +121,13 @@ export const AiAdviserFullView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-              AI Financial Adviser & Copilot
+              AutoPilot Unified AI Copilot
               <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Deterministic Engine
+                Market & Wealth Intelligence
               </span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Natural language financial advisory, goal planning, and portfolio intelligence in English & Telugu
+              Live NSE market execution, portfolio analytics, and deterministic personal wealth planning in English & Telugu
             </p>
           </div>
         </div>
@@ -127,9 +149,49 @@ export const AiAdviserFullView: React.FC = () => {
         </button>
       </div>
 
-      {/* Quick Prompts Bar */}
+      {/* Mode Switcher Tabs */}
+      <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-900/90 border border-white/10 overflow-x-auto text-xs">
+        <span className="text-[11px] text-slate-400 px-2 flex items-center gap-1">
+          <Layers className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Mode:</span>
+        </span>
+        <button
+          onClick={() => setMode('all')}
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+            mode === 'all'
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <span>🌐 All-in-One (అన్నీ)</span>
+        </button>
+        <button
+          onClick={() => setMode('market')}
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+            mode === 'market'
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>📈 Market & Trades</span>
+        </button>
+        <button
+          onClick={() => setMode('wealth')}
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+            mode === 'wealth'
+              ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Landmark className="w-3.5 h-3.5" />
+          <span>🏛️ Wealth & Planning</span>
+        </button>
+      </div>
+
+      {/* Dynamic Quick Prompts Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {QUICK_PROMPTS.map((qp, idx) => (
+        {PROMPTS_BY_MODE[mode].map((qp, idx) => (
           <button
             key={idx}
             onClick={() => handleSend(qp.prompt)}
