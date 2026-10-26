@@ -1,0 +1,33 @@
+# CodeRabbit Configuration for AutoPilot AI Trading Platform
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+  path_instructions:
+    - path: "backend/**"
+      instructions: |
+        - This is a FastAPI paper-trading platform for Indian Equities (NSE).
+        - Rule 1: Strictly enforce paper-only execution; NEVER allow real order routing or live broker execution.
+        - Rule 2: Enforce strict 1:2 Risk-Reward ratio (Stop-Loss: 1.5%, Take-Profit: 3.0%).
+        - Rule 3: Enforce Van Tharp position sizing with a maximum 1.5% capital risk per trade and 20% max portfolio allocation cap.
+        - Rule 4: Ensure all trade exits record a TradingJournal entry with setup reason, exit reason, and AI critique.
+        - Ensure CPU efficiency: always respect market-hours gate and avoid tight unthrottled background loops.
+    - path: "frontend/**"
+      instructions: |
+        - This is a React 18 + Vite + TypeScript frontend styled with Tailwind CSS.
+        - Ensure currency amounts are properly formatted with INR (₹) and Indian comma grouping.
+        - Ensure responsive layout across desktop and mobile screens.
+
+chat:
+  auto_reply: true
