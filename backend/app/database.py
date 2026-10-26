@@ -36,12 +36,7 @@ def get_db():
 def init_db():
     """Create all database tables."""
     # Import all models so they are registered with Base metadata
-    import backend.app.models.user  # noqa: F401
-    import backend.app.models.portfolio  # noqa: F401
-    import backend.app.models.position  # noqa: F401
-    import backend.app.models.order  # noqa: F401
-    import backend.app.models.trade  # noqa: F401
-    import backend.app.models.audit_log  # noqa: F401
-    import backend.app.models.strategy_config  # noqa: F401
+    import backend.app.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+
