@@ -11,7 +11,8 @@ import {
   Globe,
   TrendingUp,
   Landmark,
-  Layers
+  Layers,
+  Mic
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useTrading } from '../../context/TradingContext';
@@ -27,11 +28,12 @@ interface Message {
 interface AiChatModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenVoice?: () => void;
 }
 
 type CopilotMode = 'all' | 'market' | 'wealth';
 
-export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose }) => {
+export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpenVoice }) => {
   const { refreshPortfolio, refreshAutoPilot, setActiveTab } = useTrading();
   const [mode, setMode] = useState<CopilotMode>('all');
   const [isTelugu, setIsTelugu] = useState(true);
@@ -180,6 +182,21 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose }) => 
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Voice Mode Button */}
+            {onOpenVoice && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenVoice();
+                }}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-pink-300 bg-pink-950/40 hover:bg-pink-900/50 border border-pink-500/30 transition-all cursor-pointer"
+                title="Open Voice Mode (Hey Darling)"
+              >
+                <Mic className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                <span className="hidden sm:inline">వాయిస్ మోడ్</span>
+              </button>
+            )}
+
             {/* Language Switcher */}
             <button
               onClick={handleToggleLanguage}
@@ -486,6 +503,19 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose }) => 
             disabled={isLoading}
             className="flex-1 bg-white/5 border border-white/15 focus:border-cyan-500 focus:outline-none rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 transition-all"
           />
+          {onOpenVoice && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenVoice();
+              }}
+              className="p-2.5 sm:px-3 sm:py-2.5 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/40 text-pink-300 transition-all cursor-pointer"
+              title="Switch to Voice Mode (Hey Darling)"
+            >
+              <Mic className="w-4 h-4 animate-pulse" />
+            </button>
+          )}
           <button
             onClick={() => sendMessage()}
             disabled={!inputText.trim() || isLoading}
