@@ -55,11 +55,11 @@ def test_daily_loss_limit_blocks_trade(db, test_user):
         execution_price=45.0,
         gross_amount=45.0,
         net_amount=44.95,
-        realized_pnl=-12.00,
+        realized_pnl=-150.00,
         executed_at=datetime.utcnow()
     )
     db.add(losing_trade)
-    portfolio.realized_pnl = -12.00
+    portfolio.realized_pnl = -150.00
     db.commit()
 
     passed, reason = risk_manager.validate_pre_trade_risk(

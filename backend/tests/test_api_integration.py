@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.database import get_db
+from backend.app.config import settings
 from backend.tests.conftest import TestingSessionLocal
 
 
@@ -25,11 +26,11 @@ def test_health_endpoint():
     assert data["status"] == "healthy"
     assert data["paper_trading_mode"] is True
     assert data["live_trading_enabled"] is False
-    assert data["initial_capital_inr"] == 500.00
+    assert data["initial_capital_inr"] == settings.INITIAL_VIRTUAL_CAPITAL_INR
 
 
 def test_auth_and_portfolio_lifecycle():
-    """Verify complete registration, login, portfolio initialization with ₹500, deposit, and quotes."""
+    """Verify complete registration, login, portfolio initialization with initial capital, deposit, and quotes."""
     email = "integration_test@autopilot.ai"
     # Register
     reg_resp = client.post("/api/auth/register", json={
@@ -52,13 +53,13 @@ def test_auth_and_portfolio_lifecycle():
     port_resp = client.get("/api/portfolio", headers=headers)
     assert port_resp.status_code == 200
     pdata = port_resp.json()
-    assert pdata["initial_cash"] == 500.00
+    assert pdata["initial_cash"] == settings.INITIAL_VIRTUAL_CAPITAL_INR
     assert pdata["is_paper_trading"] is True
 
     # Test Simulated Deposit
     dep_resp = client.post("/api/portfolio/deposit", headers=headers, json={"amount": 500.0, "note": "Test Deposit"})
     assert dep_resp.status_code == 200
-    assert dep_resp.json()["cash_balance"] == 1000.00
+    assert dep_resp.json()["cash_balance"] == settings.INITIAL_VIRTUAL_CAPITAL_INR + 500.00
 
     # Market Quotes
     quotes_resp = client.get("/api/market/quotes")

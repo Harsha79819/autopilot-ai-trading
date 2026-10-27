@@ -8,13 +8,14 @@ from backend.app.models.trade import Trade
 from backend.app.paper_engine.ledger import portfolio_ledger
 from backend.app.paper_engine.execution_simulator import SimulationExecutionResult
 from backend.app.schemas.portfolio import FeeBreakdown
+from backend.app.config import settings
 
 
 def test_initial_portfolio_balance(test_user):
-    """Initial paper portfolio must start with exactly INR 500.00 virtual cash."""
+    """Initial paper portfolio must start with configured virtual cash."""
     portfolio = test_user.portfolio
-    assert portfolio.initial_cash == 500.00
-    assert portfolio.cash_balance == 500.00
+    assert portfolio.initial_cash == settings.INITIAL_VIRTUAL_CAPITAL_INR
+    assert portfolio.cash_balance == settings.INITIAL_VIRTUAL_CAPITAL_INR
     assert portfolio.realized_pnl == 0.00
     assert portfolio.total_fees_paid == 0.00
 
@@ -55,7 +56,7 @@ def test_buy_accounting_debit(db, test_user):
 
     assert trade is not None
     assert trade.side == "BUY"
-    assert round(portfolio.cash_balance, 2) == round(500.00 - 54.54, 2)
+    assert round(portfolio.cash_balance, 2) == round(settings.INITIAL_VIRTUAL_CAPITAL_INR - 54.54, 2)
     assert round(portfolio.total_fees_paid, 2) == 0.04
 
     # Verify position created

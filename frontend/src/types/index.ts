@@ -324,3 +324,28 @@ export interface TradingJournalSummary {
   entries: TradingJournalEntry[];
 }
 
+export interface DailyLedgerEntry {
+  day_number: number;
+  day_label: string;
+  date: string;
+  opening_capital: number;
+  buys_count: number;
+  sells_count: number;
+  total_trades: number;
+  stocks_traded: string;
+  gross_pnl: number;
+  charges_fees: number;
+  net_pnl: number;
+  closing_capital: number;
+  day_return_pct: number;
+  cumulative_return_pct: number;
+  discipline_status: 'TARGET_HIT' | 'CAPITAL_PRESERVED' | 'DISCIPLINED' | 'MARKET_STANDBY';
+  ai_decision_summary: string;
+}
+
+export interface DailyLedgerResponse {
+  portfolio_id: number;
+  total_days: number;
+  days: DailyLedgerEntry[];
+}
+
