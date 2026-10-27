@@ -12,7 +12,10 @@ import {
   TrendingUp,
   Landmark,
   Layers,
-  Mic
+  Mic,
+  Download,
+  Compass,
+  FileSpreadsheet
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useTrading } from '../../context/TradingContext';
@@ -29,11 +32,12 @@ interface AiChatModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenVoice?: () => void;
+  onOpenTour?: () => void;
 }
 
 type CopilotMode = 'all' | 'market' | 'wealth';
 
-export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpenVoice }) => {
+export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpenVoice, onOpenTour }) => {
   const { refreshPortfolio, refreshAutoPilot, setActiveTab } = useTrading();
   const [mode, setMode] = useState<CopilotMode>('all');
   const [isTelugu, setIsTelugu] = useState(true);
@@ -329,6 +333,47 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
                     }`}
                   >
                     {m.content}
+
+                    {/* Interactive Action Shortcuts under AI Messages */}
+                    {isAi && (m.content.includes('daily-ledger/download') || m.content.includes('ఎక్సెల్ డేటా')) && (
+                      <div className="pt-3 mt-3 border-t border-white/10 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => api.downloadDailyLedgerCsv()}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md transition-all cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>📥 Download Excel Sheet (.csv)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('reports');
+                            onClose();
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-white/10 transition-colors cursor-pointer"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>View Reports Table</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {isAi && (m.content.includes('గైడెడ్ టూర్') || m.content.includes('Platform Tour') || m.content.includes('ఫీచర్లు')) && onOpenTour && (
+                      <div className="pt-2 mt-2 border-t border-white/10 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            onOpenTour();
+                          }}
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-amber-200 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 shadow-md transition-all cursor-pointer"
+                        >
+                          <Compass className="w-3.5 h-3.5 text-amber-400" />
+                          <span>🎓 Start Interactive Tour (టూర్ ప్రారంభించు)</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <span className="text-[10px] text-muted-labels block px-1">
                     {m.timestamp}
@@ -357,6 +402,20 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
         <div className="px-4 py-2 border-t border-white/5 flex items-center gap-1.5 overflow-x-auto text-[11px] bg-slate-950/40 scrollbar-none">
           {mode === 'all' && (
             <>
+              <button
+                onClick={() => sendMessage("Day 1 నుండి నేటి వరకు రోజువారీ ఎక్సెల్ డేటా చూపించు (Show daily Excel ledger data)")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-semibold"
+              >
+                📥 ఎక్సెల్ డేటా షీట్
+              </button>
+              <button
+                onClick={() => sendMessage("ఈ వెబ్‌సైట్ ఫీచర్లు ఏంటి? ఎక్కడ ఉన్నాయో గైడ్ చేయి (Platform features tour)")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-semibold"
+              >
+                🎓 వెబ్‌సైట్ ఫీచర్స్ గైడ్
+              </button>
               <button
                 onClick={() => sendMessage("ఈరోజు ట్రేడింగ్ సమ్మరీ ఏంటి? బాట్ ఏం చేసింది? (Today's summary)")}
                 disabled={isLoading}

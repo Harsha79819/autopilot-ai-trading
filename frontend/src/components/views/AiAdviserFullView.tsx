@@ -10,7 +10,10 @@ import {
   Calculator,
   Newspaper,
   Landmark,
-  Layers
+  Layers,
+  Download,
+  Compass,
+  FileSpreadsheet
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useTrading } from '../../context/TradingContext';
@@ -25,11 +28,12 @@ type CopilotMode = 'all' | 'market' | 'wealth';
 
 const PROMPTS_BY_MODE = {
   all: [
+    { label: '📥 Day 1-to-Future Excel Ledger', prompt: 'Day 1 నుండి నేటి వరకు రోజువారీ ఎక్సెల్ డేటా చూపించు (Show daily Excel ledger data)' },
+    { label: '🎓 Website Features Tour', prompt: 'ఈ వెబ్‌సైట్ ఫీచర్లు ఏంటి? ఎక్కడ ఉన్నాయో గైడ్ చేయి (Platform features tour)' },
     { label: '📊 Analyze My Portfolio', prompt: 'Analyze my current portfolio and explain my risk exposure.' },
     { label: '💡 ₹5,000 SIP Wealth Plan', prompt: 'Calculate ₹5,000 monthly SIP returns for 10 years with inflation adjustment.' },
     { label: '📉 What If Market Crashes 10%?', prompt: 'Simulate a -10% market drop on my holdings and show projected drawdown.' },
     { label: '🏢 Compare INFY vs TCS', prompt: 'Compare fundamentals of INFY and TCS including debt and return on equity.' },
-    { label: '🇮🇳 తెలుగులో ఈరోజు సమ్మరీ', prompt: 'ఈరోజు మార్కెట్ సమ్మరీ మరియు నా పోర్ట్‌ఫోలియో అప్‌డేట్స్ తెలుగులో చెప్పు.' },
     { label: '⚠️ System Error Diagnostics', prompt: 'సిస్టమ్‌లో ఏదైనా ఎర్రర్ లేదా ఇష్యూ ఉందా చెక్ చేయి (Check issues & errors)' }
   ],
   market: [
@@ -49,7 +53,7 @@ const PROMPTS_BY_MODE = {
 };
 
 export const AiAdviserFullView: React.FC = () => {
-  const { portfolio } = useTrading();
+  const { portfolio, setActiveTab } = useTrading();
   const [mode, setMode] = useState<CopilotMode>('all');
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -218,6 +222,29 @@ export const AiAdviserFullView: React.FC = () => {
                 }`}
               >
                 <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
+
+                {/* Interactive Action Shortcuts under AI Messages */}
+                {!isUser && (msg.content.includes('daily-ledger/download') || msg.content.includes('ఎక్సెల్ డేటా')) && (
+                  <div className="pt-3 mt-3 border-t border-white/10 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => api.downloadDailyLedgerCsv()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md transition-all cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>📥 Download Excel Sheet (.csv)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('reports')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-white/10 transition-colors cursor-pointer"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Open Reports View</span>
+                    </button>
+                  </div>
+                )}
+
                 <div className={`mt-2 text-[10px] text-right ${isUser ? 'text-blue-200' : 'text-slate-500'}`}>
                   {msg.timestamp}
                 </div>
