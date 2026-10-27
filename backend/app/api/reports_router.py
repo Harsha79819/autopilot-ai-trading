@@ -74,3 +74,55 @@ def export_trades_csv(
         csv_lines.append(line)
 
     return "\n".join(csv_lines)
+
+
+@router.get("/daily-ledger")
+def get_daily_ledger(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the complete day-to-day trading and portfolio performance ledger
+    from Day 1 to present and dynamically for all future days.
+    """
+    from backend.app.services.daily_ledger_service import DailyLedgerService
+    portfolio = current_user.portfolio
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+
+    ledger_entries = DailyLedgerService.get_chronological_ledger(db, portfolio)
+    return {
+        "portfolio_id": portfolio.id,
+        "total_days": len(ledger_entries),
+        "days": ledger_entries
+    }
+
+
+@router.get("/daily-ledger/download")
+def download_daily_ledger_csv(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generates and downloads the complete Day 1 to Future daily updates spreadsheet (.csv)
+    with UTF-8 BOM encoding for direct Microsoft Excel compatibility.
+    """
+    from fastapi.responses import Response
+    from backend.app.services.daily_ledger_service import DailyLedgerService
+
+    portfolio = current_user.portfolio
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+
+    ledger_entries = DailyLedgerService.get_chronological_ledger(db, portfolio)
+    csv_str = DailyLedgerService.generate_csv_string(ledger_entries)
+
+    return Response(
+        content=csv_str.encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="AutoPilot_Trading_Daily_Ledger.csv"',
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
+

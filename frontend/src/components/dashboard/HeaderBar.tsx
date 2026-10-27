@@ -1,13 +1,14 @@
 import React from 'react';
-import { Activity, Sparkles } from 'lucide-react';
+import { Activity, Sparkles, Mic } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
 
 interface HeaderBarProps {
   onOpenDiagnostics?: () => void;
   onOpenChat?: () => void;
+  onOpenVoice?: () => void;
 }
 
-export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenDiagnostics, onOpenChat }) => {
+export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenDiagnostics, onOpenChat, onOpenVoice }) => {
   const { aiStatus, toggleAutoPilot } = useTrading();
   const isEnabled = aiStatus?.autopilot_enabled !== false;
   const status = aiStatus?.status || 'RUNNING';
@@ -28,6 +29,19 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenDiagnostics, onOpenC
 
         {/* Badges and Automation status */}
         <div className="flex items-center gap-2.5">
+          {/* Voice Mode Button */}
+          {onOpenVoice && (
+            <button
+              type="button"
+              onClick={onOpenVoice}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-pink-500/40 text-pink-200 bg-gradient-to-r from-pink-950/50 via-purple-950/50 to-indigo-950/50 hover:from-pink-900/60 hover:to-indigo-900/60 transition-all cursor-pointer shadow-lg shadow-pink-950/30 active:scale-95"
+              title="Voice Mode (Say 'Hey Darling')"
+            >
+              <Mic className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+              <span>Voice (Hey Darling)</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onOpenChat}
@@ -118,6 +132,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenDiagnostics, onOpenC
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {onOpenVoice && (
+            <button
+              type="button"
+              onClick={onOpenVoice}
+              className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-pink-500/40 text-pink-200 bg-pink-950/40 whitespace-nowrap cursor-pointer active:scale-95"
+              title="Voice Mode (Hey Darling)"
+            >
+              <Mic className="w-3 h-3 text-pink-400 animate-pulse" />
+              Voice
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenChat}

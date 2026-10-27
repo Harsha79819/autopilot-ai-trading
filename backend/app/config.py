@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     BASE_CURRENCY: str = "INR"
 
     # Strict Paper Trading Safety Assertion
-    INITIAL_VIRTUAL_CAPITAL_INR: float = 500.00
+    INITIAL_VIRTUAL_CAPITAL_INR: float = 5000.00
     STRICT_PAPER_TRADING_ONLY: bool = True
 
     # Market Data
@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     MARKET_DATA_IS_DEMO: bool = False
     MARKET_HOURS_GATE_ENABLED: bool = True  # True enforces 09:15-15:30 IST Mon-Fri session gate
     STALE_DATA_THRESHOLD_SECONDS: int = 30
+
+    # AI Model Credentials (Optional Gemini 1.5/2.0 API key for conversational copilot)
+    GEMINI_API_KEY: str = ""
 
     # Broker API Credentials (Optional, read-only for market data, strictly disabled for orders)
     UPSTOX_API_KEY: str = ""
@@ -61,9 +64,9 @@ class Settings(BaseSettings):
     MAX_RISK_PER_TRADE_PCT: float = 1.5    # Strict 1% - 2% rule: max 1.5% portfolio risk per trade
     RISK_REWARD_RATIO: float = 2.0         # 1:2 Golden Rule: Take Profit = Stop Loss * 2.0
     MIN_STOCK_PRICE_INR: float = 100.00    # Rejects penny & speculative stocks under ₹100
-    MAX_DAILY_LOSS_PCT: float = 2.0        # 2.0% daily loss limit (₹10.00 on ₹500)
-    MAX_DAILY_LOSS_INR: float = 10.00      # Configurable ₹10.00 risk trigger
-    MAX_PORTFOLIO_DRAWDOWN_PCT: float = 15.0 # 15% drawdown cutoff (₹75 on ₹500)
+    MAX_DAILY_LOSS_PCT: float = 2.0        # 2.0% daily loss limit (₹100.00 on ₹5,000)
+    MAX_DAILY_LOSS_INR: float = 100.00     # Configurable ₹100.00 risk trigger (2% of ₹5,000)
+    MAX_PORTFOLIO_DRAWDOWN_PCT: float = 15.0 # 15% drawdown cutoff (₹750 on ₹5,000)
     STOP_LOSS_PCT: float = 1.5             # -1.5% strict stop loss execution gate
     TAKE_PROFIT_PCT: float = 3.0           # +3.0% target profit gate (1:2 Risk-Reward: 1.5% * 2.0)
     EMERGENCY_STOP_ACTIVE: bool = False

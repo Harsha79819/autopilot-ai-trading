@@ -26,6 +26,7 @@ import { CostBreakdownModal } from './components/dashboard/CostBreakdownModal';
 import { DiagnosticsModal } from './components/modals/DiagnosticsModal';
 import { AiChatModal } from './components/chat/AiChatModal';
 import { FloatingChatButton } from './components/chat/FloatingChatButton';
+import { VoiceConversationModal } from './components/voice/VoiceConversationModal';
 import { TradingJournalModal } from './components/journal/TradingJournalModal';
 import { AiAdviserFullView } from './components/views/AiAdviserFullView';
 import { MarketsView } from './components/views/MarketsView';
@@ -51,6 +52,7 @@ const MainContent: React.FC = () => {
   const [showPortfolioModal, setShowPortfolioModal] = useState(false);
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false);
   const [showAiChatModal, setShowAiChatModal] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showJournalModal, setShowJournalModal] = useState(false);
 
   useEffect(() => {
@@ -68,19 +70,21 @@ const MainContent: React.FC = () => {
         <Sliders className="w-5 h-5 text-accent-cyan" />
       </button>
 
-      {/* Floating AI Chat Assistant Trigger Button */}
+      {/* Floating AI Chat Assistant & Voice Trigger Button */}
       <FloatingChatButton
-        isOpen={showAiChatModal}
+        isOpen={showAiChatModal || showVoiceModal}
         onClick={() => setShowAiChatModal(true)}
+        onOpenVoice={() => setShowVoiceModal(true)}
       />
 
       {/* Tab: Dashboard (matching reference screenshots media_1792471364217.png and media_1792471364220.png) */}
       {activeTab === 'dashboard' && (
         <div className="space-y-5">
-          {/* Top Bar with Badges, AI Bot Trigger and Automation Status */}
+          {/* Top Bar with Badges, AI Bot Trigger, Voice Copilot, and Automation Status */}
           <HeaderBar
             onOpenDiagnostics={() => setShowDiagnosticsModal(true)}
             onOpenChat={() => setShowAiChatModal(true)}
+            onOpenVoice={() => setShowVoiceModal(true)}
           />
 
           {/* Hero Portfolio Card */}
@@ -214,7 +218,16 @@ const MainContent: React.FC = () => {
         <CostBreakdownModal portfolio={portfolio} onClose={() => setShowPortfolioModal(false)} />
       )}
       <DiagnosticsModal isOpen={showDiagnosticsModal} onClose={() => setShowDiagnosticsModal(false)} />
-      <AiChatModal isOpen={showAiChatModal} onClose={() => setShowAiChatModal(false)} />
+      <AiChatModal
+        isOpen={showAiChatModal}
+        onClose={() => setShowAiChatModal(false)}
+        onOpenVoice={() => setShowVoiceModal(true)}
+      />
+      <VoiceConversationModal
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        onOpenTextChat={() => setShowAiChatModal(true)}
+      />
       <TradingJournalModal isOpen={showJournalModal} onClose={() => setShowJournalModal(false)} />
     </main>
   );

@@ -14,7 +14,9 @@ import {
   BacktestResponse,
   AIStatus,
   TradingJournalEntry,
-  TradingJournalSummary
+  TradingJournalSummary,
+  DailyLedgerEntry,
+  DailyLedgerResponse
 } from '../types';
 
 const BASE_URL = '/api';
@@ -245,10 +247,11 @@ export const api = {
     is_market_open: boolean;
     timestamp: string;
   }> {
+    const geminiKey = localStorage.getItem('gemini_api_key') || undefined;
     const res = await fetch(`${BASE_URL}/ai/chat`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ messages, include_context: true }),
+      body: JSON.stringify({ messages, include_context: true, gemini_api_key: geminiKey }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -456,6 +459,26 @@ export const api = {
     const res = await fetch(`${BASE_URL}/reports/summary`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to fetch report summary');
     return res.json();
+  },
+
+  async getDailyLedger(): Promise<DailyLedgerResponse> {
+    const res = await fetch(`${BASE_URL}/reports/daily-ledger`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch daily ledger');
+    return res.json();
+  },
+
+  async downloadDailyLedgerCsv(): Promise<void> {
+    const res = await fetch(`${BASE_URL}/reports/daily-ledger/download`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to download daily ledger CSV');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'AutoPilot_Trading_Daily_Ledger.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   },
 };
 
