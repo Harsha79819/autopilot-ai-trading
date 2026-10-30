@@ -18,13 +18,18 @@ import {
   FileText,
   Receipt,
   Settings,
-  ChevronDown
+  ChevronDown,
+  Compass
 } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
 import { formatINR } from '../../utils/currency';
 import { AccountModal } from './AccountModal';
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+  onOpenTour?: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
   const { portfolio, activeTab, setActiveTab, resetCapital, toggleKillSwitch, riskStatus } = useTrading();
   const [showAccount, setShowAccount] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -137,6 +142,18 @@ export const Navbar: React.FC = () => {
 
           {/* Right Controls: Account, Capital & Emergency Control */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Guided Tour Launcher */}
+            {onOpenTour && (
+              <button
+                onClick={onOpenTour}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer shadow-sm"
+                title="Open Interactive Feature Walkthrough Tour (గైడెడ్ టూర్)"
+              >
+                <Compass className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Guide / ఫీచర్స్</span>
+              </button>
+            )}
+
             <button
               onClick={() => setShowAccount(true)}
               title="Account & Balance"

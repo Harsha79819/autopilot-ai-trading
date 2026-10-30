@@ -1,14 +1,20 @@
 import React from 'react';
-import { Activity, Sparkles, Mic } from 'lucide-react';
+import { Activity, Sparkles, Mic, Compass } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
 
 interface HeaderBarProps {
   onOpenDiagnostics?: () => void;
   onOpenChat?: () => void;
   onOpenVoice?: () => void;
+  onOpenTour?: () => void;
 }
 
-export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenDiagnostics, onOpenChat, onOpenVoice }) => {
+export const HeaderBar: React.FC<HeaderBarProps> = ({
+  onOpenDiagnostics,
+  onOpenChat,
+  onOpenVoice,
+  onOpenTour
+}) => {
   const { aiStatus, toggleAutoPilot } = useTrading();
   const isEnabled = aiStatus?.autopilot_enabled !== false;
   const status = aiStatus?.status || 'RUNNING';
@@ -29,6 +35,19 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenDiagnostics, onOpenC
 
         {/* Badges and Automation status */}
         <div className="flex items-center gap-2.5">
+          {/* Guided Tour Button */}
+          {onOpenTour && (
+            <button
+              type="button"
+              onClick={onOpenTour}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/40 text-amber-200 bg-gradient-to-r from-amber-950/50 via-yellow-950/40 to-slate-900 hover:from-amber-900/60 transition-all cursor-pointer shadow-lg shadow-amber-950/30 active:scale-95"
+              title="Take Interactive Feature Walkthrough Tour (గైడెడ్ టూర్)"
+            >
+              <Compass className="w-3.5 h-3.5 text-amber-400" />
+              <span>Guide (ఫీచర్స్)</span>
+            </button>
+          )}
+
           {/* Voice Mode Button */}
           {onOpenVoice && (
             <button
@@ -132,6 +151,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({ onOpenDiagnostics, onOpenC
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {onOpenTour && (
+            <button
+              type="button"
+              onClick={onOpenTour}
+              className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-amber-500/40 text-amber-200 bg-amber-950/40 whitespace-nowrap cursor-pointer active:scale-95"
+              title="Interactive Platform Tour (గైడెడ్ టూర్)"
+            >
+              <Compass className="w-3 h-3 text-amber-400" />
+              Guide
+            </button>
+          )}
           {onOpenVoice && (
             <button
               type="button"

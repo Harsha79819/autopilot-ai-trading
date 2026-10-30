@@ -14,7 +14,8 @@ import {
   Bell,
   FileText,
   Receipt,
-  Settings
+  Settings,
+  Compass
 } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
 
@@ -57,6 +58,19 @@ export const MobileTabs: React.FC = () => {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Launch Guided Tour Button */}
+            <button
+              onClick={() => {
+                setShowDrawer(false);
+                window.dispatchEvent(new CustomEvent('open-product-tour'));
+              }}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-bold text-amber-200 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 transition-all cursor-pointer shadow-md"
+            >
+              <Compass className="w-4 h-4 text-amber-400" />
+              <span>🎓 Take Interactive Tour (గైడెడ్ టూర్)</span>
+            </button>
+
             <div className="grid grid-cols-2 gap-2 pt-1">
               {ALL_VIEWS.map(({ id, label, icon: Icon }) => (
                 <button

@@ -39,6 +39,7 @@ import { AlertsManagerView } from './components/views/AlertsManagerView';
 import { DocumentsView } from './components/views/DocumentsView';
 import { ReportsView } from './components/views/ReportsView';
 import { SettingsView } from './components/views/SettingsView';
+import { ProductTourModal } from './components/onboarding/ProductTourModal';
 import { StrategyInfo } from './types';
 import { api } from './services/api';
 import { Sliders } from 'lucide-react';
@@ -54,9 +55,22 @@ const MainContent: React.FC = () => {
   const [showAiChatModal, setShowAiChatModal] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showJournalModal, setShowJournalModal] = useState(false);
+  const [showTourModal, setShowTourModal] = useState(false);
 
   useEffect(() => {
     api.getStrategies().then(setStrategies).catch(console.error);
+
+    // Event listener for opening the guided tour from anywhere in the app
+    const handleOpenTour = () => setShowTourModal(true);
+    window.addEventListener('open-product-tour', handleOpenTour);
+
+    // Auto-launch guided tour on first visit
+    const hasCompletedTour = localStorage.getItem('autopilot_tour_completed');
+    if (!hasCompletedTour) {
+      setShowTourModal(true);
+    }
+
+    return () => window.removeEventListener('open-product-tour', handleOpenTour);
   }, []);
 
   return (
@@ -85,6 +99,7 @@ const MainContent: React.FC = () => {
             onOpenDiagnostics={() => setShowDiagnosticsModal(true)}
             onOpenChat={() => setShowAiChatModal(true)}
             onOpenVoice={() => setShowVoiceModal(true)}
+            onOpenTour={() => setShowTourModal(true)}
           />
 
           {/* Hero Portfolio Card */}
@@ -222,6 +237,7 @@ const MainContent: React.FC = () => {
         isOpen={showAiChatModal}
         onClose={() => setShowAiChatModal(false)}
         onOpenVoice={() => setShowVoiceModal(true)}
+        onOpenTour={() => setShowTourModal(true)}
       />
       <VoiceConversationModal
         isOpen={showVoiceModal}
@@ -229,6 +245,12 @@ const MainContent: React.FC = () => {
         onOpenTextChat={() => setShowAiChatModal(true)}
       />
       <TradingJournalModal isOpen={showJournalModal} onClose={() => setShowJournalModal(false)} />
+      <ProductTourModal
+        isOpen={showTourModal}
+        onClose={() => setShowTourModal(false)}
+        onOpenVoice={() => setShowVoiceModal(true)}
+        onOpenChat={() => setShowAiChatModal(true)}
+      />
     </main>
   );
 };
@@ -257,7 +279,7 @@ export const App: React.FC = () => {
             <div className="orb-cyan" />
           </div>
 
-          <Navbar />
+          <Navbar onOpenTour={() => window.dispatchEvent(new CustomEvent('open-product-tour'))} />
           <MainContent />
           <MobileTabs />
         </div>
