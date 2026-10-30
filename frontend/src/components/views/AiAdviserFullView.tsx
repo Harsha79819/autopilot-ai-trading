@@ -28,6 +28,7 @@ type CopilotMode = 'all' | 'market' | 'wealth';
 
 const PROMPTS_BY_MODE = {
   all: [
+    { label: '📈 +1% Daily Compounding Formula', prompt: 'డైలీ కాంపౌండింగ్ ఫార్ములా (+1% Daily Compound) ప్రోగ్రెస్ మరియు టార్గెట్స్ చూపించు' },
     { label: '📥 Day 1-to-Future Excel Ledger', prompt: 'Day 1 నుండి నేటి వరకు రోజువారీ ఎక్సెల్ డేటా చూపించు (Show daily Excel ledger data)' },
     { label: '🎓 Website Features Tour', prompt: 'ఈ వెబ్‌సైట్ ఫీచర్లు ఏంటి? ఎక్కడ ఉన్నాయో గైడ్ చేయి (Platform features tour)' },
     { label: '📊 Analyze My Portfolio', prompt: 'Analyze my current portfolio and explain my risk exposure.' },

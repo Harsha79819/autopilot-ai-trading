@@ -480,5 +480,12 @@ export const api = {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   },
+
+  async getCompoundingTracker(): Promise<any> {
+    const res = await fetch(`${BASE_URL}/reports/compounding-tracker`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch compounding tracker');
+    return res.json();
+  },
 };
+
 

@@ -22,13 +22,14 @@ import { DailyLedgerEntry } from '../../types';
 export const ReportsView: React.FC = () => {
   const [summary, setSummary] = useState<any>(null);
   const [ledgerEntries, setLedgerEntries] = useState<DailyLedgerEntry[]>([]);
+  const [compounding, setCompounding] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const fetchReportsData = async () => {
     setLoading(true);
     try {
-      const [sumRes, ledgerRes] = await Promise.all([
+      const [sumRes, ledgerRes, compRes] = await Promise.all([
         api.getReportSummary().catch((e) => {
           console.error(e);
           return null;
@@ -37,15 +38,21 @@ export const ReportsView: React.FC = () => {
           console.error(e);
           return null;
         }),
+        api.getCompoundingTracker().catch((e) => {
+          console.error(e);
+          return null;
+        }),
       ]);
       if (sumRes) setSummary(sumRes);
       if (ledgerRes && ledgerRes.days) setLedgerEntries(ledgerRes.days);
+      if (compRes) setCompounding(compRes);
     } catch (err) {
       console.error('Failed to load reports data:', err);
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchReportsData();
@@ -247,6 +254,68 @@ export const ReportsView: React.FC = () => {
         </div>
       )}
 
+      {/* DAILY COMPOUNDING GROWTH TRACKER CARD (+1% DAILY COMPOUND FORMULA) */}
+      {compounding && (
+        <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-emerald-500/30 shadow-2xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-white">
+                    📈 డైలీ కాంపౌండింగ్ ఫార్ములా (+1% Daily Compound Growth Tracker)
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Active Formula
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5 font-mono">
+                  సూత్రం: <strong>C<sub>t</sub> = C<sub>0</sub> × (1 + 0.01)<sup>t</sup></strong> &nbsp;|&nbsp;
+                  <span className="text-emerald-400">₹100 పెట్టుబడి → రోజుకు కనీసం ₹1 లాభం (101) → ₹101 తో కాంపౌండింగ్ వృద్ధి</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                🔥 {compounding.compounding_streak_days} Days Profit Streak
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/5 space-y-1">
+              <span className="text-slate-400 text-[11px]">బేస్ మూలధనం (Base Capital)</span>
+              <div className="text-base font-bold text-white font-mono">{formatINR(compounding.base_capital_inr)}</div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/5 space-y-1">
+              <span className="text-slate-400 text-[11px]">మొత్తం పోర్ట్‌ఫోలియో (Net Equity)</span>
+              <div className="text-base font-bold text-emerald-400 font-mono">{formatINR(compounding.total_portfolio_equity_inr)}</div>
+              <div className="text-[10px] text-slate-400 font-sans">క్యాష్ + ఓపెన్ షేర్ల విలువ</div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/5 space-y-1">
+              <span className="text-slate-400 text-[11px]">కాంపౌండింగ్ టార్గెట్ (Target)</span>
+              <div className="text-base font-bold text-cyan-300 font-mono">{formatINR(compounding.target_equity_inr)}</div>
+              <div className="text-[10px] text-emerald-400 font-bold font-sans">
+                {compounding.target_achieved ? '✅ Target Reached!' : 'In Progress'}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/5 space-y-1">
+              <span className="text-slate-400 text-[11px]">అప్‌గ్రేడ్ తర్వాత నికర లాభం</span>
+              <div className="text-base font-bold text-emerald-300 font-mono">
+                +{formatINR(compounding.total_profit_since_upgrade_inr)} (+{compounding.compounding_yield_pct}%)
+              </div>
+              <div className="text-[10px] text-slate-400 font-sans">రేపటి టార్గెట్: +{formatINR(compounding.next_day_target_profit_inr)}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DAY-TO-DAY EXCEL LEDGER TABLE */}
       <div className="p-6 rounded-2xl bg-slate-900/80 border border-white/10 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
@@ -284,7 +353,7 @@ export const ReportsView: React.FC = () => {
               <strong className="text-indigo-300">స్పష్టమైన రోజువారీ వివరణ:</strong> ఈ షీట్ ప్రతిరోజూ మార్కెట్ ప్రారంభం నుండి ముగిసే వరకు ఓపెనింగ్ క్యాపిటల్, జరిగిన బై/సెల్ ట్రేడ్స్, ఫీజులు, నెట్ P&L మరియు AI ట్రేడింగ్ నిర్ణయాన్ని ట్రాక్ చేస్తుంది. ఎవరైనా చదివినా సులభంగా అర్థమయ్యేలా రూపొందించబడింది.
             </p>
             <p className="text-[11px] text-slate-400">
-              గమనిక: 2026-10-27 న యూజర్ సూచన మేరకు నాణ్యమైన Nifty 50 లార్జ్ క్యాప్ షేర్లు (Infosys, Reliance, ITC, BEL) కొనుగోలు సులభతరం చేయడానికి వర్చువల్ క్యాపిటల్ ₹5,000 కు పెంచబడింది.
+              గమనిక: 2026-10-27 న యూజర్ సూచన మేరకు నాణ్యమైన Nifty 50 లార్జ్ క్యాప్ షేర్లు (Infosys, Reliance, ITC, BEL, Coal India, PowerGrid) కొనుగోలు సులభతరం చేయడానికి వర్చువల్ క్యాపిటల్ ₹5,000 కు పెంచబడింది.
             </p>
           </div>
         </div>
@@ -302,6 +371,7 @@ export const ReportsView: React.FC = () => {
                 <th className="py-3 px-3 font-semibold">Charges (₹)</th>
                 <th className="py-3 px-3 font-semibold">Net P&L (₹)</th>
                 <th className="py-3 px-3 font-semibold">Closing Cap (₹)</th>
+                <th className="py-3 px-3 font-semibold">+1% Target (₹)</th>
                 <th className="py-3 px-3 font-semibold">Day Ret %</th>
                 <th className="py-3 px-3 font-semibold">Discipline Status</th>
                 <th className="py-3 px-4 font-semibold min-w-[280px]">AI Strategy & Decision Summary</th>
@@ -311,6 +381,7 @@ export const ReportsView: React.FC = () => {
               {ledgerEntries.map((entry) => {
                 const isPositive = entry.net_pnl > 0;
                 const isNegative = entry.net_pnl < 0;
+
 
                 return (
                   <tr
@@ -355,10 +426,25 @@ export const ReportsView: React.FC = () => {
                       ₹{entry.closing_capital.toFixed(2)}
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
+                      {entry.compounding_target ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-300">₹{entry.compounding_target.toFixed(2)}</span>
+                          {entry.compounding_achieved && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" title="Daily +1% Compounding Target Achieved">
+                              ✓ Hit
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-600">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap">
                       <span className={entry.day_return_pct > 0 ? 'text-emerald-400' : entry.day_return_pct < 0 ? 'text-rose-400' : 'text-slate-400'}>
                         {entry.day_return_pct > 0 ? '+' : ''}{entry.day_return_pct.toFixed(2)}%
                       </span>
                     </td>
+
                     <td className="py-3 px-3 whitespace-nowrap font-sans">
                       {getStatusBadge(entry.discipline_status)}
                     </td>

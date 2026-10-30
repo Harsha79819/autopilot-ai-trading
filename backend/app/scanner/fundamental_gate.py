@@ -127,6 +127,153 @@ VERIFIED_FUNDAMENTALS: Dict[str, FundamentalMetrics] = {
         notes="Private bank capital structure"
     ),
 
+    # Extended High-Quality Nifty 50 Liquid Equities
+    "COALINDIA": FundamentalMetrics(
+        symbol="COALINDIA",
+        debt_to_equity=0.05,
+        roe_pct=52.0,
+        profit_trajectory_positive=True,
+        industry="Mining / Energy",
+        notes="Near zero debt, high cash flow, industry-leading 52% ROE"
+    ),
+    "POWERGRID": FundamentalMetrics(
+        symbol="POWERGRID",
+        debt_to_equity=0.92,
+        roe_pct=19.5,
+        profit_trajectory_positive=True,
+        industry="Power Transmission",
+        notes="Regulated return model, high dividend yield, healthy interest coverage"
+    ),
+    "ONGC": FundamentalMetrics(
+        symbol="ONGC",
+        debt_to_equity=0.42,
+        roe_pct=14.5,
+        profit_trajectory_positive=True,
+        industry="Oil & Gas Exploration",
+        notes="Strong upstream cash flows and low net gearing"
+    ),
+    "BPCL": FundamentalMetrics(
+        symbol="BPCL",
+        debt_to_equity=0.78,
+        roe_pct=36.0,
+        profit_trajectory_positive=True,
+        industry="Refining & Marketing",
+        notes="High refining margins and robust return on capital"
+    ),
+    "IOC": FundamentalMetrics(
+        symbol="IOC",
+        debt_to_equity=0.82,
+        roe_pct=27.0,
+        profit_trajectory_positive=True,
+        industry="Oil Marketing",
+        notes="Affordable liquid large-cap with strong domestic distribution network"
+    ),
+    "GAIL": FundamentalMetrics(
+        symbol="GAIL",
+        debt_to_equity=0.28,
+        roe_pct=14.0,
+        profit_trajectory_positive=True,
+        industry="Gas Utilities",
+        notes="Low leverage natural gas transmission monopoly"
+    ),
+    "HCLTECH": FundamentalMetrics(
+        symbol="HCLTECH",
+        debt_to_equity=0.08,
+        roe_pct=23.5,
+        profit_trajectory_positive=True,
+        industry="IT Services",
+        notes="Zero net debt, high recurring software and digital revenue"
+    ),
+    "TECHM": FundamentalMetrics(
+        symbol="TECHM",
+        debt_to_equity=0.15,
+        roe_pct=14.8,
+        profit_trajectory_positive=True,
+        industry="IT Services",
+        notes="Solid balance sheet and 5G telecom digital engineering focus"
+    ),
+    "HINDUNILVR": FundamentalMetrics(
+        symbol="HINDUNILVR",
+        debt_to_equity=0.04,
+        roe_pct=20.2,
+        profit_trajectory_positive=True,
+        industry="FMCG",
+        notes="Virtually debt-free FMCG leader with negative working capital cycle"
+    ),
+    "NESTLEIND": FundamentalMetrics(
+        symbol="NESTLEIND",
+        debt_to_equity=0.12,
+        roe_pct=105.0,
+        profit_trajectory_positive=True,
+        industry="FMCG / Food",
+        notes="Unmatched return on capital and defensive pricing power"
+    ),
+    "BRITANNIA": FundamentalMetrics(
+        symbol="BRITANNIA",
+        debt_to_equity=0.85,
+        roe_pct=54.0,
+        profit_trajectory_positive=True,
+        industry="FMCG / Bakery",
+        notes="Market leader in biscuits and dairy with excellent brand equity"
+    ),
+    "CIPLA": FundamentalMetrics(
+        symbol="CIPLA",
+        debt_to_equity=0.03,
+        roe_pct=16.5,
+        profit_trajectory_positive=True,
+        industry="Pharmaceuticals",
+        notes="Negligible debt, strong respiratory formulation franchise in US/India"
+    ),
+    "DRREDDY": FundamentalMetrics(
+        symbol="DRREDDY",
+        debt_to_equity=0.06,
+        roe_pct=21.0,
+        profit_trajectory_positive=True,
+        industry="Pharmaceuticals",
+        notes="Cash-rich global generics player with steady R&D pipeline"
+    ),
+    "SUNPHARMA": FundamentalMetrics(
+        symbol="SUNPHARMA",
+        debt_to_equity=0.07,
+        roe_pct=16.8,
+        profit_trajectory_positive=True,
+        industry="Pharmaceuticals",
+        notes="India's largest pharma company with expanding global specialty portfolio"
+    ),
+    "HAL": FundamentalMetrics(
+        symbol="HAL",
+        debt_to_equity=0.00,
+        roe_pct=26.0,
+        profit_trajectory_positive=True,
+        industry="Aerospace & Defence",
+        notes="Zero debt, sovereign aerospace monopoly with multi-year order backlog"
+    ),
+    "BAJAJ-AUTO": FundamentalMetrics(
+        symbol="BAJAJ-AUTO",
+        debt_to_equity=0.01,
+        roe_pct=24.5,
+        profit_trajectory_positive=True,
+        industry="Automobiles",
+        notes="Net-cash 2-wheeler and 3-wheeler export champion"
+    ),
+    "MARUTI": FundamentalMetrics(
+        symbol="MARUTI",
+        debt_to_equity=0.02,
+        roe_pct=17.5,
+        profit_trajectory_positive=True,
+        industry="Automobiles",
+        notes="Dominant passenger car market share and fortress balance sheet"
+    ),
+    "BHARTIARTL": FundamentalMetrics(
+        symbol="BHARTIARTL",
+        debt_to_equity=0.92,
+        roe_pct=15.2,
+        profit_trajectory_positive=True,
+        industry="Telecommunications",
+        notes="Leading ARPU, expanding 5G subscriber base and strong operating leverage"
+    ),
+
+
     # Speculative / Penny Stocks (Included to test rejection gates)
     "SUZLON": FundamentalMetrics(
         symbol="SUZLON",

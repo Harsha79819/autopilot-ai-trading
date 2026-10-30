@@ -339,6 +339,8 @@ export interface DailyLedgerEntry {
   closing_capital: number;
   day_return_pct: number;
   cumulative_return_pct: number;
+  compounding_target?: number;
+  compounding_achieved?: boolean;
   discipline_status: 'TARGET_HIT' | 'CAPITAL_PRESERVED' | 'DISCIPLINED' | 'MARKET_STANDBY';
   ai_decision_summary: string;
 }

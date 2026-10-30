@@ -403,12 +403,20 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
           {mode === 'all' && (
             <>
               <button
+                onClick={() => sendMessage("డైలీ కాంపౌండింగ్ ఫార్ములా (+1% Daily Compound) ప్రోగ్రెస్ మరియు టార్గెట్స్ చూపించు")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold"
+              >
+                📈 కాంపౌండింగ్ ఫార్ములా (+1%)
+              </button>
+              <button
                 onClick={() => sendMessage("Day 1 నుండి నేటి వరకు రోజువారీ ఎక్సెల్ డేటా చూపించు (Show daily Excel ledger data)")}
                 disabled={isLoading}
                 className="px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-semibold"
               >
                 📥 ఎక్సెల్ డేటా షీట్
               </button>
+
               <button
                 onClick={() => sendMessage("ఈ వెబ్‌సైట్ ఫీచర్లు ఏంటి? ఎక్కడ ఉన్నాయో గైడ్ చేయి (Platform features tour)")}
                 disabled={isLoading}

@@ -126,3 +126,21 @@ def download_daily_ledger_csv(
         }
     )
 
+
+@router.get("/compounding-tracker")
+def get_compounding_tracker(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns live progress against the user's +1% Daily Compounding Formula (C_t = C_0 * 1.01^t),
+    including current streak, daily profit target, and 30-day projection.
+    """
+    from backend.app.services.compounding_service import CompoundingService
+    portfolio = current_user.portfolio
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+
+    return CompoundingService.get_compounding_status(db, portfolio)
+
+

@@ -185,13 +185,218 @@ NSE_STOCKS: Dict[str, Dict[str, Any]] = {
         "tick_size": 0.05,
         "lot_size": 1,
         "volatility": 0.020
+    },
+    # Extended High-Quality Nifty 50 Liquid Equities
+    "COALINDIA": {
+        "name": "Coal India Ltd",
+        "symbol": "COALINDIA",
+        "yahoo_ticker": "COALINDIA.NS",
+        "smartapi_token": "20374",
+        "base_price": 485.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.013
+    },
+    "POWERGRID": {
+        "name": "Power Grid Corporation of India Ltd",
+        "symbol": "POWERGRID",
+        "yahoo_ticker": "POWERGRID.NS",
+        "smartapi_token": "14977",
+        "base_price": 320.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.011
+    },
+    "ONGC": {
+        "name": "Oil and Natural Gas Corporation Ltd",
+        "symbol": "ONGC",
+        "yahoo_ticker": "ONGC.NS",
+        "smartapi_token": "2475",
+        "base_price": 275.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.014
+    },
+    "BPCL": {
+        "name": "Bharat Petroleum Corporation Ltd",
+        "symbol": "BPCL",
+        "yahoo_ticker": "BPCL.NS",
+        "smartapi_token": "526",
+        "base_price": 310.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.015
+    },
+    "IOC": {
+        "name": "Indian Oil Corporation Ltd",
+        "symbol": "IOC",
+        "yahoo_ticker": "IOC.NS",
+        "smartapi_token": "1624",
+        "base_price": 145.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.012
+    },
+    "GAIL": {
+        "name": "GAIL India Ltd",
+        "symbol": "GAIL",
+        "yahoo_ticker": "GAIL.NS",
+        "smartapi_token": "4717",
+        "base_price": 205.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.013
+    },
+    "HCLTECH": {
+        "name": "HCL Technologies Ltd",
+        "symbol": "HCLTECH",
+        "yahoo_ticker": "HCLTECH.NS",
+        "smartapi_token": "7229",
+        "base_price": 1780.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.012
+    },
+    "TECHM": {
+        "name": "Tech Mahindra Ltd",
+        "symbol": "TECHM",
+        "yahoo_ticker": "TECHM.NS",
+        "smartapi_token": "13538",
+        "base_price": 1620.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.014
+    },
+    "HINDUNILVR": {
+        "name": "Hindustan Unilever Ltd",
+        "symbol": "HINDUNILVR",
+        "yahoo_ticker": "HINDUNILVR.NS",
+        "smartapi_token": "1394",
+        "base_price": 2500.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.009
+    },
+    "NESTLEIND": {
+        "name": "Nestle India Ltd",
+        "symbol": "NESTLEIND",
+        "yahoo_ticker": "NESTLEIND.NS",
+        "smartapi_token": "17963",
+        "base_price": 2350.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.009
+    },
+    "BRITANNIA": {
+        "name": "Britannia Industries Ltd",
+        "symbol": "BRITANNIA",
+        "yahoo_ticker": "BRITANNIA.NS",
+        "smartapi_token": "547",
+        "base_price": 5100.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.011
+    },
+    "CIPLA": {
+        "name": "Cipla Ltd",
+        "symbol": "CIPLA",
+        "yahoo_ticker": "CIPLA.NS",
+        "smartapi_token": "694",
+        "base_price": 1540.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.011
+    },
+    "DRREDDY": {
+        "name": "Dr. Reddy's Laboratories Ltd",
+        "symbol": "DRREDDY",
+        "yahoo_ticker": "DRREDDY.NS",
+        "smartapi_token": "881",
+        "base_price": 6600.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.012
+    },
+    "SUNPHARMA": {
+        "name": "Sun Pharmaceutical Industries Ltd",
+        "symbol": "SUNPHARMA",
+        "yahoo_ticker": "SUNPHARMA.NS",
+        "smartapi_token": "3351",
+        "base_price": 1820.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.011
+    },
+    "HAL": {
+        "name": "Hindustan Aeronautics Ltd",
+        "symbol": "HAL",
+        "yahoo_ticker": "HAL.NS",
+        "smartapi_token": "2303",
+        "base_price": 4450.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.016
+    },
+    "BAJAJ-AUTO": {
+        "name": "Bajaj Auto Ltd",
+        "symbol": "BAJAJ-AUTO",
+        "yahoo_ticker": "BAJAJ-AUTO.NS",
+        "smartapi_token": "16669",
+        "base_price": 9200.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.013
+    },
+    "MARUTI": {
+        "name": "Maruti Suzuki India Ltd",
+        "symbol": "MARUTI",
+        "yahoo_ticker": "MARUTI.NS",
+        "smartapi_token": "10999",
+        "base_price": 11800.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.011
+    },
+    "KOTAKBANK": {
+        "name": "Kotak Mahindra Bank Ltd",
+        "symbol": "KOTAKBANK",
+        "yahoo_ticker": "KOTAKBANK.NS",
+        "smartapi_token": "1922",
+        "base_price": 1750.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.011
+    },
+    "AXISBANK": {
+        "name": "Axis Bank Ltd",
+        "symbol": "AXISBANK",
+        "yahoo_ticker": "AXISBANK.NS",
+        "smartapi_token": "5900",
+        "base_price": 1180.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.012
+    },
+    "BHARTIARTL": {
+        "name": "Bharti Airtel Ltd",
+        "symbol": "BHARTIARTL",
+        "yahoo_ticker": "BHARTIARTL.NS",
+        "smartapi_token": "10604",
+        "base_price": 1650.00,
+        "tick_size": 0.05,
+        "lot_size": 1,
+        "volatility": 0.012
     }
 }
 
 # Primary liquid large/mid-cap trading universe (strictly >= ₹100 instruments)
 PRIMARY_UNIVERSE_SYMBOLS: List[str] = [
     "INFY", "TCS", "ITC", "BEL", "WIPRO", "TATASTEEL",
-    "TATAMOTORS", "SBIN", "RELIANCE", "NTPC", "HDFCBANK", "ICICIBANK"
+    "TATAMOTORS", "SBIN", "RELIANCE", "NTPC", "HDFCBANK", "ICICIBANK",
+    "COALINDIA", "POWERGRID", "ONGC", "BPCL", "IOC", "GAIL",
+    "HCLTECH", "TECHM", "HINDUNILVR", "NESTLEIND", "BRITANNIA",
+    "CIPLA", "DRREDDY", "SUNPHARMA", "HAL", "BAJAJ-AUTO", "MARUTI",
+    "KOTAKBANK", "AXISBANK", "BHARTIARTL"
 ]
 
 UNIVERSE_SYMBOLS: List[str] = list(NSE_STOCKS.keys())
@@ -205,3 +410,4 @@ def get_universe_metadata() -> Dict[str, Any]:
 def get_primary_universe_symbols() -> List[str]:
     """Return primary established large/mid-cap symbols."""
     return PRIMARY_UNIVERSE_SYMBOLS
+
