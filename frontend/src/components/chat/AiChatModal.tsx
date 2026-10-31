@@ -15,7 +15,11 @@ import {
   Mic,
   Download,
   Compass,
-  FileSpreadsheet
+  FileSpreadsheet,
+  PauseCircle,
+  PlayCircle,
+  Search,
+  BrainCircuit
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useTrading } from '../../context/TradingContext';
@@ -374,6 +378,58 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
                         </button>
                       </div>
                     )}
+
+                    {/* Interactive AutoPilot Control Toolbar under AI Messages */}
+                    {isAi && (
+                      m.content.includes('నియంత్రణ') ||
+                      m.content.includes('User Control') ||
+                      m.content.includes('AutoPilot PAUSED') ||
+                      m.content.includes('AutoPilot RESUMED') ||
+                      m.content.includes('స్కాన్ ఫలితాలు') ||
+                      m.content.includes('Live Market Scan') ||
+                      m.content.includes('పూర్తి పారదర్శకత') ||
+                      m.content.includes('AutoPilot Live Quant') ||
+                      m.content.includes('AutoPilot లైవ్ క్వాంట్')
+                    ) && (
+                      <div className="pt-3 mt-3 border-t border-white/10 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => sendMessage(isTelugu ? "AutoPilot trading pause cheyu" : "pause autopilot")}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-200 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 shadow-md transition-all cursor-pointer"
+                          title="Pause autonomous trading"
+                        >
+                          <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
+                          <span>⏸️ Pause AutoPilot</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => sendMessage(isTelugu ? "AutoPilot start cheyu" : "resume autopilot")}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-200 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 shadow-md transition-all cursor-pointer"
+                          title="Resume autonomous trading"
+                        >
+                          <PlayCircle className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>▶️ Resume AutoPilot</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => sendMessage(isTelugu ? "మొత్తం 38 స్టాక్స్‌ను ఇప్పుడే స్కాన్ చేయి" : "scan 38 stocks now")}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-cyan-200 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 shadow-md transition-all cursor-pointer"
+                          title="Scan all 38 liquid stocks"
+                        >
+                          <Search className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>🔄 Scan 38 Stocks</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => sendMessage(isTelugu ? "AI ప్రస్తుతం ఏం చేస్తోంది, నియంత్రణ వివరాలు చెప్పు" : "what is ai doing and show control")}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-violet-300 hover:text-white bg-violet-900/40 hover:bg-violet-800/50 border border-violet-500/30 transition-colors cursor-pointer"
+                          title="View live AI thoughts and control details"
+                        >
+                          <BrainCircuit className="w-3.5 h-3.5 text-violet-400" />
+                          <span>🧠 Live AI Brain</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <span className="text-[10px] text-muted-labels block px-1">
                     {m.timestamp}
@@ -402,6 +458,20 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
         <div className="px-4 py-2 border-t border-white/5 flex items-center gap-1.5 overflow-x-auto text-[11px] bg-slate-950/40 scrollbar-none">
           {mode === 'all' && (
             <>
+              <button
+                onClick={() => sendMessage("AI ప్రస్తుతం ఏం చేస్తోంది, నియంత్రణ వివరాలు చెప్పు (AI control & live thoughts)")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold"
+              >
+                🎮 AI కంట్రోల్ & లైవ్ బ్రెయిన్
+              </button>
+              <button
+                onClick={() => sendMessage("మొత్తం 38 స్టాక్స్‌ను ఇప్పుడే స్కాన్ చేయి (Scan all 38 stocks now)")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-semibold"
+              >
+                🔄 38 స్టాక్స్ స్కాన్
+              </button>
               <button
                 onClick={() => sendMessage("డైలీ కాంపౌండింగ్ ఫార్ములా (+1% Daily Compound) ప్రోగ్రెస్ మరియు టార్గెట్స్ చూపించు")}
                 disabled={isLoading}

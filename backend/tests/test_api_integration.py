@@ -132,3 +132,56 @@ def test_auth_and_portfolio_lifecycle():
     ap_scan = client.post("/api/autopilot/scan", headers=headers)
     assert ap_scan.status_code == 200
     assert ap_scan.json()["success"] is True
+
+
+def test_ai_chat_commands_and_user_control():
+    # Login to obtain valid test client token
+    email = "integration_test@autopilot.ai"
+    client.post("/api/auth/register", json={
+        "email": email,
+        "password": "Password123!",
+        "full_name": "Integration Tester"
+    })
+    login_resp = client.post("/api/auth/login", json={
+        "email": email,
+        "password": "Password123!"
+    })
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. User control inquiry in Telugu
+    chat_req = {
+        "messages": [
+            {
+                "role": "user",
+                "content": "Ai bot ela question adigithey naku edi edo answers chesthundi ?? im clear ga chepthuna nenu ai nela thana control undali em em cheyali chesthundi anni teliyali ai real time beasd ai creat chey ani chepaa evo konni answer chesey la undakudadhu ??"
+            }
+        ]
+    }
+    resp = client.post("/api/ai/chat", headers=headers, json=chat_req)
+    assert resp.status_code == 200
+    reply = resp.json()["reply"]
+    # Check that it routes to user control & transparency, NOT the canned error diagnosis
+    assert "నియంత్రణ" in reply or "User Control" in reply
+    assert "AutoPilot" in reply
+
+    # 2. Pause command via chat
+    pause_req = {
+        "messages": [
+            {"role": "user", "content": "pause"}
+        ]
+    }
+    p_resp = client.post("/api/ai/chat", headers=headers, json=pause_req)
+    assert p_resp.status_code == 200
+    from backend.app.services.auto_trader import autopilot_runner
+    assert autopilot_runner.autopilot_enabled is False
+
+    # 3. Resume command via chat
+    resume_req = {
+        "messages": [
+            {"role": "user", "content": "resume"}
+        ]
+    }
+    r_resp = client.post("/api/ai/chat", headers=headers, json=resume_req)
+    assert r_resp.status_code == 200
+    assert autopilot_runner.autopilot_enabled is True
