@@ -17,7 +17,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenTour
 }) => {
   const { aiStatus, toggleAutoPilot } = useTrading();
-  const { language, toggleLanguage } = useLanguage();
+  const { language, toggleLanguage, t } = useLanguage();
   const isEnabled = aiStatus?.autopilot_enabled !== false;
   const status = aiStatus?.status || 'RUNNING';
 
@@ -54,10 +54,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               type="button"
               onClick={onOpenTour}
               className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-amber-500/40 text-amber-200 bg-gradient-to-r from-amber-950/50 via-yellow-950/40 to-slate-900 hover:from-amber-900/60 transition-all cursor-pointer shadow-lg shadow-amber-950/30 active:scale-95"
-              title="Take Interactive Feature Walkthrough Tour (గైడెడ్ టూర్)"
+              title={t('ఇంటరాక్టివ్ గైడెడ్ టూర్ ప్రారంభించండి', 'Take Interactive Feature Tour')}
             >
               <Compass className="w-3.5 h-3.5 text-amber-400" />
-              <span>Guide (ఫీచర్స్)</span>
+              <span>{t('గైడ్ (ఫీచర్స్)', 'Guide Tour')}</span>
             </button>
           )}
 
@@ -67,10 +67,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               type="button"
               onClick={onOpenVoice}
               className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-pink-500/40 text-pink-200 bg-gradient-to-r from-pink-950/50 via-purple-950/50 to-indigo-950/50 hover:from-pink-900/60 hover:to-indigo-900/60 transition-all cursor-pointer shadow-lg shadow-pink-950/30 active:scale-95"
-              title="Voice Mode (Say 'Hey Darling')"
+              title={t('వాయిస్ మోడ్ ("హే డార్లింగ్")', 'Voice Mode (Hey Darling)')}
             >
               <Mic className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
-              <span>Voice (Hey Darling)</span>
+              <span>{t('వాయిస్ (హే డార్లింగ్)', 'Voice Copilot')}</span>
             </button>
           )}
 
@@ -78,10 +78,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             type="button"
             onClick={onOpenChat}
             className="flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold border border-violet-500/40 text-violet-200 bg-gradient-to-r from-violet-950/50 to-indigo-950/50 hover:from-violet-900/60 hover:to-indigo-900/60 transition-all cursor-pointer shadow-lg shadow-violet-950/30 active:scale-95"
-            title="Chat with AutoPilot AI Copilot"
+            title={t('AutoPilot AI కోపైలట్‌తో మాట్లాడండి', 'Chat with AutoPilot AI Copilot')}
           >
             <Sparkles className="w-3.5 h-3.5 text-violet-400 animate-pulse" />
-            <span>AI Copilot (చాట్ బాట్)</span>
+            <span>{t('AI కోపైలట్ (చాట్ బాట్)', 'AI Copilot')}</span>
           </button>
 
           <span className="px-3.5 py-1 rounded-full text-xs font-semibold tracking-wide border border-violet-500/40 text-violet-300 bg-violet-950/30">

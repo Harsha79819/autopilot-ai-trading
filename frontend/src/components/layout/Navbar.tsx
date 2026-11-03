@@ -39,26 +39,42 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
 
   const isStopped = portfolio?.is_kill_switched || riskStatus?.is_emergency_stopped;
 
-  const PRIMARY_NAV = [
-    { id: 'dashboard', label: 'Overview', icon: Activity },
-    { id: 'ai-adviser', label: 'AI Adviser', icon: BrainCircuit },
-    { id: 'markets', label: 'Markets', icon: TrendingUp },
-    { id: 'watchlist', label: 'Watchlist', icon: Star },
-    { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
-    { id: 'orders', label: 'Paper Trading', icon: LineChart },
-    { id: 'risk-centre', label: 'Risk Centre', icon: ShieldAlert },
-    { id: 'research', label: 'Research', icon: Newspaper },
-    { id: 'planner', label: 'Planner', icon: PieChart },
-  ];
-
-  const SECONDARY_NAV = [
-    { id: 'alerts', label: 'Alerts', icon: Bell },
-    { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'reports', label: 'Reports', icon: Receipt },
-    { id: 'scanner', label: 'Scanner', icon: Radio },
-    { id: 'strategies', label: 'Strategies', icon: Layers },
-    { id: 'backtest', label: 'Backtesting', icon: Sliders },
-    { id: 'settings', label: 'Settings', icon: Settings },
+  const CORE_HUBS = [
+    { 
+      id: 'dashboard', 
+      labelTe: 'ట్రేడింగ్ డెస్క్', 
+      labelEn: 'Trading Desk', 
+      icon: Activity,
+      subIds: ['dashboard', 'orders', 'portfolio'] 
+    },
+    { 
+      id: 'ai-adviser', 
+      labelTe: 'AI కోపైలట్', 
+      labelEn: 'AI Copilot', 
+      icon: BrainCircuit,
+      subIds: ['ai-adviser'] 
+    },
+    { 
+      id: 'markets', 
+      labelTe: 'మార్కెట్స్ & స్కానర్', 
+      labelEn: 'Markets & Scanner', 
+      icon: TrendingUp,
+      subIds: ['markets', 'watchlist', 'scanner', 'research'] 
+    },
+    { 
+      id: 'risk-centre', 
+      labelTe: 'రిస్క్ & రిపోర్ట్స్', 
+      labelEn: 'Risk & Reports', 
+      icon: ShieldAlert,
+      subIds: ['risk-centre', 'reports', 'strategies', 'backtest'] 
+    },
+    { 
+      id: 'planner', 
+      labelTe: 'టూల్స్ & ప్లానర్', 
+      labelEn: 'Tools & Planner', 
+      icon: Sliders,
+      subIds: ['planner', 'alerts', 'documents', 'settings'] 
+    },
   ];
 
   return (
@@ -82,10 +98,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
             </div>
           </div>
 
-          {/* Desktop Navigation Tabs */}
-          <nav className="hidden lg:flex items-center gap-1 bg-white/[0.02] p-1 rounded-xl border border-white/[0.06] overflow-x-auto scrollbar-none">
-            {PRIMARY_NAV.map(({ id, label, icon: Icon }) => {
-              const isActive = activeTab === id;
+          {/* Desktop Navigation Tabs - Consolidated 5 Core Hubs */}
+          <nav className="hidden lg:flex items-center gap-1.5 bg-white/[0.02] p-1.5 rounded-xl border border-white/[0.06]">
+            {CORE_HUBS.map(({ id, labelTe, labelEn, icon: Icon, subIds }) => {
+              const isActive = activeTab === id || subIds.includes(activeTab);
               return (
                 <button
                   key={id}
@@ -93,54 +109,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
                     setActiveTab(id);
                     setShowMoreMenu(false);
                   }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                     isActive
                       ? 'bg-cyan-500/15 text-cyan-300 shadow-sm border border-cyan-500/30'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span>{label}</span>
+                  <span>{t(labelTe, labelEn)}</span>
                 </button>
               );
             })}
-
-            {/* Dropdown for More / Intelligence Tools */}
-            <div className="relative">
-              <button
-                onClick={() => setShowMoreMenu(!showMoreMenu)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  SECONDARY_NAV.some((n) => n.id === activeTab)
-                    ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-                }`}
-              >
-                <span>Tools</span>
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showMoreMenu && (
-                <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-slate-900 border border-white/10 shadow-2xl p-1.5 z-50 animate-fade-in space-y-0.5">
-                  {SECONDARY_NAV.map(({ id, label, icon: Icon }) => (
-                    <button
-                      key={id}
-                      onClick={() => {
-                        setActiveTab(id);
-                        setShowMoreMenu(false);
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left ${
-                        activeTab === id
-                          ? 'bg-cyan-500/20 text-cyan-300'
-                          : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>{label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           </nav>
 
           {/* Right Controls: Account, Capital & Emergency Control */}
@@ -149,7 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
             <button
               onClick={toggleLanguage}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-850 hover:bg-slate-700/80 border border-slate-700 text-slate-200 transition-all cursor-pointer shadow-sm"
-              title="Switch Language / భాషను మార్చుకోండి (తెలుగు ⇄ English)"
+              title={t('భాషను మార్చుకోండి (తెలుగు ⇄ English)', 'Switch Language (English ⇄ Telugu)')}
             >
               <Globe className="w-3.5 h-3.5 text-accent-cyan" />
               <span className="font-mono text-[11px] font-bold">{language === 'te' ? 'తెలుగు' : 'EN'}</span>
@@ -160,10 +139,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
               <button
                 onClick={onOpenTour}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer shadow-sm"
-                title="Open Interactive Feature Walkthrough Tour (గైడెడ్ టూర్)"
+                title={t('గైడెడ్ టూర్ ప్రారంభించు', 'Take Guided Tour')}
               >
                 <Compass className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">{t('Guide / ఫీచర్స్', 'Guide / Features')}</span>
+                <span className="hidden sm:inline">{t('గైడ్ (ఫీచర్స్)', 'Guide Tour')}</span>
               </button>
             )}
 

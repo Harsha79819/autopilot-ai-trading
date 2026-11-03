@@ -15,6 +15,8 @@ import { AutoPilotBanner } from './components/dashboard/AutoPilotBanner';
 import { PerformanceChart } from './components/dashboard/PerformanceChart';
 import { LiveStockChart } from './components/dashboard/LiveStockChart';
 import { DashboardDailyLedgerCard } from './components/dashboard/DashboardDailyLedgerCard';
+import { RealizedPnLCard } from './components/dashboard/RealizedPnLCard';
+import { useLanguage } from './context/LanguageContext';
 import { ScannerTable } from './components/scanner/ScannerTable';
 import { StrategyCard } from './components/strategies/StrategyCard';
 import { CostGateWidget } from './components/strategies/CostGateWidget';
@@ -45,11 +47,35 @@ import { SettingsView } from './components/views/SettingsView';
 import { ProductTourModal } from './components/onboarding/ProductTourModal';
 import { StrategyInfo } from './types';
 import { api } from './services/api';
-import { Sliders, TrendingUp, BarChart2, Layers } from 'lucide-react';
+import { Sliders, TrendingUp, BarChart2, Layers, Receipt, Table, ShoppingCart, Radio, Sparkles } from 'lucide-react';
 
 const MainContent: React.FC = () => {
   const { activeTab, portfolio } = useTrading();
+  const { t } = useLanguage();
   const [chartViewMode, setChartViewMode] = useState<'equity' | 'live_market' | 'both'>('equity');
+  
+  // Multi-View Workspace panels: allow users to open multiple sections simultaneously
+  const [panels, setPanels] = useState({
+    charts: true,
+    realizedTable: true,
+    dailyLedger: true,
+    orders: true,
+    scanner: false,
+  });
+
+  const togglePanel = (key: keyof typeof panels) => {
+    setPanels(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const showAllPanels = () => {
+    setPanels({
+      charts: true,
+      realizedTable: true,
+      dailyLedger: true,
+      orders: true,
+      scanner: true,
+    });
+  };
   const [strategies, setStrategies] = useState<StrategyInfo[]>([]);
   const [showRiskModal, setShowRiskModal] = useState(false);
   const [showInvestModal, setShowInvestModal] = useState(false);
@@ -135,157 +161,228 @@ const MainContent: React.FC = () => {
             <AutoPilotBanner />
           </div>
 
-          {/* Equity Trajectory & Live Stock Market Chart Section */}
-          <div className="pt-4 space-y-3">
-            {/* Chart View Switcher Controls */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5">
-              <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800">
-                <button
-                  onClick={() => setChartViewMode('equity')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    chartViewMode === 'equity'
-                      ? 'bg-accent-cyan text-slate-950 font-bold shadow-md shadow-accent-cyan/20'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <span>📈 Equity Trajectory (పోర్ట్‌ఫోలియో ప్రయాణం)</span>
-                </button>
+          {/* Multi-View Workspace Module Selector ("ఒకేసారి multiple open ayyela chey") */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-white/10 shadow-lg">
+            <div className="flex items-center gap-1.5 overflow-x-auto text-xs py-0.5">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 pl-1">
+                {t('మల్టీ-వ్యూ ప్యానెల్స్:', 'Multi-View Panels:')}
+              </span>
 
-                <button
-                  onClick={() => setChartViewMode('live_market')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    chartViewMode === 'live_market'
-                      ? 'bg-emerald-400 text-slate-950 font-bold shadow-md shadow-emerald-400/20'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <BarChart2 className="w-3.5 h-3.5" />
-                  <span>📊 Live Stock Market Graph (లైవ్ మార్కెట్ చార్ట్)</span>
-                </button>
+              <button
+                type="button"
+                onClick={() => togglePanel('realizedTable')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  panels.realizedTable
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
+                }`}
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span>{t('🟢 అమ్మేసిన ట్రేడ్స్ & కాలిక్యులేటర్', '🟢 Realized Trades & Calculator')}</span>
+              </button>
 
-                <button
-                  onClick={() => setChartViewMode('both')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                    chartViewMode === 'both'
-                      ? 'bg-accent-violet text-white font-bold shadow-md shadow-accent-violet/20'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>⚡ Both (రెండు చార్టులు)</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => togglePanel('charts')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  panels.charts
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>{t('📈 చార్టులు', '📈 Charts')}</span>
+              </button>
 
-              <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Live NSE Data Feeds Active</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => togglePanel('dailyLedger')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  panels.dailyLedger
+                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-sm'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
+                }`}
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>{t('📑 15-రోజుల లెడ్జర్', '📑 15-Day Ledger')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => togglePanel('orders')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  panels.orders
+                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500/40 shadow-sm'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
+                }`}
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                <span>{t('⚡ ఆర్డర్లు', '⚡ Orders')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => togglePanel('scanner')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  panels.scanner
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
+                }`}
+              >
+                <Radio className="w-3.5 h-3.5" />
+                <span>{t('🔍 స్కానర్ టేబుల్', '🔍 Scanner Table')}</span>
+              </button>
             </div>
 
-            {/* Grid Layout: Charts + Quick Order Form */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              <div className="lg:col-span-2 space-y-4">
-                {(chartViewMode === 'equity' || chartViewMode === 'both') && (
-                  <PerformanceChart />
-                )}
-                {(chartViewMode === 'live_market' || chartViewMode === 'both') && (
-                  <LiveStockChart />
-                )}
+            <button
+              type="button"
+              onClick={showAllPanels}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 transition-all cursor-pointer shadow-md shrink-0 active:scale-95"
+              title={t('అన్ని ప్యానెల్స్ ఒకేసారి చూడండి', 'View all modules simultaneously')}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>{t('అన్నీ ఒకేసారి చూడు (Show All)', 'Show All Modules')}</span>
+            </button>
+          </div>
+
+          {/* Module 1: Realized Trades & Live Interactive Calculator */}
+          {panels.realizedTable && (
+            <div className="pt-2 animate-fade-in">
+              <RealizedPnLCard />
+            </div>
+          )}
+
+          {/* Module 2: Equity Trajectory & Live Stock Market Chart Section */}
+          {panels.charts && (
+            <div className="pt-2 space-y-3 animate-fade-in">
+              {/* Chart View Switcher Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
+                <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+                  <button
+                    onClick={() => setChartViewMode('equity')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                      chartViewMode === 'equity'
+                        ? 'bg-accent-cyan text-slate-950 font-bold shadow-md shadow-accent-cyan/20'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    <span>{t('📈 ఈక్విటీ ట్రాజెక్టరీ (పోర్ట్‌ఫోలియో ప్రయాణం)', '📈 Equity Trajectory Chart')}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setChartViewMode('live_market')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                      chartViewMode === 'live_market'
+                        ? 'bg-emerald-400 text-slate-950 font-bold shadow-md shadow-emerald-400/20'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    <span>{t('📊 లైవ్ మార్కెట్ చార్ట్ (రియల్-టైమ్)', '📊 Live Stock Market Graph')}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setChartViewMode('both')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                      chartViewMode === 'both'
+                        ? 'bg-accent-violet text-white font-bold shadow-md shadow-accent-violet/20'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>{t('⚡ రెండు చార్టులు (Both)', '⚡ Both Charts')}</span>
+                  </button>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{t('లైవ్ NSE డేటా ఫీడ్ యాక్టివ్', 'Live NSE Data Feeds Active')}</span>
+                </div>
               </div>
-              <div>
-                <OrderForm />
+
+              {/* Grid Layout: Charts + Quick Order Form */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div className="lg:col-span-2 space-y-4">
+                  {(chartViewMode === 'equity' || chartViewMode === 'both') && (
+                    <PerformanceChart />
+                  )}
+                  {(chartViewMode === 'live_market' || chartViewMode === 'both') && (
+                    <LiveStockChart />
+                  )}
+                </div>
+                <div>
+                  <OrderForm />
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Day-by-Day Financial Accounting Ledger Table */}
-            <div className="pt-2">
+          {/* Module 3: Day-by-Day Financial Accounting Ledger Table */}
+          {panels.dailyLedger && (
+            <div className="pt-2 animate-fade-in">
               <DashboardDailyLedgerCard />
             </div>
-          </div>
-          <OrderHistory />
-        </div>
-      )}
+          )}
 
-      {/* Tab: Scanner */}
-      {activeTab === 'scanner' && (
-        <div className="space-y-6">
-          <ScannerTable />
-        </div>
-      )}
-
-      {/* Tab: Strategies */}
-      {activeTab === 'strategies' && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-lg font-bold text-white mb-1">Quantitative Strategy Lab</h2>
-            <p className="text-xs text-slate-400">
-              Modular transparent trading strategies with non-bypassable risk controls and cost awareness
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            {strategies.map((strat) => (
-              <StrategyCard key={strat.name} strategy={strat} />
-            ))}
-          </div>
-          <CostGateWidget />
-        </div>
-      )}
-
-      {/* Tab: Orders */}
-      {activeTab === 'orders' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div>
-              <OrderForm />
-            </div>
-            <div className="lg:col-span-2">
+          {/* Module 4: Order Execution & Order History */}
+          {panels.orders && (
+            <div className="pt-2 space-y-4 animate-fade-in">
               <OrderHistory />
             </div>
-          </div>
-          <AuditLogView />
+          )}
+
+          {/* Module 5: Optional In-Dashboard Full Scanner Table */}
+          {panels.scanner && (
+            <div className="pt-2 animate-fade-in">
+              <ScannerTable />
+            </div>
+          )}
         </div>
       )}
 
-      {/* Tab: Backtest */}
-      {activeTab === 'backtest' && (
-        <div className="space-y-6">
+      {/* Tab: AI Adviser & Copilot (Hub 2) */}
+      {activeTab === 'ai-adviser' && <AiAdviserFullView />}
+
+      {/* Tab: Market Intelligence (Hub 3 - Consolidates Markets, Scanner, Watchlist, News) */}
+      {(activeTab === 'markets' || activeTab === 'scanner' || activeTab === 'watchlist' || activeTab === 'research') && (
+        <div className="space-y-6 animate-fade-in">
+          <MarketsView />
+          <ScannerTable />
+          <NewsResearchView />
+          <WatchlistView />
+        </div>
+      )}
+
+      {/* Tab: Risk & Performance Reports (Hub 4 - Consolidates Risk Centre, Reports, Strategies, Backtesting) */}
+      {(activeTab === 'risk-centre' || activeTab === 'reports' || activeTab === 'strategies' || activeTab === 'backtest') && (
+        <div className="space-y-6 animate-fade-in">
+          <RiskCentreView />
+          <ReportsView />
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold text-white mb-1">
+              {t('క్వాంటిటేటివ్ స్ట్రాటజీ ల్యాబ్ & బ్యాక్‌టెస్ట్', 'Quantitative Strategy Lab & Backtesting')}
+            </h2>
+            <div className="grid grid-cols-1 gap-4">
+              {strategies.map((strat) => (
+                <StrategyCard key={strat.name} strategy={strat} />
+              ))}
+            </div>
+            <CostGateWidget />
+          </div>
           <BacktestRunner />
         </div>
       )}
 
-      {/* Tab: AI Adviser */}
-      {activeTab === 'ai-adviser' && <AiAdviserFullView />}
-
-      {/* Tab: Markets */}
-      {activeTab === 'markets' && <MarketsView />}
-
-      {/* Tab: Watchlist */}
-      {activeTab === 'watchlist' && <WatchlistView />}
-
-      {/* Tab: Portfolio Detail */}
-      {activeTab === 'portfolio' && <PortfolioDetailView />}
-
-      {/* Tab: Risk Centre */}
-      {activeTab === 'risk-centre' && <RiskCentreView />}
-
-      {/* Tab: Research & News */}
-      {activeTab === 'research' && <NewsResearchView />}
-
-      {/* Tab: Financial Planner */}
-      {activeTab === 'planner' && <FinancialPlannerView />}
-
-      {/* Tab: Alerts Manager */}
-      {activeTab === 'alerts' && <AlertsManagerView />}
-
-      {/* Tab: Documents Intelligence */}
-      {activeTab === 'documents' && <DocumentsView />}
-
-      {/* Tab: Reports & Tax */}
-      {activeTab === 'reports' && <ReportsView />}
-
-      {/* Tab: Settings */}
-      {activeTab === 'settings' && <SettingsView />}
+      {/* Tab: Financial Tools & Settings (Hub 5 - Consolidates Planner, Alerts, Documents, Settings) */}
+      {(activeTab === 'planner' || activeTab === 'alerts' || activeTab === 'documents' || activeTab === 'settings') && (
+        <div className="space-y-6 animate-fade-in">
+          <FinancialPlannerView />
+          <AlertsManagerView />
+          <DocumentsView />
+          <SettingsView />
+        </div>
+      )}
 
 
       {/* Modals */}
