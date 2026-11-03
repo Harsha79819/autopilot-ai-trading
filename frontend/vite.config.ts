@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true, // Listen on all addresses for mobile browser access
+    allowedHosts: true, // Allow Cloudflare tunnel and mobile network hosts
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',
