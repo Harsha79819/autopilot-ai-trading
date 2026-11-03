@@ -8,12 +8,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#080B12',
+        background: '#0A0F1D',
         surface: {
           DEFAULT: '#0F172A',
-          glass: 'rgba(15, 23, 42, 0.65)',
-          border: 'rgba(255, 255, 255, 0.08)',
-          hover: 'rgba(255, 255, 255, 0.05)',
+          glass: 'rgba(15, 23, 42, 0.72)',
+          border: 'rgba(255, 255, 255, 0.12)',
+          hover: 'rgba(255, 255, 255, 0.08)',
         },
         accent: {
           cyan: '#06B6D4',

@@ -19,9 +19,11 @@ import {
   Receipt,
   Settings,
   ChevronDown,
-  Compass
+  Compass,
+  Globe
 } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { formatINR } from '../../utils/currency';
 import { AccountModal } from './AccountModal';
 
@@ -31,6 +33,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
   const { portfolio, activeTab, setActiveTab, resetCapital, toggleKillSwitch, riskStatus } = useTrading();
+  const { language, toggleLanguage, t } = useLanguage();
   const [showAccount, setShowAccount] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -142,6 +145,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
 
           {/* Right Controls: Account, Capital & Emergency Control */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Language Switcher: Telugu ⇄ English */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-850 hover:bg-slate-700/80 border border-slate-700 text-slate-200 transition-all cursor-pointer shadow-sm"
+              title="Switch Language / భాషను మార్చుకోండి (తెలుగు ⇄ English)"
+            >
+              <Globe className="w-3.5 h-3.5 text-accent-cyan" />
+              <span className="font-mono text-[11px] font-bold">{language === 'te' ? 'తెలుగు' : 'EN'}</span>
+            </button>
+
             {/* Guided Tour Launcher */}
             {onOpenTour && (
               <button
@@ -150,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
                 title="Open Interactive Feature Walkthrough Tour (గైడెడ్ టూర్)"
               >
                 <Compass className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Guide / ఫీచర్స్</span>
+                <span className="hidden sm:inline">{t('Guide / ఫీచర్స్', 'Guide / Features')}</span>
               </button>
             )}
 

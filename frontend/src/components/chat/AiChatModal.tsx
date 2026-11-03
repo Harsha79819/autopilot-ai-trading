@@ -459,6 +459,27 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
           {mode === 'all' && (
             <>
               <button
+                onClick={() => sendMessage("overal ga total lo profit entha loss entha (Overall Profit & Loss Breakup)")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm"
+              >
+                💰 ఓవరాల్ లాభం & నష్టం (Overall PnL)
+              </button>
+              <button
+                onClick={() => sendMessage("/trader-analyst ITC")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-semibold"
+              >
+                🔬 /trader-analyst ITC
+              </button>
+              <button
+                onClick={() => sendMessage("/trader-risk")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-semibold"
+              >
+                🛡️ /trader-risk ఆడిట్
+              </button>
+              <button
                 onClick={() => sendMessage("AI ప్రస్తుతం ఏం చేస్తోంది, నియంత్రణ వివరాలు చెప్పు (AI control & live thoughts)")}
                 disabled={isLoading}
                 className="px-2.5 py-1 rounded-full bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold"

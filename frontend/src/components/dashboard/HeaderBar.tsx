@@ -1,6 +1,7 @@
 import React from 'react';
-import { Activity, Sparkles, Mic, Compass } from 'lucide-react';
+import { Activity, Sparkles, Mic, Compass, Globe } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface HeaderBarProps {
   onOpenDiagnostics?: () => void;
@@ -16,6 +17,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenTour
 }) => {
   const { aiStatus, toggleAutoPilot } = useTrading();
+  const { language, toggleLanguage } = useLanguage();
   const isEnabled = aiStatus?.autopilot_enabled !== false;
   const status = aiStatus?.status || 'RUNNING';
 
@@ -35,6 +37,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
         {/* Badges and Automation status */}
         <div className="flex items-center gap-2.5">
+          {/* Language Switcher Button */}
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/40 text-emerald-200 bg-gradient-to-r from-emerald-950/50 to-teal-950/40 hover:from-emerald-900/60 transition-all cursor-pointer shadow-lg shadow-emerald-950/30 active:scale-95"
+            title={language === 'en' ? "తెలుగుకు మార్చుకోండి (Switch to Telugu)" : "Switch to English"}
+          >
+            <Globe className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{language === 'en' ? '🌐 English ⇄ తెలుగు' : '🌐 తెలుగు ⇄ English'}</span>
+          </button>
+
           {/* Guided Tour Button */}
           {onOpenTour && (
             <button
@@ -151,6 +164,15 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-emerald-500/40 text-emerald-200 bg-emerald-950/40 whitespace-nowrap cursor-pointer active:scale-95"
+            title={language === 'en' ? "తెలుగుకు మార్చుకోండి" : "Switch to English"}
+          >
+            <Globe className="w-3 h-3 text-emerald-400" />
+            {language === 'en' ? 'తెలుగు' : 'English'}
+          </button>
           {onOpenTour && (
             <button
               type="button"

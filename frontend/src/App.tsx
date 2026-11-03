@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { TradingProvider, useTrading } from './context/TradingContext';
 import { Navbar } from './components/layout/Navbar';
 import { MobileTabs } from './components/layout/MobileTabs';
@@ -13,6 +14,7 @@ import { DailySummaryCard } from './components/dashboard/DailySummaryCard';
 import { AutoPilotBanner } from './components/dashboard/AutoPilotBanner';
 import { PerformanceChart } from './components/dashboard/PerformanceChart';
 import { LiveStockChart } from './components/dashboard/LiveStockChart';
+import { DashboardDailyLedgerCard } from './components/dashboard/DashboardDailyLedgerCard';
 import { ScannerTable } from './components/scanner/ScannerTable';
 import { StrategyCard } from './components/strategies/StrategyCard';
 import { CostGateWidget } from './components/strategies/CostGateWidget';
@@ -195,6 +197,11 @@ const MainContent: React.FC = () => {
                 <OrderForm />
               </div>
             </div>
+
+            {/* Day-by-Day Financial Accounting Ledger Table */}
+            <div className="pt-2">
+              <DashboardDailyLedgerCard />
+            </div>
           </div>
           <OrderHistory />
         </div>
@@ -326,20 +333,23 @@ export const App: React.FC = () => {
 
   return (
     <AuthProvider>
-      <TradingProvider>
-        <div className="min-h-screen bg-[#080B12] text-slate-100 relative overflow-hidden flex flex-col">
-          {/* Animated Drifting Gradient Orbs in #080B12 base */}
-          <div className="orb-container">
-            <div className="orb-blue" />
-            <div className="orb-violet" />
-            <div className="orb-cyan" />
-          </div>
+      <LanguageProvider>
+        <TradingProvider>
+          <div className="min-h-screen bg-[#0A0F1D] text-slate-100 relative overflow-hidden flex flex-col">
+            {/* Animated Liquid Ambient Orbs & Fluid Mesh */}
+            <div className="liquid-mesh-overlay" />
+            <div className="orb-container">
+              <div className="orb-blue" />
+              <div className="orb-violet" />
+              <div className="orb-cyan" />
+            </div>
 
-          <Navbar onOpenTour={() => window.dispatchEvent(new CustomEvent('open-product-tour'))} />
-          <MainContent />
-          <MobileTabs />
-        </div>
-      </TradingProvider>
+            <Navbar onOpenTour={() => window.dispatchEvent(new CustomEvent('open-product-tour'))} />
+            <MainContent />
+            <MobileTabs />
+          </div>
+        </TradingProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 };
