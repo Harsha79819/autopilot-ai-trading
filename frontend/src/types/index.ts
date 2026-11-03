@@ -337,6 +337,7 @@ export interface DailyLedgerEntry {
   charges_fees: number;
   net_pnl: number;
   closing_capital: number;
+  total_equity?: number;
   day_return_pct: number;
   cumulative_return_pct: number;
   compounding_target?: number;

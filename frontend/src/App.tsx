@@ -12,6 +12,7 @@ import { BottomStatusGrid } from './components/dashboard/BottomStatusGrid';
 import { DailySummaryCard } from './components/dashboard/DailySummaryCard';
 import { AutoPilotBanner } from './components/dashboard/AutoPilotBanner';
 import { PerformanceChart } from './components/dashboard/PerformanceChart';
+import { LiveStockChart } from './components/dashboard/LiveStockChart';
 import { ScannerTable } from './components/scanner/ScannerTable';
 import { StrategyCard } from './components/strategies/StrategyCard';
 import { CostGateWidget } from './components/strategies/CostGateWidget';
@@ -42,10 +43,11 @@ import { SettingsView } from './components/views/SettingsView';
 import { ProductTourModal } from './components/onboarding/ProductTourModal';
 import { StrategyInfo } from './types';
 import { api } from './services/api';
-import { Sliders } from 'lucide-react';
+import { Sliders, TrendingUp, BarChart2, Layers } from 'lucide-react';
 
 const MainContent: React.FC = () => {
   const { activeTab, portfolio } = useTrading();
+  const [chartViewMode, setChartViewMode] = useState<'equity' | 'live_market' | 'both'>('equity');
   const [strategies, setStrategies] = useState<StrategyInfo[]>([]);
   const [showRiskModal, setShowRiskModal] = useState(false);
   const [showInvestModal, setShowInvestModal] = useState(false);
@@ -131,13 +133,67 @@ const MainContent: React.FC = () => {
             <AutoPilotBanner />
           </div>
 
-          {/* Equity Chart & Order History Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pt-4">
-            <div className="lg:col-span-2">
-              <PerformanceChart />
+          {/* Equity Trajectory & Live Stock Market Chart Section */}
+          <div className="pt-4 space-y-3">
+            {/* Chart View Switcher Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+                <button
+                  onClick={() => setChartViewMode('equity')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    chartViewMode === 'equity'
+                      ? 'bg-accent-cyan text-slate-950 font-bold shadow-md shadow-accent-cyan/20'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>📈 Equity Trajectory (పోర్ట్‌ఫోలియో ప్రయాణం)</span>
+                </button>
+
+                <button
+                  onClick={() => setChartViewMode('live_market')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    chartViewMode === 'live_market'
+                      ? 'bg-emerald-400 text-slate-950 font-bold shadow-md shadow-emerald-400/20'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  <span>📊 Live Stock Market Graph (లైవ్ మార్కెట్ చార్ట్)</span>
+                </button>
+
+                <button
+                  onClick={() => setChartViewMode('both')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                    chartViewMode === 'both'
+                      ? 'bg-accent-violet text-white font-bold shadow-md shadow-accent-violet/20'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>⚡ Both (రెండు చార్టులు)</span>
+                </button>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Live NSE Data Feeds Active</span>
+              </div>
             </div>
-            <div>
-              <OrderForm />
+
+            {/* Grid Layout: Charts + Quick Order Form */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2 space-y-4">
+                {(chartViewMode === 'equity' || chartViewMode === 'both') && (
+                  <PerformanceChart />
+                )}
+                {(chartViewMode === 'live_market' || chartViewMode === 'both') && (
+                  <LiveStockChart />
+                )}
+              </div>
+              <div>
+                <OrderForm />
+              </div>
             </div>
           </div>
           <OrderHistory />
