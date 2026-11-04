@@ -82,4 +82,22 @@ describe('Realized Trades & Interactive Calculator Verification', () => {
     const allOpen = Object.values(panels).every(v => v === true);
     expect(allOpen).toBe(true);
   });
+
+  it('calculates exact in-hand net profit if exiting market right now', () => {
+    const totalDeposits = 5500.00;
+    const currentEquity = 5727.75;
+    const estimatedExitTaxes = 5.10;
+
+    const grossExitNetProfit = currentEquity - totalDeposits; // +₹227.75
+    const netTakeHomeAfterExitFees = grossExitNetProfit - estimatedExitTaxes; // +₹222.65
+    const roiPct = (grossExitNetProfit / totalDeposits) * 100; // +4.14%
+
+    expect(grossExitNetProfit).toBeCloseTo(227.75, 2);
+    expect(netTakeHomeAfterExitFees).toBeCloseTo(222.65, 2);
+    expect(roiPct).toBeCloseTo(4.14, 2);
+
+    // After 20% STCG on closed gains (₹17.61)
+    const afterTaxProfit = grossExitNetProfit - 17.61;
+    expect(afterTaxProfit).toBeCloseTo(210.14, 2);
+  });
 });

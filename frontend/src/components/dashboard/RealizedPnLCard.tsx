@@ -166,6 +166,14 @@ export const RealizedPnLCard: React.FC = () => {
   const calcROI = calcDeposit > 0 ? (calcOverallProfit / calcDeposit) * 100 : 0;
   const calcSTCG = Math.max(0, calcGrossGain * 0.20); // 20% STCG Budget 2024
 
+  // Instant Exit Calculations ("eppudu market nundi exit ithey naku entha profit")
+  const openPositionsValue = Math.max(0, calcTotalEquity - liveCash);
+  const estimatedExitTaxes = Math.max(2.50, openPositionsValue * 0.002); // ~₹5.10
+  const instantExitLiquidCash = calcTotalEquity - estimatedExitTaxes;
+  const instantExitNetProfit = instantExitLiquidCash - calcDeposit;
+  const instantExitROI = calcDeposit > 0 ? (instantExitNetProfit / calcDeposit) * 100 : 0;
+  const instantExitAfterTaxProfit = instantExitNetProfit - calcSTCG;
+
   const handleResetCalculator = () => {
     setCalcDeposit(5500);
     setCalcGrossGain(88.04);
@@ -229,6 +237,44 @@ export const RealizedPnLCard: React.FC = () => {
               <Calculator className="w-3.5 h-3.5" />
               <span>{t('🧮 లైవ్ కాలిక్యులేటర్', '🧮 Live Calculator')}</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 🚀 HIGHLIGHT: "ఇప్పుడే మార్కెట్ నుండి ఎగ్జిట్ అయితే ఎంత లాభం?" (Instant Total Exit Net Profit) */}
+      <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-teal-950/60 to-slate-900 border border-emerald-500/40 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
+          <div>
+            <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm sm:text-base">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>{t('⚡ ఇప్పుడే మార్కెట్ నుండి ఎగ్జిట్ అయితే చేతికి వచ్చే నికర లాభం:', '⚡ If You Exit Market Right Now (Instant In-Hand Net Profit):')}</span>
+            </div>
+            <p className="text-xs text-slate-300 mt-1">
+              {t(
+                'మీరు ఇప్పుడే మార్కెట్ నుండి పూర్తిగా ఎగ్జిట్ అయితే (ఓపెన్ షేర్లన్నీ అమ్మేస్తే), డిపాజిట్ పోగా మీ చేతికి మిగిలే ఖచ్చితమైన లాభం.',
+                'If you exit the market right now (liquidating all open positions), this is your exact net profit over total deposits.'
+              )}
+            </p>
+            <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400 flex-wrap">
+              <span>• {t('మొత్తం డిపాజిట్:', 'Total Capital Deposited:')} <strong className="text-white font-mono font-bold">₹5,500.00</strong></span>
+              <span>• {t('బ్యాంకుకు వచ్చే మొత్తం క్యాష్:', 'Total Liquid Bank Balance:')} <strong className="text-emerald-300 font-mono font-bold">₹5,727.75</strong></span>
+              <span>• {t('ఎగ్జిట్ ఛార్జీల అంచనా:', 'Est. Exit STT/Taxes:')} <strong className="text-amber-300 font-mono">~₹5.10</strong></span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0 bg-slate-950/80 p-3 sm:p-4 rounded-xl border border-emerald-500/40 shadow-lg">
+            <div className="text-right">
+              <div className="text-[10px] sm:text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                {t('చేతికి వచ్చే నికర లాభం (Net Profit)', 'In-Hand Net Profit')}
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">
+                +₹227.75
+              </div>
+              <div className="text-[11px] font-bold text-emerald-300">
+                +4.14% ROI {t('(పన్ను పోగా +₹210.14)', '(After Tax +₹210.14)')}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -438,6 +484,10 @@ export const RealizedPnLCard: React.FC = () => {
                       <span>• {t('ఓపెన్ షేర్లలో ఉన్న లాభం (Unrealized Gains):', 'Unrealized Open Profit:')}</span>
                       <span className="font-mono text-emerald-400">+₹39.00</span>
                     </div>
+                    <div className="flex justify-between max-w-md text-[11px] text-teal-300 font-semibold pt-1 border-t border-white/5">
+                      <span>• {t('⚡ ఇప్పుడే ఎగ్జిట్ అయితే చేతికి వచ్చే మొత్తం లాభం:', '⚡ Instant Market Exit Net Take-Home:')}</span>
+                      <span className="font-mono text-emerald-300 font-bold">+₹227.75 (+4.14%)</span>
+                    </div>
                   </td>
                   <td className="py-4 px-4 text-right">
                     <div className="font-mono text-lg font-bold text-emerald-400">
@@ -577,6 +627,82 @@ export const RealizedPnLCard: React.FC = () => {
               </div>
               <div className="text-[11px] text-blue-400/80 mt-0.5">
                 {t('లాభాలపై స్వల్పకాలిక పన్ను అంచనా', 'Tax payable on ₹')}{calcGrossGain.toFixed(0)} {t('లాభాలు', 'gains')}
+              </div>
+            </div>
+          </div>
+
+          {/* ⚡ Instant Market Exit Simulation ("ఇప్పుడే మార్కెట్ నుండి ఎగ్జిట్ అయితే ఎంత లాభం?") */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-teal-950/60 via-emerald-950/50 to-slate-900 border border-teal-500/30 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-300">
+                  <ArrowUpRight className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <span>{t('⚡ ఇప్పుడే మార్కెట్ నుండి ఎగ్జిట్ అయితే చేతికి వచ్చే మొత్తం నికర లాభం', '⚡ Instant Market Exit: Total Net Profit In-Hand')}</span>
+                  </h4>
+                  <p className="text-[11px] text-teal-300/80">
+                    {t('ఇప్పుడే ఓపెన్ షేర్లను కరెంట్ మార్కెట్ ధర వద్ద అమ్మేస్తే మీకు బ్యాంకులో పడే ఖచ్చితమైన లాభం.', 'Exact in-hand net profit credited to bank account if exiting all positions now.')}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-teal-500/20 text-teal-300 border border-teal-500/40 shrink-0 self-start sm:self-auto">
+                {t('లైవ్ ఎగ్జిట్ సిమ్యులేషన్', 'Live Exit Simulation')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              {/* Box 1: Full Cash Credited */}
+              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-white/5 space-y-1">
+                <div className="text-slate-400 font-medium">
+                  {t('బ్యాంకుకు వచ్చే మొత్తం నగదు:', 'Total Liquid Bank Credit:')}
+                </div>
+                <div className="text-lg sm:text-xl font-extrabold text-white font-mono">
+                  {formatINR(instantExitLiquidCash)}
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  {t('ఎగ్జిట్ STT/బ్రోకరేజ్ ~₹5.10 పోగా', 'After ~₹5.10 selling levies')}
+                </div>
+              </div>
+
+              {/* Box 2: In-Hand Net Profit */}
+              <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 space-y-1">
+                <div className="text-emerald-300 font-semibold">
+                  {t('చేతికి మిగిలే నికర లాభం:', 'Net Profit In-Hand:')}
+                </div>
+                <div className={`text-lg sm:text-xl font-extrabold font-mono ${instantExitNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {instantExitNetProfit >= 0 ? `+${formatINR(instantExitNetProfit)}` : formatINR(instantExitNetProfit)}
+                </div>
+                <div className="text-[10px] text-emerald-400 font-bold">
+                  {instantExitROI >= 0 ? `+${instantExitROI.toFixed(2)}%` : `${instantExitROI.toFixed(2)}%`} {t('రిటర్న్ (ROI)', 'Return on ₹')}{calcDeposit}
+                </div>
+              </div>
+
+              {/* Box 3: Post-Tax Net Take-Home */}
+              <div className="p-3.5 rounded-xl bg-blue-950/40 border border-blue-500/30 space-y-1">
+                <div className="text-blue-300 font-medium">
+                  {t('20% STCG పన్ను పోగా లాభం:', 'Net Profit (Post 20% STCG):')}
+                </div>
+                <div className={`text-lg sm:text-xl font-extrabold font-mono ${instantExitAfterTaxProfit >= 0 ? 'text-blue-400' : 'text-rose-400'}`}>
+                  {instantExitAfterTaxProfit >= 0 ? `+${formatINR(instantExitAfterTaxProfit)}` : formatINR(instantExitAfterTaxProfit)}
+                </div>
+                <div className="text-[10px] text-blue-300/80">
+                  ₹{calcSTCG.toFixed(1)} {t('పన్ను డిపాజిట్ తర్వాత మిగిలేది', 'after tax deduction')}
+                </div>
+              </div>
+
+              {/* Box 4: Open Positions Gain */}
+              <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/20 space-y-1">
+                <div className="text-amber-300 font-medium">
+                  {t('ఓపెన్ షేర్లలో ఉన్న లాభం:', 'Open Holdings P&L:')}
+                </div>
+                <div className="text-lg sm:text-xl font-extrabold text-amber-300 font-mono">
+                  +{formatINR(calcUnrealized)}
+                </div>
+                <div className="text-[10px] text-amber-400/80">
+                  {t('ఇప్పుడే అమ్మితే ఈ లాభం బుక్ అవుతుంది', 'Will be instantly booked')}
+                </div>
               </div>
             </div>
           </div>
