@@ -442,6 +442,7 @@ class AutoPilotRunner:
                 sl_pct = getattr(settings, "STOP_LOSS_PCT", 1.5)
                 rr_ratio = getattr(settings, "RISK_REWARD_RATIO", 2.0)
                 tp_pct = getattr(settings, "TAKE_PROFIT_PCT", round(sl_pct * rr_ratio, 2))
+                closed_symbols_this_cycle: Set[str] = set()
 
                 for pos in positions:
                     quote = latest_quotes.get(pos.symbol)
@@ -600,6 +601,7 @@ class AutoPilotRunner:
                         self._position_targets.pop((user.id, pos.symbol), None)
                         self._position_entry_times.pop((user.id, pos.symbol), None)
                         self._position_highs.pop(high_key, None)
+                        closed_symbols_this_cycle.add(pos.symbol)
                         logger.info(f"AutoPilot SELL {pos.symbol} for user {user.id}: {reason}")
                         self._last_ai_status = {
                             "status": "SCANNING",
@@ -787,7 +789,7 @@ class AutoPilotRunner:
                     continue
 
                 # C. Screening Pipeline with Fundamental Health, Penny Stock Cutoff & Multi-Stock Capital Allocation
-                held_symbols = {p.symbol for p in positions}
+                held_symbols = {p.symbol for p in positions} | closed_symbols_this_cycle
                 min_price_cutoff = getattr(settings, "MIN_STOCK_PRICE_INR", 100.0)
                 MAX_CONCURRENT_POSITIONS = 8
                 per_stock_budget_cap = max(
