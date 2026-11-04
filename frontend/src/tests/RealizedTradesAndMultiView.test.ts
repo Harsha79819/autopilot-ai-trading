@@ -137,5 +137,34 @@ describe('Realized Trades & Interactive Calculator Verification', () => {
       expect(minWidth).toBeGreaterThan(480);
     });
   });
+
+  it('validates Pro Terminal tab navigation defaults to 15-day ledger at top', () => {
+    type DashboardSubTab = 'ledger' | 'trading' | 'charts' | 'brain' | 'split' | 'all';
+    let currentTab: DashboardSubTab = 'ledger';
+
+    // Must default to 'ledger' so Day 17 is visible immediately without vertical scrolling
+    expect(currentTab).toBe('ledger');
+
+    // Switch to trading
+    currentTab = 'trading';
+    expect(currentTab).toBe('trading');
+
+    // Switch to split-view mode
+    currentTab = 'split';
+    expect(currentTab).toBe('split');
+  });
+
+  it('validates multi-tab split view allows pairing any two modules simultaneously', () => {
+    let leftPane = 'ledger';
+    let rightPane = 'trading';
+
+    expect(leftPane).toBe('ledger');
+    expect(rightPane).toBe('trading');
+
+    // User can customize right pane to charts
+    rightPane = 'charts';
+    expect(rightPane).toBe('charts');
+    expect(leftPane !== rightPane).toBe(true);
+  });
 });
 

@@ -45,14 +45,39 @@ import { DocumentsView } from './components/views/DocumentsView';
 import { ReportsView } from './components/views/ReportsView';
 import { SettingsView } from './components/views/SettingsView';
 import { ProductTourModal } from './components/onboarding/ProductTourModal';
+import { ProCommandBar } from './components/dashboard/ProCommandBar';
 import { StrategyInfo } from './types';
 import { api } from './services/api';
-import { Sliders, TrendingUp, BarChart2, Layers, Receipt, Table, ShoppingCart, Radio, Sparkles } from 'lucide-react';
+import { Sliders, TrendingUp, BarChart2, Layers, Receipt, Table, ShoppingCart, Radio, Sparkles, Activity, Columns } from 'lucide-react';
 
 const MainContent: React.FC = () => {
   const { activeTab, portfolio } = useTrading();
   const { t } = useLanguage();
   const [chartViewMode, setChartViewMode] = useState<'equity' | 'live_market' | 'both'>('equity');
+  
+  // Pro Terminal Sub-Tabs: Instant tab switching & multi-tab split view
+  type DashboardSubTab = 'ledger' | 'trading' | 'charts' | 'brain' | 'split' | 'all';
+  const [dashboardTab, setDashboardTab] = useState<DashboardSubTab>(() => {
+    return (localStorage.getItem('autopilot_dashboard_pro_tab') as DashboardSubTab) || 'ledger';
+  });
+  const [splitLeftTab, setSplitLeftTab] = useState<'ledger' | 'trading' | 'charts' | 'brain'>('ledger');
+  const [splitRightTab, setSplitRightTab] = useState<'ledger' | 'trading' | 'charts' | 'brain'>('trading');
+  const [isExpandedHero, setIsExpandedHero] = useState<boolean>(() => {
+    return localStorage.getItem('autopilot_expanded_hero') === 'true';
+  });
+
+  const handleSetDashboardTab = (tab: DashboardSubTab) => {
+    setDashboardTab(tab);
+    localStorage.setItem('autopilot_dashboard_pro_tab', tab);
+  };
+
+  const handleToggleExpandedHero = () => {
+    setIsExpandedHero(prev => {
+      const next = !prev;
+      localStorage.setItem('autopilot_expanded_hero', String(next));
+      return next;
+    });
+  };
   
   // Multi-View Workspace panels: allow users to open multiple sections simultaneously
   const [panels, setPanels] = useState({
@@ -103,8 +128,107 @@ const MainContent: React.FC = () => {
     return () => window.removeEventListener('open-product-tour', handleOpenTour);
   }, []);
 
+  // Helper to render individual dashboard tab modules
+  const renderTabContent = (tabKey: 'ledger' | 'trading' | 'charts' | 'brain') => {
+    switch (tabKey) {
+      case 'ledger':
+        return (
+          <div className="animate-fade-in space-y-4">
+            <DashboardDailyLedgerCard />
+          </div>
+        );
+      case 'trading':
+        return (
+          <div className="animate-fade-in space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+              <OpenPositionsCard />
+              <MarketScannerCard />
+            </div>
+          </div>
+        );
+      case 'charts':
+        return (
+          <div className="animate-fade-in space-y-4">
+            {/* Chart View Switcher Controls with Distinct Radio Pills */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-white/10 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setChartViewMode('equity')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                    chartViewMode === 'equity'
+                      ? 'bg-cyan-500/25 text-cyan-200 font-bold border border-cyan-400/60 shadow-sm ring-1 ring-cyan-400/40'
+                      : 'text-slate-400 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${chartViewMode === 'equity' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>{t('ఈక్విటీ ట్రాజెక్టరీ', 'Equity Trajectory')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setChartViewMode('live_market')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                    chartViewMode === 'live_market'
+                      ? 'bg-emerald-500/25 text-emerald-200 font-bold border border-emerald-400/60 shadow-sm ring-1 ring-emerald-400/40'
+                      : 'text-slate-400 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${chartViewMode === 'live_market' ? 'bg-emerald-400 ring-2 ring-emerald-400/50' : 'border border-slate-500'}`} />
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  <span>{t('లైవ్ మార్కెట్ చార్ట్', 'Live Stock Market')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setChartViewMode('both')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                    chartViewMode === 'both'
+                      ? 'bg-violet-500/25 text-violet-200 font-bold border border-violet-400/60 shadow-sm ring-1 ring-violet-400/40'
+                      : 'text-slate-400 hover:text-white border border-transparent'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${chartViewMode === 'both' ? 'bg-violet-400 ring-2 ring-violet-400/50' : 'border border-slate-500'}`} />
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>{t('రెండు చార్టులు (Both)', 'Both Charts')}</span>
+                </button>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{t('లైవ్ NSE డేటా ఫీడ్ యాక్టివ్', 'Live NSE Data Feeds Active')}</span>
+              </div>
+            </div>
+
+            {/* Grid Layout: Charts + Quick Order Form */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2 space-y-4">
+                {(chartViewMode === 'equity' || chartViewMode === 'both') && <PerformanceChart />}
+                {(chartViewMode === 'live_market' || chartViewMode === 'both') && <LiveStockChart />}
+              </div>
+              <div>
+                <OrderForm />
+              </div>
+            </div>
+
+            <RealizedPnLCard />
+            <OrderHistory />
+          </div>
+        );
+      case 'brain':
+        return (
+          <div className="animate-fade-in space-y-4">
+            <AutoPilotBanner />
+            <DailySummaryCard onOpenJournal={() => setShowJournalModal(true)} />
+            <BottomStatusGrid onOpenDiagnostics={() => setShowDiagnosticsModal(true)} />
+          </div>
+        );
+    }
+  };
+
   return (
-    <main className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 md:pb-12 relative z-10">
+    <main className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-3 sm:py-5 pb-24 md:pb-12 relative z-10">
       {/* Risk modal trigger floating button */}
       <button
         onClick={() => setShowRiskModal(true)}
@@ -121,229 +245,204 @@ const MainContent: React.FC = () => {
         onOpenVoice={() => setShowVoiceModal(true)}
       />
 
-      {/* Tab: Dashboard (matching reference screenshots media_1792471364217.png and media_1792471364220.png) */}
+      {/* Tab: Dashboard (Pro Terminal with Instant Tabs & Multi-Tab Split) */}
       {activeTab === 'dashboard' && (
-        <div className="space-y-5">
-          {/* Top Bar with Badges, AI Bot Trigger, Voice Copilot, and Automation Status */}
-          <HeaderBar
+        <div className="space-y-4">
+          {/* Top Sticky Pro Command Bar (~52px compact header with live metrics and quick actions) */}
+          <ProCommandBar
+            onOpenInvest={() => setShowInvestModal(true)}
+            onOpenWithdraw={() => setShowWithdrawModal(true)}
+            onOpenPortfolio={() => setShowPortfolioModal(true)}
             onOpenDiagnostics={() => setShowDiagnosticsModal(true)}
             onOpenChat={() => setShowAiChatModal(true)}
             onOpenVoice={() => setShowVoiceModal(true)}
             onOpenTour={() => setShowTourModal(true)}
+            isExpandedView={isExpandedHero}
+            onToggleExpandedView={handleToggleExpandedHero}
           />
 
-          {/* Hero Portfolio Card */}
-          <HeroPortfolioCard />
+          {/* Optional Expanded Classic Hero Cards (Only visible when user toggles 'Hero Cards') */}
+          {isExpandedHero && (
+            <div className="space-y-4 animate-fade-in">
+              <HeaderBar
+                onOpenDiagnostics={() => setShowDiagnosticsModal(true)}
+                onOpenChat={() => setShowAiChatModal(true)}
+                onOpenVoice={() => setShowVoiceModal(true)}
+                onOpenTour={() => setShowTourModal(true)}
+              />
+              <HeroPortfolioCard />
+              <ThreeOptionCards
+                onOpenInvest={() => setShowInvestModal(true)}
+                onOpenPortfolio={() => setShowPortfolioModal(true)}
+                onOpenWithdraw={() => setShowWithdrawModal(true)}
+              />
+            </div>
+          )}
 
-          {/* Three Main Option Cards: Invest, Portfolio/PnL, Withdraw */}
-          <ThreeOptionCards
-            onOpenInvest={() => setShowInvestModal(true)}
-            onOpenPortfolio={() => setShowPortfolioModal(true)}
-            onOpenWithdraw={() => setShowWithdrawModal(true)}
-          />
-
-          {/* Two-Column Middle Grid: Open Position & Market Scanner */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <OpenPositionsCard />
-            <MarketScannerCard />
-          </div>
-
-          {/* Bottom Row: Risk Status, Data Source, Emergency Control */}
-          <BottomStatusGrid onOpenDiagnostics={() => setShowDiagnosticsModal(true)} />
-
-          {/* Today's Daily Summary & Trade Journal Box */}
-          <div className="pt-2">
-            <DailySummaryCard onOpenJournal={() => setShowJournalModal(true)} />
-          </div>
-
-          {/* AI Autonomous Bot Live Feed Banner */}
-          <div className="pt-2">
-            <AutoPilotBanner />
-          </div>
-
-          {/* Multi-View Workspace Module Selector ("ఒకేసారి multiple open ayyela chey") */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-white/10 shadow-lg">
+          {/* Pro Sub-Tab Selector Bar with Split Mode & Distinct Radio Pills */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2 rounded-xl bg-slate-950/80 border border-white/10 shadow-lg">
             <div className="flex items-center gap-1.5 overflow-x-auto touch-scroll no-scrollbar text-xs py-0.5">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 pl-1">
-                {t('మల్టీ-వ్యూ ప్యానెల్స్:', 'Multi-View Panels:')}
-              </span>
-
+              {/* Tab 1: 15-Day Ledger */}
               <button
                 type="button"
-                onClick={() => togglePanel('realizedTable')}
+                onClick={() => handleSetDashboardTab('ledger')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  panels.realizedTable
-                    ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/60 shadow-sm ring-1 ring-emerald-400/40'
+                  dashboardTab === 'ledger'
+                    ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-400/60 shadow-sm ring-1 ring-cyan-400/40'
                     : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.realizedTable ? 'bg-emerald-400 ring-2 ring-emerald-400/50' : 'border border-slate-500'}`} />
-                <Receipt className="w-3.5 h-3.5" />
-                <span>{t('అమ్మేసిన ట్రేడ్స్ & కాలిక్యులేటర్', 'Realized Trades & Calculator')}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => togglePanel('charts')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  panels.charts
-                    ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/60 shadow-sm ring-1 ring-cyan-400/40'
-                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.charts ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>{t('చార్టులు', 'Charts')}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => togglePanel('dailyLedger')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  panels.dailyLedger
-                    ? 'bg-blue-500/20 text-blue-200 border border-blue-400/60 shadow-sm ring-1 ring-blue-400/40'
-                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.dailyLedger ? 'bg-blue-400 ring-2 ring-blue-400/50' : 'border border-slate-500'}`} />
+                <span className={`w-2 h-2 rounded-full shrink-0 ${dashboardTab === 'ledger' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
                 <Table className="w-3.5 h-3.5" />
-                <span>{t('15-రోజుల లెడ్జర్', '15-Day Ledger')}</span>
+                <span>{t('15-రోజుల లెడ్జర్ (Day 17 Top)', '15-Day Ledger (Day 17 Top)')}</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] bg-cyan-400/20 text-cyan-300 font-mono font-bold">D17</span>
               </button>
 
+              {/* Tab 2: Live Trading & Scanner */}
               <button
                 type="button"
-                onClick={() => togglePanel('orders')}
+                onClick={() => handleSetDashboardTab('trading')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  panels.orders
-                    ? 'bg-violet-500/20 text-violet-200 border border-violet-400/60 shadow-sm ring-1 ring-violet-400/40'
+                  dashboardTab === 'trading'
+                    ? 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/60 shadow-sm ring-1 ring-emerald-400/40'
                     : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.orders ? 'bg-violet-400 ring-2 ring-violet-400/50' : 'border border-slate-500'}`} />
-                <ShoppingCart className="w-3.5 h-3.5" />
-                <span>{t('ఆర్డర్లు', 'Orders')}</span>
+                <span className={`w-2 h-2 rounded-full shrink-0 ${dashboardTab === 'trading' ? 'bg-emerald-400 ring-2 ring-emerald-400/50' : 'border border-slate-500'}`} />
+                <Activity className="w-3.5 h-3.5" />
+                <span>{t('లైవ్ ట్రేడింగ్ & స్కానర్', 'Live Trading & Scanner')}</span>
               </button>
 
+              {/* Tab 3: Realized Trades & Charts */}
               <button
                 type="button"
-                onClick={() => togglePanel('scanner')}
+                onClick={() => handleSetDashboardTab('charts')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  panels.scanner
-                    ? 'bg-amber-500/20 text-amber-200 border border-amber-400/60 shadow-sm ring-1 ring-amber-400/40'
+                  dashboardTab === 'charts'
+                    ? 'bg-blue-500/25 text-blue-200 border border-blue-400/60 shadow-sm ring-1 ring-blue-400/40'
                     : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.scanner ? 'bg-amber-400 ring-2 ring-amber-400/50' : 'border border-slate-500'}`} />
-                <Radio className="w-3.5 h-3.5" />
-                <span>{t('స్కానర్ టేబుల్', 'Scanner Table')}</span>
+                <span className={`w-2 h-2 rounded-full shrink-0 ${dashboardTab === 'charts' ? 'bg-blue-400 ring-2 ring-blue-400/50' : 'border border-slate-500'}`} />
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>{t('రియలైజ్డ్ ట్రేడ్స్ & చార్టులు', 'Realized Trades & Charts')}</span>
+              </button>
+
+              {/* Tab 4: AI Brain & Automation */}
+              <button
+                type="button"
+                onClick={() => handleSetDashboardTab('brain')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  dashboardTab === 'brain'
+                    ? 'bg-violet-500/25 text-violet-200 border border-violet-400/60 shadow-sm ring-1 ring-violet-400/40'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${dashboardTab === 'brain' ? 'bg-violet-400 ring-2 ring-violet-400/50' : 'border border-slate-500'}`} />
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{t('AGI బ్రెయిన్ & ఆటోమేషన్', 'AGI Brain & Automation')}</span>
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={showAllPanels}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 transition-all cursor-pointer shadow-md shrink-0 active:scale-95"
-              title={t('అన్ని ప్యానెల్స్ ఒకేసారి చూడండి', 'View all modules simultaneously')}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>{t('అన్నీ ఒకేసారి చూడు (Show All)', 'Show All Modules')}</span>
-            </button>
+            {/* Right: Multi-Tab Split Mode and Show All buttons */}
+            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => handleSetDashboardTab(dashboardTab === 'split' ? 'ledger' : 'split')}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  dashboardTab === 'split'
+                    ? 'bg-amber-500/25 text-amber-200 border border-amber-400/60 shadow-sm ring-1 ring-amber-400/40'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
+                }`}
+                title={t('రెండు ట్యాబ్స్ పక్కపక్కనే ఒకేసారి తెరవండి', 'Open 2 tabs side-by-side simultaneously')}
+              >
+                <Columns className="w-3.5 h-3.5" />
+                <span>{t('⚡ స్ప్లిట్ 2 ట్యాబ్స్', '⚡ Split 2 Tabs')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSetDashboardTab(dashboardTab === 'all' ? 'ledger' : 'all')}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  dashboardTab === 'all'
+                    ? 'bg-indigo-500/25 text-indigo-200 border border-indigo-400/60 shadow-sm ring-1 ring-indigo-400/40'
+                    : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
+                }`}
+                title={t('అన్ని మోడ్యూల్స్ ఒకే పేజీలో వరుసగా చూడండి', 'View all modules sequentially')}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>{t('అన్నీ (All)', 'All')}</span>
+              </button>
+            </div>
           </div>
 
-          {/* Module 1: Realized Trades & Live Interactive Calculator */}
-          {panels.realizedTable && (
-            <div className="pt-2 animate-fade-in">
-              <RealizedPnLCard />
-            </div>
-          )}
+          {/* Tab 1 Content: 15-Day Daily Ledger (Day 17 at Top) */}
+          {dashboardTab === 'ledger' && renderTabContent('ledger')}
 
-          {/* Module 2: Equity Trajectory & Live Stock Market Chart Section */}
-          {panels.charts && (
-            <div className="pt-2 space-y-3 animate-fade-in">
-              {/* Chart View Switcher Controls with Distinct Radio Pills */}
-              <div className="flex flex-wrap items-center justify-between gap-2.5">
-                <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-white/10 text-xs">
-                  <button
-                    onClick={() => setChartViewMode('equity')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                      chartViewMode === 'equity'
-                        ? 'bg-cyan-500/25 text-cyan-200 font-bold border border-cyan-400/60 shadow-sm ring-1 ring-cyan-400/40'
-                        : 'text-slate-400 hover:text-white border border-transparent'
-                    }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${chartViewMode === 'equity' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span>{t('ఈక్విటీ ట్రాజెక్టరీ', 'Equity Trajectory')}</span>
-                  </button>
+          {/* Tab 2 Content: Live Trading & Scanner */}
+          {dashboardTab === 'trading' && renderTabContent('trading')}
 
-                  <button
-                    onClick={() => setChartViewMode('live_market')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                      chartViewMode === 'live_market'
-                        ? 'bg-emerald-500/25 text-emerald-200 font-bold border border-emerald-400/60 shadow-sm ring-1 ring-emerald-400/40'
-                        : 'text-slate-400 hover:text-white border border-transparent'
-                    }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${chartViewMode === 'live_market' ? 'bg-emerald-400 ring-2 ring-emerald-400/50' : 'border border-slate-500'}`} />
-                    <BarChart2 className="w-3.5 h-3.5" />
-                    <span>{t('లైవ్ మార్కెట్ చార్ట్', 'Live Stock Market')}</span>
-                  </button>
+          {/* Tab 3 Content: Realized Trades & Charts */}
+          {dashboardTab === 'charts' && renderTabContent('charts')}
 
-                  <button
-                    onClick={() => setChartViewMode('both')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                      chartViewMode === 'both'
-                        ? 'bg-violet-500/25 text-violet-200 font-bold border border-violet-400/60 shadow-sm ring-1 ring-violet-400/40'
-                        : 'text-slate-400 hover:text-white border border-transparent'
-                    }`}
+          {/* Tab 4 Content: AI Brain & Automation */}
+          {dashboardTab === 'brain' && renderTabContent('brain')}
+
+          {/* Multi-Tab Split Mode: 2 Tabs Side-by-Side (or stacked on mobile) */}
+          {dashboardTab === 'split' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-slate-900/80 border border-amber-500/30">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-amber-300">
+                    {t('ఎడమ ప్యానెల్ (Left):', 'Left Pane:')}
+                  </span>
+                  <select
+                    value={splitLeftTab}
+                    onChange={(e) => setSplitLeftTab(e.target.value as any)}
+                    className="bg-slate-800 text-white text-xs rounded-lg px-2.5 py-1 border border-white/10"
                   >
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${chartViewMode === 'both' ? 'bg-violet-400 ring-2 ring-violet-400/50' : 'border border-slate-500'}`} />
-                    <Layers className="w-3.5 h-3.5" />
-                    <span>{t('రెండు చార్టులు (Both)', 'Both Charts')}</span>
-                  </button>
+                    <option value="ledger">📑 15-Day Ledger (Day 17 Top)</option>
+                    <option value="trading">⚡ Live Trading & Scanner</option>
+                    <option value="charts">📊 Realized Trades & Charts</option>
+                    <option value="brain">🧠 AGI Brain & Automation</option>
+                  </select>
                 </div>
 
-                <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>{t('లైవ్ NSE డేటా ఫీడ్ యాక్టివ్', 'Live NSE Data Feeds Active')}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-amber-300">
+                    {t('కుడి ప్యానెల్ (Right):', 'Right Pane:')}
+                  </span>
+                  <select
+                    value={splitRightTab}
+                    onChange={(e) => setSplitRightTab(e.target.value as any)}
+                    className="bg-slate-800 text-white text-xs rounded-lg px-2.5 py-1 border border-white/10"
+                  >
+                    <option value="trading">⚡ Live Trading & Scanner</option>
+                    <option value="ledger">📑 15-Day Ledger (Day 17 Top)</option>
+                    <option value="charts">📊 Realized Trades & Charts</option>
+                    <option value="brain">🧠 AGI Brain & Automation</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Grid Layout: Charts + Quick Order Form */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div className="lg:col-span-2 space-y-4">
-                  {(chartViewMode === 'equity' || chartViewMode === 'both') && (
-                    <PerformanceChart />
-                  )}
-                  {(chartViewMode === 'live_market' || chartViewMode === 'both') && (
-                    <LiveStockChart />
-                  )}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                <div className="space-y-4 overflow-hidden">
+                  {renderTabContent(splitLeftTab)}
                 </div>
-                <div>
-                  <OrderForm />
+                <div className="space-y-4 overflow-hidden">
+                  {renderTabContent(splitRightTab)}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Module 3: Day-by-Day Financial Accounting Ledger Table */}
-          {panels.dailyLedger && (
-            <div className="pt-2 animate-fade-in">
-              <DashboardDailyLedgerCard />
-            </div>
-          )}
-
-          {/* Module 4: Order Execution & Order History */}
-          {panels.orders && (
-            <div className="pt-2 space-y-4 animate-fade-in">
-              <OrderHistory />
-            </div>
-          )}
-
-          {/* Module 5: Optional In-Dashboard Full Scanner Table */}
-          {panels.scanner && (
-            <div className="pt-2 animate-fade-in">
-              <ScannerTable />
+          {/* All Modules View */}
+          {dashboardTab === 'all' && (
+            <div className="space-y-5 animate-fade-in">
+              {renderTabContent('ledger')}
+              {renderTabContent('trading')}
+              {renderTabContent('charts')}
+              {renderTabContent('brain')}
             </div>
           )}
         </div>
