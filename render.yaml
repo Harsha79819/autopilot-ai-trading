@@ -16,4 +16,4 @@ services:
       - key: STRICT_PAPER_TRADING_ONLY
         value: true
       - key: INITIAL_VIRTUAL_CAPITAL_INR
-        value: 500.00
+        value: 5000.00
