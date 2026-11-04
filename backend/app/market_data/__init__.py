@@ -23,6 +23,8 @@ from backend.app.market_data.market_calendar import (
     get_market_status,
     get_next_open_time,
     get_seconds_until_next_open,
+    to_ist_datetime,
+    IST,
 )
 
 
@@ -81,5 +83,7 @@ __all__ = [
     "get_market_status",
     "get_next_open_time",
     "get_seconds_until_next_open",
+    "to_ist_datetime",
+    "IST",
     "get_market_provider"
 ]

@@ -71,6 +71,10 @@ class Settings(BaseSettings):
     TAKE_PROFIT_PCT: float = 3.0           # +3.0% target profit gate (1:2 Risk-Reward: 1.5% * 2.0)
     EMERGENCY_STOP_ACTIVE: bool = False
 
+    # Overnight & Gap Risk Policy
+    INTRADAY_ONLY: bool = True             # True disallows new entries after 15:00 IST and auto-squares off at 15:15 IST
+    KILL_SWITCH_CLOSES_POSITIONS: bool = False # When True, activating kill switch liquidates all open positions immediately
+
     # Strategy & Cost Gate Parameters
     COST_AWARE_GATE_MULTIPLIER: float = 3.0 # expected_move >= K * total_costs
     SIMULATED_SLIPPAGE_BPS: float = 7.5     # 0.075% slippage buffer (realistic 0.05% - 0.10%)

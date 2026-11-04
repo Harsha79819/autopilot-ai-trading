@@ -112,6 +112,9 @@ export const AutoPilotBanner: React.FC = () => {
                 <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">
                   PAPER TRADING
                 </span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30">
+                  {aiStatus?.intraday_only !== false ? 'INTRADAY ONLY' : 'OVERNIGHT ALLOWED'}
+                </span>
               </h1>
             </div>
             {getStatusBadge()}

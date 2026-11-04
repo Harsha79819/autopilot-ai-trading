@@ -22,6 +22,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   const status = aiStatus?.status || 'RUNNING';
 
   const isRunning = isEnabled && status !== 'PAUSED' && status !== 'HALTED';
+  const isIntradayOnly = aiStatus?.intraday_only !== false;
 
   return (
     <header className="w-full mb-6">
@@ -100,6 +101,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           >
             {status === 'MARKET_CLOSED' ? 'MARKET CLOSED (PAPER PAUSED)' : 'REAL FEED (PAPER EXECUTION)'}
           </button>
+
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide border ${
+              isIntradayOnly
+                ? 'border-blue-500/40 text-blue-300 bg-blue-950/30'
+                : 'border-purple-500/40 text-purple-300 bg-purple-950/30'
+            }`}
+            title={isIntradayOnly ? "Intraday Only: Auto square-off at 15:15 IST, no overnight risk" : "Overnight Allowed: Positions can be carried multi-day"}
+          >
+            {isIntradayOnly ? '⚡ Intraday Only (15:15 SqOff)' : '🌙 Overnight Allowed'}
+          </span>
 
           <button
             type="button"
@@ -206,6 +218,16 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </button>
           <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border border-violet-500/40 text-violet-300 bg-violet-950/30 whitespace-nowrap">
             PAPER — VIRTUAL MONEY
+          </span>
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap ${
+              isIntradayOnly
+                ? 'border-blue-500/40 text-blue-300 bg-blue-950/30'
+                : 'border-purple-500/40 text-purple-300 bg-purple-950/30'
+            }`}
+            title={isIntradayOnly ? "Intraday Only: Square-off at 15:15 IST" : "Overnight Allowed"}
+          >
+            {isIntradayOnly ? '⚡ Intraday' : '🌙 Overnight'}
           </span>
           <button
             type="button"

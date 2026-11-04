@@ -119,7 +119,9 @@ class RiskManager:
             max_portfolio_drawdown_pct=settings.MAX_PORTFOLIO_DRAWDOWN_PCT,
             stale_data_threshold_seconds=settings.STALE_DATA_THRESHOLD_SECONDS,
             cost_gate_multiplier=settings.COST_AWARE_GATE_MULTIPLIER,
-            is_emergency_stopped=is_stopped
+            is_emergency_stopped=is_stopped,
+            intraday_only=settings.INTRADAY_ONLY,
+            kill_switch_closes_positions=settings.KILL_SWITCH_CLOSES_POSITIONS
         )
 
         return RiskStatusResponse(

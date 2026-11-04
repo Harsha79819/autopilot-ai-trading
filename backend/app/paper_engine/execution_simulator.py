@@ -64,8 +64,8 @@ class ExecutionSimulator:
                 rejection_reason=f"Invalid market quote for {symbol}: price must be positive."
             )
 
-        # Rule 3: Stale quote check
-        if quote.is_stale:
+        # Rule 3: Stale quote check (strictly blocks BUY entries; position-closing exits permitted)
+        if quote.is_stale and side_upper == "BUY":
             return SimulationExecutionResult(
                 is_fillable=False,
                 rejection_reason=f"Stale market data detected for {symbol}. Order rejected for safety."

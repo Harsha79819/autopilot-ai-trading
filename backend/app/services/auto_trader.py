@@ -1,8 +1,9 @@
 """Continuous Auto-Pilot Trading Runner service with Best-Stock AI Scoring."""
 import asyncio
+import json
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from typing import Dict, Set, Optional, List, Any, Tuple
 from sqlalchemy.orm import Session
 from backend.app.database import SessionLocal
@@ -21,6 +22,8 @@ from backend.app.market_data import (
     is_market_session_active,
     get_next_open_time,
     get_seconds_until_next_open,
+    to_ist_datetime,
+    IST,
 )
 from backend.app.scanner.universe import UNIVERSE_SYMBOLS
 from backend.app.scanner.fundamental_gate import fundamental_gate
@@ -90,7 +93,10 @@ class AutoPilotRunner:
             await self.broadcast({"type": "AI_STATUS", **self._last_ai_status})
 
     def get_ai_status(self) -> dict:
-        return self._last_ai_status
+        status_copy = dict(self._last_ai_status)
+        status_copy["intraday_only"] = getattr(settings, "INTRADAY_ONLY", True)
+        status_copy["kill_switch_closes_positions"] = getattr(settings, "KILL_SWITCH_CLOSES_POSITIONS", False)
+        return status_copy
 
     def set_autopilot_enabled(self, enabled: bool) -> bool:
         self.autopilot_enabled = enabled
@@ -487,12 +493,16 @@ class AutoPilotRunner:
 
                     # Enforce minimum holding cooldown of 10 seconds to avoid tick jitter,
                     # unless stop loss is pierced
+                    is_gap_stop = cur_price < (entry_info["stop_loss"] - 0.001)
                     hit_take_profit = cur_price >= entry_info["take_profit"] and holding_seconds >= 10
                     hit_stop_loss = cur_price <= entry_info["stop_loss"]
 
                     if hit_take_profit or hit_stop_loss:
                         if hit_take_profit:
                             reason = f"Take-Profit Target Hit (+{tp_pct}%, 1:{int(rr_ratio)} RR)"
+                        elif is_gap_stop:
+                            gap_delta = round(entry_info["stop_loss"] - cur_price, 2)
+                            reason = f"GAP_STOP: Market opened/traded at ₹{cur_price:.2f} below stop ₹{entry_info['stop_loss']:.2f} (gap delta: -₹{gap_delta})"
                         elif entry_info.get("is_trailed"):
                             trailed_gain = ((cur_price - pos.average_buy_price) / pos.average_buy_price) * 100.0
                             reason = f"Trailing Stop-Loss Profit Lock Executed (+{trailed_gain:.2f}%)"
@@ -513,6 +523,28 @@ class AutoPilotRunner:
                             quote=quote,
                             risk_manager=risk_manager
                         )
+
+                        if is_gap_stop:
+                            try:
+                                gap_delta = round(entry_info["stop_loss"] - cur_price, 2)
+                                db.add(AuditLog(
+                                    user_id=user.id,
+                                    event_type="GAP_STOP",
+                                    symbol=pos.symbol,
+                                    decision="EXECUTED",
+                                    reason=f"Gap-through Stop-Loss: price ₹{cur_price:.2f} opened/traded below stop ₹{entry_info['stop_loss']:.2f}",
+                                    details_json=json.dumps({
+                                        "stop_loss": entry_info["stop_loss"],
+                                        "execution_price": cur_price,
+                                        "gap_delta": gap_delta,
+                                        "quantity": pos.quantity,
+                                        "loss": round((cur_price - pos.average_buy_price) * pos.quantity, 2)
+                                    }),
+                                    timestamp=now
+                                ))
+                                db.commit()
+                            except Exception as gap_err:
+                                logger.error(f"Error logging GAP_STOP audit: {gap_err}")
 
                         # Record trade in Trading Journal (Golden Rule 4)
                         try:
@@ -582,6 +614,86 @@ class AutoPilotRunner:
 
                 # Re-query positions after potential sell
                 positions = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
+
+                # Intraday 15:15 Auto Square-Off Check
+                now_ist = to_ist_datetime(now)
+                cur_time_ist = now_ist.time()
+                if getattr(settings, "INTRADAY_ONLY", True) and cur_time_ist >= time(15, 15) and cur_time_ist <= time(15, 30):
+                    if positions:
+                        logger.info(f"Intraday 15:15 square-off: closing {len(positions)} open positions for user {user.id}")
+                        for pos in positions:
+                            quote = latest_quotes.get(pos.symbol)
+                            cur_price = quote.current_price if quote else pos.average_buy_price
+                            reason = "INTRADAY_SQUARE_OFF: 15:15 IST Market Square-off per INTRADAY_ONLY policy"
+                            order_in = OrderCreate(
+                                symbol=pos.symbol,
+                                side="SELL",
+                                order_type="MARKET",
+                                quantity=pos.quantity,
+                                price=cur_price
+                            )
+                            paper_broker.execute_paper_order(
+                                db=db,
+                                user=user,
+                                order_in=order_in,
+                                quote=quote,
+                                risk_manager=risk_manager
+                            )
+                            try:
+                                from backend.app.models.trading_journal import TradingJournal
+                                entry_time = self._position_entry_times.get((user.id, pos.symbol), now - timedelta(seconds=60))
+                                holding_sec = int((now - entry_time).total_seconds())
+                                pnl_val = round((cur_price - pos.average_buy_price) * pos.quantity, 2)
+                                pnl_pct_val = round(((cur_price - pos.average_buy_price) / pos.average_buy_price) * 100.0, 2)
+                                db.add(TradingJournal(
+                                    user_id=user.id,
+                                    portfolio_id=portfolio.id,
+                                    symbol=pos.symbol,
+                                    side="BUY_SELL",
+                                    quantity=pos.quantity,
+                                    entry_price=pos.average_buy_price,
+                                    exit_price=cur_price,
+                                    stop_loss=pos.average_buy_price * 0.985,
+                                    take_profit=pos.average_buy_price * 1.03,
+                                    risk_reward_ratio=2.0,
+                                    risk_amount=round(pos.average_buy_price * 0.015 * pos.quantity, 2),
+                                    realized_pnl=pnl_val,
+                                    realized_pnl_pct=pnl_pct_val,
+                                    setup_reason="Intraday Position",
+                                    exit_reason=reason,
+                                    emotion_tag="DISCIPLINED",
+                                    ai_critique="Intraday square-off at 15:15 IST executed cleanly. Zero overnight gap risk.",
+                                    holding_seconds=holding_sec,
+                                    created_at=entry_time,
+                                    closed_at=now
+                                ))
+                                db.add(AuditLog(
+                                    user_id=user.id,
+                                    event_type="INTRADAY_SQUARE_OFF",
+                                    symbol=pos.symbol,
+                                    decision="EXECUTED",
+                                    reason="Auto square-off at 15:15 IST per INTRADAY_ONLY risk policy",
+                                    details_json=json.dumps({
+                                        "exit_price": cur_price,
+                                        "quantity": pos.quantity,
+                                        "realized_pnl": pnl_val
+                                    }),
+                                    timestamp=now
+                                ))
+                                db.query(PositionRiskState).filter(
+                                    PositionRiskState.user_id == user.id,
+                                    PositionRiskState.symbol == pos.symbol
+                                ).delete()
+                                db.commit()
+                            except Exception as log_err:
+                                logger.error(f"Error logging intraday square-off: {log_err}")
+
+                            self._position_targets.pop((user.id, pos.symbol), None)
+                            self._position_entry_times.pop((user.id, pos.symbol), None)
+                            self._position_highs.pop((user.id, pos.symbol), None)
+
+                        positions = []
+
                 metrics = portfolio_ledger.calculate_metrics(
                     db,
                     portfolio,
@@ -598,6 +710,47 @@ class AutoPilotRunner:
                         if kill_switch_manager.is_stopped(portfolio)
                         else "Daily loss or drawdown limit reached. Trading halted for today."
                     )
+                    if getattr(settings, "KILL_SWITCH_CLOSES_POSITIONS", False) and len(positions) > 0:
+                        logger.warning(f"KILL_SWITCH_CLOSES_POSITIONS=True: liquidating {len(positions)} positions for user {user.id}")
+                        for pos in positions:
+                            quote = latest_quotes.get(pos.symbol)
+                            cur_price = quote.current_price if quote else pos.average_buy_price
+                            order_in = OrderCreate(
+                                symbol=pos.symbol,
+                                side="SELL",
+                                order_type="MARKET",
+                                quantity=pos.quantity,
+                                price=cur_price
+                            )
+                            paper_broker.execute_paper_order(
+                                db=db,
+                                user=user,
+                                order_in=order_in,
+                                quote=quote,
+                                risk_manager=risk_manager
+                            )
+                            db.add(AuditLog(
+                                user_id=user.id,
+                                event_type="KILL_SWITCH_LIQUIDATION",
+                                symbol=pos.symbol,
+                                decision="EXECUTED",
+                                reason=f"Liquidated {pos.symbol} due to emergency kill-switch halt",
+                                details_json=json.dumps({"price": cur_price, "quantity": pos.quantity}),
+                                timestamp=now
+                            ))
+                            try:
+                                db.query(PositionRiskState).filter(
+                                    PositionRiskState.user_id == user.id,
+                                    PositionRiskState.symbol == pos.symbol
+                                ).delete()
+                            except Exception:
+                                pass
+                            self._position_targets.pop((user.id, pos.symbol), None)
+                            self._position_entry_times.pop((user.id, pos.symbol), None)
+                            self._position_highs.pop((user.id, pos.symbol), None)
+                        db.commit()
+                        positions = []
+
                     self._last_ai_status = {
                         "status": "HALTED",
                         "message": f"Trading halted for today: {halt_reason}",
@@ -611,6 +764,24 @@ class AutoPilotRunner:
                     }
                     await self.broadcast_ai_status_if_changed(self._last_ai_status)
                     logger.info(f"AutoPilot loop paused for user {user.id}: {halt_reason}. Continuing with other users.")
+                    continue
+
+                # C. Check Intraday 15:00 cutoff for new entries
+                if getattr(settings, "INTRADAY_ONLY", True) and cur_time_ist >= time(15, 0):
+                    logger.info(f"Intraday entry cutoff reached ({cur_time_ist.strftime('%H:%M')} >= 15:00 IST). Skipping new entries.")
+                    if len(positions) == 0:
+                        self._last_ai_status = {
+                            "status": "SCANNING",
+                            "message": "Intraday entry cutoff reached (15:00 IST). No new positions allowed today.",
+                            "best_stock": None,
+                            "best_score": 0,
+                            "active_positions_count": 0,
+                            "target_profit": None,
+                            "stop_loss": None,
+                            "autopilot_enabled": self.autopilot_enabled,
+                            "updated_at": now.isoformat()
+                        }
+                        await self.broadcast_ai_status_if_changed(self._last_ai_status)
                     continue
 
                 # C. Screening Pipeline with Fundamental Health, Penny Stock Cutoff & Multi-Stock Capital Allocation
@@ -849,6 +1020,14 @@ class AutoPilotRunner:
                 return {"success": False, "message": "User portfolio not found", "deployed_count": 0}
 
             portfolio = user.portfolio
+            now_ist = to_ist_datetime(now)
+            if getattr(settings, "INTRADAY_ONLY", True) and now_ist.time() >= time(15, 0):
+                return {
+                    "success": False,
+                    "message": "Intraday entry cutoff reached (15:00 IST). Cannot deploy new capital.",
+                    "deployed_count": 0
+                }
+
             self._sync_agi_learning(db, user.id)
 
             latest_quotes = {sym: market_provider.get_quote(sym) for sym in UNIVERSE_SYMBOLS}

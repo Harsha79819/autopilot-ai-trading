@@ -54,6 +54,9 @@ def _to_ist_datetime(dt: Optional[Union[datetime, date]]) -> datetime:
     return datetime.combine(dt, time(0, 0), tzinfo=IST)
 
 
+to_ist_datetime = _to_ist_datetime
+
+
 def is_trading_day(d: Optional[Union[datetime, date]] = None) -> bool:
     """
     Check if a given calendar day is an active NSE trading day.

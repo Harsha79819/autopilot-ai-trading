@@ -10,6 +10,8 @@ class RiskConfig(BaseModel):
     stale_data_threshold_seconds: int = Field(30, ge=5, le=300)
     cost_gate_multiplier: float = Field(3.0, ge=1.0, le=10.0)
     is_emergency_stopped: bool = False
+    intraday_only: bool = True
+    kill_switch_closes_positions: bool = False
 
 
 class RiskStatusResponse(BaseModel):

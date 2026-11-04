@@ -289,6 +289,8 @@ export interface AIStatus {
   target_profit?: number | null;
   stop_loss?: number | null;
   autopilot_enabled?: boolean;
+  intraday_only?: boolean;
+  kill_switch_closes_positions?: boolean;
   updated_at?: string;
 }
 
