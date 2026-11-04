@@ -39,147 +39,105 @@ export const RealizedPnLCard: React.FC = () => {
   const { t } = useLanguage();
   const { portfolio } = useTrading();
   const [activeTab, setActiveTab] = useState<'records' | 'calculator'>('records');
-  const [selectedPeriod, setSelectedPeriod] = useState<'ALL' | 'D4' | 'D10' | 'D11' | 'D12' | 'TODAY'>('ALL');
+  const [selectedPeriod, setSelectedPeriod] = useState<'ALL' | 'PROFITS' | 'LOSSES'>('ALL');
+
+  const liveCash = portfolio?.cash_balance ?? 0;
+  const liveEquity = portfolio?.total_portfolio_value ?? liveCash;
+  const totalDeposit = portfolio?.initial_cash ?? 0;
+
+  const closedTrades = useMemo(() => {
+    if (!portfolio?.recent_trades) return [];
+    return portfolio.recent_trades.filter(t => t.side === 'SELL');
+  }, [portfolio]);
+
+  const grossProfits = useMemo(() => {
+    const profitable = closedTrades.filter(tr => tr.realized_pnl > 0);
+    const total = profitable.reduce((acc, tr) => acc + tr.realized_pnl, 0);
+    const trades: RealizedTradeRecord[] = profitable.map(tr => {
+      const costBasis = tr.gross_amount - tr.realized_pnl;
+      const retPct = costBasis > 0 ? (tr.realized_pnl / costBasis) * 100 : 0;
+      return {
+        symbol: tr.symbol,
+        pnl: tr.realized_pnl,
+        returnPct: `+${retPct.toFixed(2)}%`,
+        note: t('లాభం బుకింగ్', 'Profit Booking')
+      };
+    });
+    return { total, trades };
+  }, [closedTrades, t]);
+
+  const grossLosses = useMemo(() => {
+    const losing = closedTrades.filter(tr => tr.realized_pnl < 0);
+    const total = losing.reduce((acc, tr) => acc + tr.realized_pnl, 0);
+    const trades: RealizedTradeRecord[] = losing.map(tr => {
+      const costBasis = tr.gross_amount - tr.realized_pnl;
+      const retPct = costBasis > 0 ? (tr.realized_pnl / costBasis) * 100 : 0;
+      return {
+        symbol: tr.symbol,
+        pnl: tr.realized_pnl,
+        returnPct: `${retPct.toFixed(2)}%`,
+        note: t('స్టాప్-లాస్ ఎగ్జిట్', 'Stop-Loss Exit')
+      };
+    });
+    return { total, trades };
+  }, [closedTrades, t]);
+
+  const taxesFees = -(portfolio?.total_fees_paid ?? 0);
+  const netRealized = (portfolio?.realized_pnl ?? 0) + taxesFees;
+
+  const currentData: DayBreakdown = useMemo(() => {
+    return {
+      dayLabel: t('మొత్తం క్లోజ్డ్ ట్రేడ్లు', 'All Closed Trades'),
+      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      grossProfits: selectedPeriod === 'LOSSES' ? { total: 0, trades: [] } : grossProfits,
+      grossLosses: selectedPeriod === 'PROFITS' ? { total: 0, trades: [] } : grossLosses,
+      taxesFees,
+      netRealized
+    };
+  }, [selectedPeriod, grossProfits, grossLosses, taxesFees, netRealized, t]);
+
+  const netLifetimeGain = liveEquity - totalDeposit;
+  const netLifetimeReturnPct = totalDeposit > 0 ? (netLifetimeGain / totalDeposit) * 100 : 0;
 
   // Calculator custom state
-  const liveCash = portfolio?.cash_balance ?? 3178.75;
-  const liveEquity = portfolio?.total_portfolio_value ?? 5727.75;
-  
-  const [calcDeposit, setCalcDeposit] = useState<number>(5500);
-  const [calcGrossGain, setCalcGrossGain] = useState<number>(88.04);
-  const [calcGrossLoss, setCalcGrossLoss] = useState<number>(220.71);
-  const [calcFees, setCalcFees] = useState<number>(18.84);
-  const [calcUnrealized, setCalcUnrealized] = useState<number>(39.00);
+  const [calcDeposit, setCalcDeposit] = useState<number>(() => totalDeposit);
+  const [calcGrossGain, setCalcGrossGain] = useState<number>(() => grossProfits.total);
+  const [calcGrossLoss, setCalcGrossLoss] = useState<number>(() => Math.abs(grossLosses.total));
+  const [calcFees, setCalcFees] = useState<number>(() => portfolio?.total_fees_paid ?? 0);
+  const [calcUnrealized, setCalcUnrealized] = useState<number>(() => portfolio?.unrealized_pnl ?? 0);
 
-  // Exact data requested by user
-  const historicalDays: Record<string, DayBreakdown> = {
-    ALL: {
-      dayLabel: t('మొత్తం 15 రోజులు (All Time)', 'All-Time Cumulative (15 Days)'),
-      date: '19 Oct - 02 Nov 2026',
-      grossProfits: {
-        total: 88.04,
-        trades: [
-          { symbol: 'WIPRO', pnl: 31.54, returnPct: '+3.09%', note: t('Day 12 టార్గెట్ హిట్', 'Day 12 Target Hit') },
-          { symbol: 'ITC', pnl: 27.30, returnPct: '+3.10%', note: t('Day 10 టార్గెట్ హిట్', 'Day 10 Target Hit') },
-          { symbol: 'BEL', pnl: 26.97, returnPct: '+3.12%', note: t('Day 11 టార్గెట్ హిట్', 'Day 11 Target Hit') },
-          { symbol: 'SUZLON', pnl: 1.45, returnPct: '+2.66%', note: t('Day 4 స్మాల్ స్కాల్ప్', 'Day 4 Small Scalp') },
-          { symbol: 'IDEA', pnl: 0.78, returnPct: '+3.15%', note: t('Day 4 మైక్రో టెస్ట్', 'Day 4 Micro Test') }
-        ]
-      },
-      grossLosses: {
-        total: -220.71,
-        trades: [
-          { symbol: 'SBIN', pnl: -201.59, returnPct: '-1.50%', note: t('Day 4 పాత స్టాప్ లాస్ క్రమశిక్షణ', 'Day 4 Strict Stop-Loss Hit') },
-          { symbol: 'NHPC', pnl: -18.10, returnPct: '-1.50%', note: t('Day 10 క్లీనప్ ఎగ్జిట్', 'Day 10 Clean-up Exit') },
-          { symbol: 'SUZLON / IDEA', pnl: -1.02, returnPct: '-0.85%', note: t('Day 4 స్లిప్పేజ్', 'Day 4 Slippage') }
-        ]
-      },
-      taxesFees: -18.84,
-      netRealized: -151.51
-    },
-    D12: {
-      dayLabel: 'Day 12',
-      date: '30 Oct 2026',
-      grossProfits: {
-        total: 31.54,
-        trades: [
-          { symbol: 'WIPRO', pnl: 31.54, returnPct: '+3.09%', note: t('లార్జ్-క్యాప్ ప్రాఫిట్ బుకింగ్', 'Large-Cap Profit Booking') }
-        ]
-      },
-      grossLosses: { total: 0, trades: [] },
-      taxesFees: -3.46,
-      netRealized: 28.08
-    },
-    D11: {
-      dayLabel: 'Day 11',
-      date: '29 Oct 2026',
-      grossProfits: {
-        total: 26.97,
-        trades: [
-          { symbol: 'BEL', pnl: 26.97, returnPct: '+3.12%', note: t('డిఫెన్స్ ర్యాలీ టార్గెట్ హిట్', 'Defense Target Hit') }
-        ]
-      },
-      grossLosses: { total: 0, trades: [] },
-      taxesFees: -3.53,
-      netRealized: 23.44
-    },
-    D10: {
-      dayLabel: 'Day 10',
-      date: '28 Oct 2026',
-      grossProfits: {
-        total: 27.30,
-        trades: [
-          { symbol: 'ITC', pnl: 27.30, returnPct: '+3.10%', note: t('లార్జ్-క్యాప్ మొమెంటం హిట్', 'Momentum Target Hit') }
-        ]
-      },
-      grossLosses: {
-        total: -18.10,
-        trades: [
-          { symbol: 'NHPC', pnl: -18.10, returnPct: '-1.50%', note: t('స్టాప్ లాస్ క్రమశిక్షణ ఎగ్జిట్', 'Stop Loss Exit') }
-        ]
-      },
-      taxesFees: -3.70,
-      netRealized: 5.50
-    },
-    D4: {
-      dayLabel: 'Day 4',
-      date: '22 Oct 2026',
-      grossProfits: {
-        total: 2.23,
-        trades: [
-          { symbol: 'SUZLON', pnl: 1.45, returnPct: '+2.66%', note: t('చిన్న టెస్ట్ ట్రేడ్', 'Small Test Trade') },
-          { symbol: 'IDEA', pnl: 0.78, returnPct: '+3.15%', note: t('చిన్న టెస్ట్ ట్రేడ్', 'Small Test Trade') }
-        ]
-      },
-      grossLosses: {
-        total: -202.61,
-        trades: [
-          { symbol: 'SBIN', pnl: -201.59, returnPct: '-1.50%', note: t('స్టాప్-లాస్ హిట్ (క్యాపిటల్ సేవ్)', 'Stop-Loss Hit (Protected Capital)') },
-          { symbol: 'SUZLON/IDEA', pnl: -1.02, returnPct: '-0.85%', note: t('స్లిప్పేజ్', 'Slippage') }
-        ]
-      },
-      taxesFees: -8.21,
-      netRealized: -208.59
-    },
-    TODAY: {
-      dayLabel: t('ఈరోజు (Today)', 'Today (Live Session)'),
-      date: '03 Nov 2026',
-      grossProfits: { total: 0, trades: [] },
-      grossLosses: { total: 0, trades: [] },
-      taxesFees: 0.00,
-      netRealized: 0.00
+  // Sync state if portfolio loads
+  React.useEffect(() => {
+    if (portfolio) {
+      setCalcDeposit(portfolio.initial_cash || 0);
+      setCalcGrossGain(portfolio.metrics?.gross_profit || grossProfits.total);
+      setCalcGrossLoss(Math.abs(grossLosses.total));
+      setCalcFees(portfolio.total_fees_paid || 0);
+      setCalcUnrealized(portfolio.unrealized_pnl || 0);
     }
-  };
-
-  const currentData = historicalDays[selectedPeriod] || historicalDays.ALL;
-
-  // Realized calculations
-  const totalDeposit = 5500.00;
-  const currentNetEquity = 5727.75;
-  const netLifetimeGain = currentNetEquity - totalDeposit; // +₹227.75
-  const postUpgradeGain = currentNetEquity - 5293.29; // +₹434.46
+  }, [portfolio, grossProfits.total, grossLosses.total]);
 
   // Calculator results
   const calcNetRealized = calcGrossGain - calcGrossLoss - calcFees;
-  const calcTotalEquity = calcDeposit + calcNetRealized + calcUnrealized + 340.26;
+  const calcTotalEquity = calcDeposit + calcNetRealized + calcUnrealized;
   const calcOverallProfit = calcTotalEquity - calcDeposit;
   const calcROI = calcDeposit > 0 ? (calcOverallProfit / calcDeposit) * 100 : 0;
   const calcSTCG = Math.max(0, calcGrossGain * 0.20); // 20% STCG Budget 2024
 
   // Instant Exit Calculations ("eppudu market nundi exit ithey naku entha profit")
-  const openPositionsValue = Math.max(0, calcTotalEquity - liveCash);
-  const estimatedExitTaxes = Math.max(2.50, openPositionsValue * 0.002); // ~₹5.10
-  const instantExitLiquidCash = calcTotalEquity - estimatedExitTaxes;
-  const instantExitNetProfit = instantExitLiquidCash - calcDeposit;
-  const instantExitROI = calcDeposit > 0 ? (instantExitNetProfit / calcDeposit) * 100 : 0;
+  const openPositionsValue = Math.max(0, liveEquity - liveCash);
+  const estimatedExitTaxes = openPositionsValue > 0 ? Math.max(2.50, openPositionsValue * 0.002) : 0;
+  const instantExitLiquidCash = Math.max(0, liveEquity - estimatedExitTaxes);
+  const instantExitNetProfit = instantExitLiquidCash - totalDeposit;
+  const instantExitROI = totalDeposit > 0 ? (instantExitNetProfit / totalDeposit) * 100 : 0;
   const instantExitAfterTaxProfit = instantExitNetProfit - calcSTCG;
 
   const handleResetCalculator = () => {
-    setCalcDeposit(5500);
-    setCalcGrossGain(88.04);
-    setCalcGrossLoss(220.71);
-    setCalcFees(18.84);
-    setCalcUnrealized(39.00);
+    setCalcDeposit(totalDeposit);
+    setCalcGrossGain(grossProfits.total);
+    setCalcGrossLoss(Math.abs(grossLosses.total));
+    setCalcFees(portfolio?.total_fees_paid ?? 0);
+    setCalcUnrealized(portfolio?.unrealized_pnl ?? 0);
   };
 
   return (
@@ -257,9 +215,9 @@ export const RealizedPnLCard: React.FC = () => {
               )}
             </p>
             <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400 flex-wrap">
-              <span>• {t('మొత్తం డిపాజిట్:', 'Total Capital Deposited:')} <strong className="text-white font-mono font-bold">₹5,500.00</strong></span>
-              <span>• {t('బ్యాంకుకు వచ్చే మొత్తం క్యాష్:', 'Total Liquid Bank Balance:')} <strong className="text-emerald-300 font-mono font-bold">₹5,727.75</strong></span>
-              <span>• {t('ఎగ్జిట్ ఛార్జీల అంచనా:', 'Est. Exit STT/Taxes:')} <strong className="text-amber-300 font-mono">~₹5.10</strong></span>
+              <span>• {t('మొత్తం డిపాజిట్:', 'Total Capital Deposited:')} <strong className="text-white font-mono font-bold">{formatINR(totalDeposit)}</strong></span>
+              <span>• {t('బ్యాంకుకు వచ్చే మొత్తం క్యాష్:', 'Total Liquid Bank Balance:')} <strong className="text-emerald-300 font-mono font-bold">{formatINR(instantExitLiquidCash)}</strong></span>
+              <span>• {t('ఎగ్జిట్ ఛార్జీల అంచనా:', 'Est. Exit STT/Taxes:')} <strong className="text-amber-300 font-mono">~{formatINR(estimatedExitTaxes)}</strong></span>
             </div>
           </div>
 
@@ -268,11 +226,11 @@ export const RealizedPnLCard: React.FC = () => {
               <div className="text-[10px] sm:text-xs text-slate-400 font-semibold uppercase tracking-wider">
                 {t('చేతికి వచ్చే నికర లాభం (Net Profit)', 'In-Hand Net Profit')}
               </div>
-              <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">
-                +₹227.75
+              <div className={`text-2xl sm:text-3xl font-extrabold font-mono ${instantExitNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {instantExitNetProfit >= 0 ? `+${formatINR(instantExitNetProfit)}` : formatINR(instantExitNetProfit)}
               </div>
               <div className="text-[11px] font-bold text-emerald-300">
-                +4.14% ROI {t('(పన్ను పోగా +₹210.14)', '(After Tax +₹210.14)')}
+                {instantExitROI >= 0 ? `+${instantExitROI.toFixed(2)}%` : `${instantExitROI.toFixed(2)}%`} ROI {t(`(పన్ను పోగా ${instantExitAfterTaxProfit >= 0 ? '+' : ''}${formatINR(instantExitAfterTaxProfit)})`, `(After Tax ${instantExitAfterTaxProfit >= 0 ? '+' : ''}${formatINR(instantExitAfterTaxProfit)})`)}
               </div>
             </div>
           </div>
@@ -295,57 +253,27 @@ export const RealizedPnLCard: React.FC = () => {
                   : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
               }`}
             >
-              {t('మొత్తం (All-Time)', 'All-Time (15 Days)')}
+              {t('అన్ని క్లోజ్డ్ ట్రేడ్స్', 'All Closed Trades')} ({closedTrades.length})
             </button>
             <button
-              onClick={() => setSelectedPeriod('D12')}
+              onClick={() => setSelectedPeriod('PROFITS')}
               className={`px-3 py-1 rounded-lg font-semibold shrink-0 transition-all cursor-pointer ${
-                selectedPeriod === 'D12'
-                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                selectedPeriod === 'PROFITS'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                   : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
               }`}
             >
-              Day 12 (WIPRO +₹31.54)
+              {t('లాభాలు (Winning)', 'Profits Only')} ({grossProfits.trades.length})
             </button>
             <button
-              onClick={() => setSelectedPeriod('D11')}
+              onClick={() => setSelectedPeriod('LOSSES')}
               className={`px-3 py-1 rounded-lg font-semibold shrink-0 transition-all cursor-pointer ${
-                selectedPeriod === 'D11'
-                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                  : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
-              }`}
-            >
-              Day 11 (BEL +₹26.97)
-            </button>
-            <button
-              onClick={() => setSelectedPeriod('D10')}
-              className={`px-3 py-1 rounded-lg font-semibold shrink-0 transition-all cursor-pointer ${
-                selectedPeriod === 'D10'
-                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                  : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
-              }`}
-            >
-              Day 10 (ITC +₹27.30)
-            </button>
-            <button
-              onClick={() => setSelectedPeriod('D4')}
-              className={`px-3 py-1 rounded-lg font-semibold shrink-0 transition-all cursor-pointer ${
-                selectedPeriod === 'D4'
+                selectedPeriod === 'LOSSES'
                   ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                   : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
               }`}
             >
-              Day 4 (SBIN -₹201.59 SL)
-            </button>
-            <button
-              onClick={() => setSelectedPeriod('TODAY')}
-              className={`px-3 py-1 rounded-lg font-semibold shrink-0 transition-all cursor-pointer ${
-                selectedPeriod === 'TODAY'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
-              }`}
-            >
-              {t('ఈరోజు (Today)', 'Today')}
+              {t('నష్టాలు (Stop-Loss)', 'Losses Only')} ({grossLosses.trades.length})
             </button>
           </div>
 
@@ -482,28 +410,28 @@ export const RealizedPnLCard: React.FC = () => {
                   </td>
                   <td className="py-4 px-4 text-xs space-y-1">
                     <div className="flex justify-between max-w-md">
-                      <span className="text-slate-400">• {t('మొత్తం డిపాజిట్ (Day 1 + Day 9):', 'Total Deposits (Day 1 + 9):')}</span>
-                      <span className="font-mono font-bold text-white">₹5,500.00</span>
+                      <span className="text-slate-400">• {t('మొత్తం డిపాజిట్:', 'Total Capital Deposited:')}</span>
+                      <span className="font-mono font-bold text-white">{formatINR(totalDeposit)}</span>
                     </div>
                     <div className="flex justify-between max-w-md">
                       <span className="text-slate-400">• {t('ప్రస్తుత నికర ఆస్తి (Total Net Equity):', 'Current Net Equity:')}</span>
-                      <span className="font-mono font-bold text-white">₹5,727.75</span>
+                      <span className="font-mono font-bold text-white">{formatINR(liveEquity)}</span>
                     </div>
                     <div className="flex justify-between max-w-md text-[11px] text-slate-400">
                       <span>• {t('ఓపెన్ షేర్లలో ఉన్న లాభం (Unrealized Gains):', 'Unrealized Open Profit:')}</span>
-                      <span className="font-mono text-emerald-400">+₹39.00</span>
+                      <span className="font-mono text-emerald-400">{portfolio?.unrealized_pnl ? (portfolio.unrealized_pnl >= 0 ? '+' : '') + formatINR(portfolio.unrealized_pnl) : '₹0.00'}</span>
                     </div>
                     <div className="flex justify-between max-w-md text-[11px] text-teal-300 font-semibold pt-1 border-t border-white/5">
                       <span>• {t('⚡ ఇప్పుడే ఎగ్జిట్ అయితే చేతికి వచ్చే మొత్తం లాభం:', '⚡ Instant Market Exit Net Take-Home:')}</span>
-                      <span className="font-mono text-emerald-300 font-bold">+₹227.75 (+4.14%)</span>
+                      <span className="font-mono text-emerald-300 font-bold">{instantExitNetProfit >= 0 ? '+' : ''}{formatINR(instantExitNetProfit)} ({instantExitROI >= 0 ? '+' : ''}{instantExitROI.toFixed(2)}%)</span>
                     </div>
                   </td>
                   <td className="py-4 px-4 text-right">
-                    <div className="font-mono text-lg font-bold text-emerald-400">
-                      +{formatINR(netLifetimeGain)}
+                    <div className={`font-mono text-lg font-bold ${instantExitNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {instantExitNetProfit >= 0 ? `+${formatINR(instantExitNetProfit)}` : formatINR(instantExitNetProfit)}
                     </div>
                     <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300">
-                      +4.14% {t('లాభం', 'Gain')}
+                      {instantExitROI >= 0 ? `+${instantExitROI.toFixed(2)}%` : `${instantExitROI.toFixed(2)}%`} {t('లాభం', 'Gain')}
                     </span>
                   </td>
                 </tr>
@@ -549,7 +477,7 @@ export const RealizedPnLCard: React.FC = () => {
                 onChange={(e) => setCalcDeposit(Number(e.target.value) || 0)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono font-bold text-sm focus:border-cyan-400 focus:outline-none"
               />
-              <span className="text-[10px] text-slate-500">Day 1 (₹500) + Day 9 (₹5,000)</span>
+              <span className="text-[10px] text-slate-500">{t('ఖాతాలో డిపాజిట్ చేసిన మూలధనం', 'Total allocated capital')}</span>
             </div>
 
             {/* Input 2: Gross Realized Gains */}
@@ -564,7 +492,7 @@ export const RealizedPnLCard: React.FC = () => {
                 onChange={(e) => setCalcGrossGain(Number(e.target.value) || 0)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-emerald-400 font-mono font-bold text-sm focus:border-emerald-400 focus:outline-none"
               />
-              <span className="text-[10px] text-emerald-500/80">WIPRO, ITC, BEL, SUZLON, IDEA</span>
+              <span className="text-[10px] text-emerald-500/80">{t('క్లోజ్ చేసిన లాభదాయక ట్రేడ్లు', 'Closed winning trades')}</span>
             </div>
 
             {/* Input 3: Gross Realized Losses */}
@@ -579,7 +507,7 @@ export const RealizedPnLCard: React.FC = () => {
                 onChange={(e) => setCalcGrossLoss(Number(e.target.value) || 0)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-rose-400 font-mono font-bold text-sm focus:border-rose-400 focus:outline-none"
               />
-              <span className="text-[10px] text-rose-500/80">SBIN Stop-Loss (-₹201.59), NHPC</span>
+              <span className="text-[10px] text-rose-500/80">{t('స్టాప్-లాస్ హిట్ అయిన ట్రేడ్లు', 'Closed stop-loss trades')}</span>
             </div>
 
             {/* Input 4: Taxes & Levies */}
@@ -594,7 +522,7 @@ export const RealizedPnLCard: React.FC = () => {
                 onChange={(e) => setCalcFees(Number(e.target.value) || 0)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-amber-300 font-mono font-bold text-sm focus:border-amber-400 focus:outline-none"
               />
-              <span className="text-[10px] text-amber-500/80">STT 0.1% + GST + Turnover fee</span>
+              <span className="text-[10px] text-amber-500/80">{t('STT 0.1% + GST + టర్నోవర్ ఫీజు', 'STT 0.1% + GST + Turnover fee')}</span>
             </div>
           </div>
 

@@ -60,16 +60,13 @@ def test_overall_pnl_query_resolution():
         "db": None
     }
     
-    # Exact user query test
+    # Empty portfolio test: honest data reporting
     query = "overal ga total lo profit entha loss entha"
     reply = generate_copilot_response(query, mock_ctx)
     
-    assert "+₹227.75" in reply
-    assert "₹5,500.00" in reply
-    assert "₹5,727.75" in reply
-    assert "+₹88.04" in reply
-    assert "-₹220.71" in reply
-    assert "SBIN" in reply
+    assert "No data yet" in reply or "డేటా లభించలేదు" in reply
+    assert "5,727.75" not in reply
+    assert "+₹227.75" not in reply
 
 
 def test_slash_trader_command_dispatch():

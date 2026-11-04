@@ -219,63 +219,96 @@ def generate_copilot_response(query: str, ctx: Dict[str, Any], api_key: Optional
     )
 
     if is_overall_pnl_query:
+        portfolio = ctx.get("portfolio")
+        metrics = ctx.get("metrics")
+        positions = ctx.get("positions", [])
+        recent_trades = ctx.get("recent_trades", [])
+
+        if not portfolio:
+            if is_te:
+                return """### 💰 పోర్ట్‌ఫోలియో ఓవరాల్ లాభం & నష్టాల నివేదిక
+- **డేటా లభించలేదు (No data yet)**: యాక్టివ్ పోర్ట్‌ఫోలియో కనుగొనబడలేదు."""
+            else:
+                return """### 💰 Overall Portfolio Profit & Loss Reconciliation
+- **Status**: No data yet. No active portfolio found."""
+
+        init_cap = getattr(portfolio, 'initial_cash', 0.0) or getattr(portfolio, 'initial_balance', 0.0) or 0.0
+        cash = getattr(portfolio, 'cash_balance', 0.0) or 0.0
+        tot_equity = metrics.total_portfolio_value if metrics else cash
+        realized_pnl = metrics.realized_pnl if metrics else 0.0
+        unrealized_pnl = metrics.total_unrealized_pnl if metrics else 0.0
+        total_fees = getattr(metrics, 'total_fees', 0.0) if metrics else 0.0
+        net_profit = tot_equity - init_cap
+        pct_gain = (net_profit / init_cap * 100.0) if init_cap > 0 else 0.0
+
+        closed_sells = [t for t in recent_trades if getattr(t, 'side', '') == 'SELL']
+        if not closed_sells and len(positions) == 0 and abs(net_profit) < 0.01:
+            if is_te:
+                return f"""### 💰 పోర్ట్‌ఫోలియో ఓవరాల్ లాభం & నష్టాల నివేదిక
+- **డేటా లభించలేదు (No data yet)**: మీ ఖాతాలో ఇంకా ఎటువంటి ట్రేడింగ్ లావాదేవీలు లేదా క్లోజ్డ్ పొజిషన్లు నమోదు కాలేదు.
+- **ప్రారంభ మూలధనం**: **₹{init_cap:,.2f}**
+- **చేతిలో ఉన్న లిక్విడ్ క్యాష్**: **₹{cash:,.2f}**
+- **నికర లాభం / నష్టం**: **₹0.00** (`0.00%`)
+- **యాక్టివ్ షేర్లు**: ఏవీ లేవు. ఆటోపైలట్ మార్కెట్ స్కానింగ్ కొనసాగిస్తోంది."""
+            else:
+                return f"""### 💰 Overall Portfolio Profit & Loss Reconciliation
+- **Status**: No data yet. No executed trades or closed positions recorded for this account.
+- **Initial Capital**: **₹{init_cap:,.2f}**
+- **Available Liquid Cash**: **₹{cash:,.2f}**
+- **Net PnL**: **₹0.00** (`0.00%`)
+- **Active Holdings**: None."""
+
+        holdings_lines = []
+        for p in positions:
+            holdings_lines.append(f"- **{p.symbol}**: {p.quantity} shares @ ₹{p.average_buy_price:,.2f}")
+        holdings_str = "\n".join(holdings_lines) if holdings_lines else ("- ఏవీ లేవు (అంతా లిక్విడ్ క్యాష్)" if is_te else "- None (All liquid cash)")
+
+        trade_lines = []
+        for t in closed_sells[:5]:
+            pnl_val = getattr(t, 'realized_pnl', 0.0)
+            trade_lines.append(f"- **{t.symbol}**: ₹{pnl_val:+,.2f}")
+        trades_str = "\n".join(trade_lines) if trade_lines else ("- ఇంకా క్లోజ్డ్ ట్రేడ్లు లేవు" if is_te else "- No closed trades yet")
+
         if is_te:
-            return """### 💰 పోర్ట్‌ఫోలియో ఓవరాల్ లాభం & నష్టాల పూర్తి నివేదిక (100% గణిత ఖచ్చితత్వం)
+            return f"""### 💰 పోర్ట్‌ఫోలియో ఓవరాల్ లాభం & నష్టాల పూర్తి నివేదిక
 
-బ్రో, మీ ఖాతాలోని రూపాయి రూపాయి లెక్కలు మరియు లైవ్ గణాంకాలు ఇక్కడ ఉన్నాయి:
-
-#### 1. 💵 డిపాజిట్లు & ప్రస్తుత ఆస్తి (Capital & Net Worth):
-- **మొత్తం డిపాజిట్ చేసిన మూలధనం**: **₹5,500.00**
-  - మొదటి రోజు (Day 1) ప్రారంభ పెట్టుబడి: `₹500.00`
-  - 9వ రోజు (Day 9) లార్జ్-క్యాప్ అప్‌గ్రేడ్ డిపాజిట్: `₹5,000.00`
-- **ప్రస్తుత మొత్తం పోర్ట్‌ఫోలియో విలువ (Net Equity)**: **₹5,727.75**
-  - చేతిలో ఉన్న లిక్విడ్ క్యాష్: **₹3,178.75**
-  - ప్రస్తుతం ఉన్న షేర్ల విలువ: **₹2,549.00** (COALINDIA: 2 sh @ ₹485.00, POWERGRID: 3 sh @ ₹320.00, IOC: 4 sh @ ₹145.00)
+#### 1. 💵 మూలధనం & ప్రస్తుత ఆస్తి (Capital & Net Worth):
+- **ప్రారంభ డిపాజిట్**: **₹{init_cap:,.2f}**
+- **ప్రస్తుత మొత్తం పోర్ట్‌ఫోలియో విలువ**: **₹{tot_equity:,.2f}**
+- **చేతిలో ఉన్న లిక్విడ్ క్యాష్**: **₹{cash:,.2f}**
+- **ఓపెన్ షేర్ల విలువ**: **₹{(tot_equity - cash):,.2f}**
 
 #### 2. 📈 ఓవరాల్ నికర ఫలితం (Bottom-Line Profit & Loss):
-- **మొత్తం డిపాజిట్లపై నికర లాభం (Net Profit)**: **+₹227.75** (`+4.14%`)
-  *(గణితం: ప్రస్తుత విలువ ₹5,727.75 - మొత్తం డిపాజిట్ ₹5,500.00 = +₹227.75)*
-- **₹5,000 అప్‌గ్రేడ్ తర్వాత సాధించిన లాభం**: **+₹434.46** (`+8.2%`)
-  *(గణితం: ప్రస్తుత విలువ ₹5,727.75 - అప్‌గ్రేడ్ నాటి బేస్ ₹5,293.29 = +₹434.46)*
+- **నికర లాభం / నష్టం**: **₹{net_profit:+,.2f}** (`{pct_gain:+.2f}%`)
+- **బుక్ చేసుకున్న లాభాలు / నష్టాలు (Realized P&L)**: **₹{realized_pnl:+,.2f}**
+- **ఓపెన్ పొజిషన్లలో లాభం (Unrealized P&L)**: **₹{unrealized_pnl:+,.2f}**
+- **చెల్లించిన ఫీజులు / ఛార్జీలు**: **₹{total_fees:,.2f}**
 
-#### 3. 🔍 విడివిడిగా లాభాలు & నష్టాల వివరాలు (Breakup):
-- **బుక్ చేసుకున్న లాభాలు (Realized Profits)**: **+₹88.04**
-  - ITC: `+₹27.30` (+3.10% టార్గెట్ హిట్)
-  - BEL: `+₹26.97` (+3.12% టార్గెట్ హిట్)
-  - WIPRO: `+₹31.54` (+3.09% టార్గెట్ హిట్)
-- **వచ్చిన నష్టాలు (Realized Losses)**: **-₹220.71**
-  - Day 4 నాడు SBIN స్టాప్-లాస్ హిట్: `-₹201.59` (పెద్ద నష్టం జరగకుండా అడ్డుకున్న -1.5% స్టాప్-లాస్ క్రమశిక్షణ)
-  - ఇతర చిన్న టెస్ట్ ట్రేడ్ల నష్టం: `-₹19.12`
-- **ఖర్చులు / ఫీజులు (STT & Charges)**: **₹18.84**
-- **ప్రస్తుతం ఓపెన్ షేర్లలో ఉన్న లాభం (Unrealized Profit)**: **+₹39.00**
+#### 3. 🔍 యాక్టివ్ షేర్లు:
+{holdings_str}
 
-👉 **సారాంశం**: మీ ఖాతా ప్రస్తుతం ప్రారంభ డిపాజిట్ల కంటే **+₹227.75 నికర లాభంలో** మరియు అప్‌గ్రేడ్ తర్వాత **+₹434.46 లాభంలో** ఉంది. మీ చేతిలో ₹3,178.75 నగదు పూర్తిగా భద్రంగా ఉంది!"""
+#### 4. 📊 ఇటీవలి క్లోజ్డ్ ట్రేడ్లు:
+{trades_str}"""
         else:
-            return """### 💰 Overall Portfolio Profit & Loss Reconciliation (100% Mathematical Precision)
+            return f"""### 💰 Overall Portfolio Profit & Loss Reconciliation
 
-Here is the exact financial ledger breakdown of your capital, profits, and losses:
+#### 1. 💵 Capital & Net Worth:
+- **Initial Capital**: **₹{init_cap:,.2f}**
+- **Current Portfolio Value**: **₹{tot_equity:,.2f}**
+- **Liquid Cash Available**: **₹{cash:,.2f}**
+- **Active Holdings Value**: **₹{(tot_equity - cash):,.2f}**
 
-#### 1. 💵 Capital Injected & Current Net Worth:
-- **Total Injected Capital**: **₹5,500.00**
-  - Day 1 Initial Deposit: `₹500.00`
-  - Day 9 Large-Cap Upgrade Deposit: `₹5,000.00`
-- **Current Total Net Equity**: **₹5,727.75**
-  - Liquid Cash Balance: **₹3,178.75**
-  - Active Stock Holdings Value: **₹2,549.00** (COALINDIA: 2 sh, POWERGRID: 3 sh, IOC: 4 sh)
+#### 2. 📈 Bottom-Line Profit & Loss:
+- **Net Overall P&L**: **₹{net_profit:+,.2f}** (`{pct_gain:+.2f}%`)
+- **Realized P&L**: **₹{realized_pnl:+,.2f}**
+- **Unrealized Open P&L**: **₹{unrealized_pnl:+,.2f}**
+- **Total Fees / Levies Paid**: **₹{total_fees:,.2f}**
 
-#### 2. 📈 Bottom-Line Overall Profit:
-- **Net Lifetime Profit (Over All Deposits)**: **+₹227.75** (`+4.14%`)
-  *(Formula: Current Value ₹5,727.75 - All Deposits ₹5,500.00 = +₹227.75)*
-- **Growth Since ₹5,000 Upgrade**: **+₹434.46** (`+8.2%`)
-  *(Formula: Current Value ₹5,727.75 - Post-Upgrade Base ₹5,293.29 = +₹434.46)*
+#### 3. 🔍 Active Holdings:
+{holdings_str}
 
-#### 3. 🔍 Trade-by-Trade Realized Breakdown:
-- **Realized Booked Gains**: **+₹88.04** (ITC +₹27.30, BEL +₹26.97, WIPRO +₹31.54)
-- **Realized Losses**: **-₹220.71** (Day 4 SBIN strict stop-loss exit of -₹201.59 + minor ₹19.12)
-- **Fees & Regulatory Charges**: **₹18.84**
-- **Unrealized Open Positions Gain**: **+₹39.00** (across 3 active holdings)
-
-👉 **Summary**: Your account is currently in net positive profit of **+₹227.75** over all deposits and **+₹434.46** since the upgrade, with ₹3,178.75 in liquid cash reserves."""
+#### 4. 📊 Recent Closed Trades:
+{trades_str}"""
 
     # 2. If Gemini API key is configured, invoke real LLM
     effective_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get("GEMINI_API_KEY", "") or api_key

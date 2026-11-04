@@ -245,21 +245,28 @@ class TraderSkillEngine:
 """
 
     @staticmethod
-    def tax_skill(realized_gains: float, is_te: bool = True) -> str:
+    def tax_skill(realized_gains: float, total_fees: float = 0.0, is_te: bool = True) -> str:
         """Skill 6: trader-tax - Indian Capital Gains Tax calculation (Budget 2024 revised)."""
         stcg_rate = 0.20  # 20% for STCG
-        stt_rate = 0.001  # 0.1% STT
-
         tax_payable = max(0.0, realized_gains * stcg_rate)
-        stt_est = 18.84
-        post_tax_gain = realized_gains - tax_payable - stt_est
+        post_tax_gain = realized_gains - tax_payable - total_fees
+
+        if realized_gains == 0.0:
+            if is_te:
+                return """### 📑 [trader-tax] భారతీయ క్యాపిటల్ గెయిన్స్ పన్ను లెక్కింపు
+- **డేటా లభించలేదు (No data yet)**: మీ ఖాతాలో ఇంకా ఎటువంటి బుక్ చేసిన లాభాలు నమోదు కాలేదు.
+- **లెక్కింపు సిద్ధాంతం**: బడ్జెట్ 2024 ప్రకారం స్వల్పకాలిక మూలధన లాభాల పన్ను (STCG) 20% వర్తిస్తుంది."""
+            else:
+                return """### 📑 [trader-tax] Indian Capital Gains Tax Calculation
+- **Status**: No data yet. No realized capital gains recorded for this account.
+- **Tax Policy**: Budget 2024 STCG applies at 20% on realized equity profits."""
 
         if is_te:
             return f"""### 📑 [trader-tax] భారతీయ క్యాపిటల్ గెయిన్స్ పన్ను లెక్కింపు (బడ్జెట్ 2024 సవరణ)
 
 - **బుక్ చేసిన మొత్తం లాభం**: **₹{realized_gains:,.2f}**
 - **స్వల్పకాలిక మూలధన లాభాల పన్ను (STCG @ 20%)**: **₹{tax_payable:,.2f}**
-- **సెక్యూరిటీస్ లావాదేవీ పన్ను (STT) & ఛార్జీలు**: **₹{stt_est:,.2f}**
+- **సెక్యూరిటీస్ లావాదేవీ పన్ను (STT) & ఛార్జీలు**: **₹{total_fees:,.2f}**
 - **పన్నుల అనంతరం నికర మిగులు (Post-Tax Return)**: **₹{post_tax_gain:,.2f}**
 
 💡 *గమనిక*: దీర్ఘకాలిక మూలధన లాభాలు (LTCG > 1 సంవత్సరం) అయితే రూ. 1.25 లక్షల మినహాయింపు తర్వాత 12.5% పన్ను వర్తిస్తుంది.
@@ -269,7 +276,7 @@ class TraderSkillEngine:
 
 - **Realized Gross Gain**: **₹{realized_gains:,.2f}**
 - **Short-Term Capital Gains Tax (STCG @ 20%)**: **₹{tax_payable:,.2f}**
-- **STT & Turnover Levies**: **₹{stt_est:,.2f}**
+- **STT & Turnover Levies**: **₹{total_fees:,.2f}**
 - **Net Post-Tax Profit**: **₹{post_tax_gain:,.2f}**
 
 💡 *Rule Context*: Budget 2024 revised equity STCG from 15% to 20%, and LTCG from 10% to 12.5% (above ₹1.25L exemption).
@@ -338,30 +345,34 @@ class TraderSkillEngine:
         if is_te:
             return """### 🏛️ [trader-pelosi] సంస్థాగత నిధుల ప్రవాహం (FII / DII Tracker)
 
-- **FII (విదేశీ సంస్థాగత పెట్టుబడిదారులు)**: గత సెషన్‌లో **+₹1,245 కోట్లు** నికర కొనుగోళ్లు.
-- **DII (దేశీయ సంస్థాగత పెట్టుబడిదారులు / SIP ఇన్-ఫ్లో)**: **+₹2,180 కోట్లు** నికర కొనుగోళ్లు.
-- **ప్రమోటర్ హోల్డింగ్ తనిఖీ**: Nifty 50 కంపెనీలలో ప్రమోటర్ ప్లెడ్జింగ్ 0% నుండి 1.2% మాత్రమే.
-- **బల్క్ / బ్లాక్ డీల్స్**: పవర్ & డిఫెన్స్ రంగాలలో (BEL, POWERGRID) ప్రముఖ మ్యూచువల్ ఫండ్స్ చేరికలు నమోదయ్యాయి.
-- **సారాంశం**: సంస్థాగత మద్దతు బలంగా ఉంది; మార్కెట్ భారీగా పడిపోయే ప్రమాదం తక్కువ.
+- **డేటా అందుబాటులో లేదు (Data not available)**: పేపర్ ట్రేడింగ్ మోడ్‌లో అధికారిక FII / DII మరియు బల్క్ డీల్స్ లైవ్ డేటా ఫీడ్ అందుబాటులో లేదు.
+- **విధానం**: వినియోగదారులను తప్పుదోవ పట్టించకుండా ఉండేందుకు కల్పిత లేదా డమ్మీ సంఖ్యలు ప్రదర్శించబడవు.
 """
         else:
             return """### 🏛️ [trader-pelosi] Institutional & FII/DII Flow Tracker
 
-- **FII Net Flow**: **+₹1,245 Cr** net inflow in recent session.
-- **DII Net Flow (SIP Support)**: **+₹2,180 Cr** strong sustained buying.
-- **Promoter Pledging**: Negligible (< 1.2%) across core Nifty 50 holdings.
-- **Block Deals Recorded**: High institutional volume detected in Defense (BEL) and Utilities (POWERGRID).
-- **Macro Takeaway**: Deep institutional liquidity cushions downside volatility.
+- **Status**: Data not available. Live institutional (FII/DII) cash market and bulk deal feeds are not integrated in paper trading mode.
+- **Policy**: AutoPilot does not display fabricated institutional turnover figures.
 """
 
     @staticmethod
     def rebalance_skill(portfolio_val: float, cash: float, is_te: bool = True) -> str:
         """Skill 10: trader-rebalance - Target asset allocation rebalancing planner."""
+        if portfolio_val <= 0:
+            if is_te:
+                return """### ⚖️ [trader-rebalance] పోర్ట్‌ఫోలియో రీబ్యాలెన్సింగ్ ప్లానర్
+- **డేటా లభించలేదు (No data yet)**: పోర్ట్‌ఫోలియో విలువ సున్నాగా ఉంది.
+"""
+            else:
+                return """### ⚖️ [trader-rebalance] Portfolio Rebalancing Matrix
+- **Status**: No data yet. Portfolio total value is zero.
+"""
+
         target_equity_pct = 50.0
         target_cash_pct = 50.0
 
         current_cash_pct = (cash / portfolio_val * 100) if portfolio_val > 0 else 50.0
-        current_equity_pct = 100.0 - current_cash_pct
+        current_equity_pct = max(0.0, 100.0 - current_cash_pct)
         drift = abs(current_equity_pct - target_equity_pct)
 
         if is_te:
@@ -370,8 +381,7 @@ class TraderSkillEngine:
 - **ప్రస్తుత విలువ**: **₹{portfolio_val:,.2f}**
 - **ప్రస్తుత నిష్పత్తి**: ఈక్విటీ `{current_equity_pct:.1f}%` | లిక్విడ్ క్యాష్ `{current_cash_pct:.1f}%`
 - **లక్ష్య నిష్పత్తి**: ఈక్విటీ `50.0%` | లిక్విడ్ క్యాష్ `50.0%`
-- **డ్రిఫ్ట్ (వ్యత్యాసం)**: `{drift:.1f}%` (5.0% పరిమితి లోపలే ఉంది)
-- **యాక్షన్**: రీబ్యాలెన్సింగ్ అవసరం లేదు. ప్రస్తుత కేటాయింపు మార్కెట్ డిప్స్‌లో కొనుగోలు చేయడానికి తగినంత నగదును అందిస్తుంది.
+- **డ్రిఫ్ట్ (వ్యత్యాసం)**: `{drift:.1f}%` ({'పునర్వ్యవస్థీకరణ అవసరం' if drift > 10 else 'పరిమితి లోపలే ఉంది'})
 """
         else:
             return f"""### ⚖️ [trader-rebalance] Portfolio Rebalancing Matrix
@@ -379,43 +389,42 @@ class TraderSkillEngine:
 - **Portfolio Value**: **₹{portfolio_val:,.2f}**
 - **Current Allocation**: Equity `{current_equity_pct:.1f}%` | Cash `{current_cash_pct:.1f}%`
 - **Target Baseline**: Equity `50.0%` | Cash `50.0%`
-- **Allocation Drift**: `{drift:.1f}%` (Well within ±5% tolerance threshold).
-- **Action**: No rebalance execution required; cash cushion is perfectly positioned for high-probability setups.
+- **Allocation Drift**: `{drift:.1f}%` ({'Rebalance recommended' if drift > 10 else 'Well within tolerance threshold'}).
 """
 
     @staticmethod
-    def compounding_skill(current_val: float, total_deposited: float = 5500.0, is_te: bool = True) -> str:
-        """Skill 11: trader-compounding - 15-day target compounding roadmap (+1% daily target)."""
+    def compounding_skill(current_val: float, total_deposited: float = 0.0, is_te: bool = True) -> str:
+        """Skill 11: trader-compounding - Target compounding roadmap (+1% daily target)."""
+        if total_deposited <= 0:
+            if is_te:
+                return """### 📈 [trader-compounding] కాంపౌండింగ్ రోడ్‌మ్యాప్ (+1% డైలీ మోడల్)
+- **డేటా లభించలేదు (No data yet)**: ఈ ఖాతాలో ఇంకా ఎటువంటి డిపాజిట్ నమోదు కాలేదు.
+- **లక్ష్యం**: రోజుకు +1% క్రమశిక్షణతో కూడిన కాంపౌండింగ్ లక్ష్య మోడల్.
+"""
+            else:
+                return """### 📈 [trader-compounding] Compounding Roadmap (+1% Daily Model)
+- **Status**: No data yet. No initial capital deposit recorded for this account.
+- **Objective**: Target 1:2 Risk-to-Reward compounding model.
+"""
+
         net_profit = current_val - total_deposited
         pct_gain = (net_profit / total_deposited * 100) if total_deposited > 0 else 0.0
 
         if is_te:
-            return f"""### 📈 [trader-compounding] 15-రోజుల గోల్డెన్ కాంపౌండింగ్ రోడ్‌మ్యాప్ (+1% డైలీ ఫార్ములా)
+            return f"""### 📈 [trader-compounding] కాంపౌండింగ్ రోడ్‌మ్యాప్ (+1% డైలీ మోడల్)
 
-- **మొత్తం డిపాజిట్లు**: **₹{total_deposited:,.2f}** (Day 1 ₹500 + Day 9 ₹5,000)
-- **ప్రస్తుత మొత్తం విలువ**: **₹{current_val:,.2f}**
-- **నికర సాధించిన లాభం**: **+₹{net_profit:,.2f}** (`+{pct_gain:.2f}%`)
-- **కాంపౌండింగ్ ఫార్ములా**: \\( C_n = C_0 \\times (1.01)^n \\)
-
-#### 🎯 మైలురాళ్ళు:
-- Day 10 (ITC): +₹27.30 ✅
-- Day 11 (BEL): +₹26.97 ✅
-- Day 12 (WIPRO): +₹31.54 ✅
-- **ప్రస్తుత స్థితి**: నిరంతర మూలధన పెరుగుదల కొనసాగుతోంది.
+- **మొత్తం డిపాజిట్ చేసిన మూలధనం**: **₹{total_deposited:,.2f}**
+- **ప్రస్తుత మొత్తం పోర్ట్‌ఫోలియో విలువ**: **₹{current_val:,.2f}**
+- **నికర ఫలితం**: **{'+' if net_profit >= 0 else ''}₹{net_profit:,.2f}** (`{pct_gain:+.2f}%`)
+- **కాంపౌండింగ్ సూత్రం**: \\( C_n = C_0 \\times (1.01)^n \\)
 """
         else:
-            return f"""### 📈 [trader-compounding] 15-Day Golden Compounding Roadmap (+1% Daily)
+            return f"""### 📈 [trader-compounding] Compounding Roadmap (+1% Daily Model)
 
-- **Total Injected Capital**: **₹{total_deposited:,.2f}** (₹500 Day 1 + ₹5,000 Day 9)
-- **Current Net Equity**: **₹{current_val:,.2f}**
-- **Overall Net Profit**: **+₹{net_profit:,.2f}** (`+{pct_gain:.2f}%`)
-- **Mathematical Directive**: \\( C_n = C_0 \\times (1.01)^n \\)
-
-#### 🎯 Verified Milestones:
-- Day 10 (ITC): +₹27.30 target booked ✅
-- Day 11 (BEL): +₹26.97 target booked ✅
-- Day 12 (WIPRO): +₹31.54 target booked ✅
-- **Status**: Compounding trajectory active with disciplined 1:2 RR.
+- **Total Capital Injected**: **₹{total_deposited:,.2f}**
+- **Current Portfolio Net Worth**: **₹{current_val:,.2f}**
+- **Net Cumulative Return**: **{'+' if net_profit >= 0 else ''}₹{net_profit:,.2f}** (`{pct_gain:+.2f}%`)
+- **Compounding Mathematical Directive**: \\( C_n = C_0 \\times (1.01)^n \\)
 """
 
     @classmethod
@@ -427,8 +436,11 @@ class TraderSkillEngine:
         quotes = ctx.get("quotes", {})
         positions = ctx.get("positions", [])
 
-        cash = portfolio.cash_balance if portfolio else 3178.75
-        tot_val = metrics.total_portfolio_value if metrics else 5727.75
+        cash = portfolio.cash_balance if portfolio else 0.0
+        tot_val = metrics.total_portfolio_value if metrics else (cash if portfolio else 0.0)
+        initial_cap = portfolio.initial_balance if portfolio else 0.0
+        realized_gains = metrics.realized_pnl if metrics else 0.0
+        total_fees = getattr(metrics, 'total_fees', 0.0) if metrics else 0.0
 
         # 1. /trader-analyst or analyst queries
         if q.startswith("/trader-analyst") or any(k in q for k in ["analyst", "విశ్లేషణ", "technical analysis", "indicator"]):
@@ -466,7 +478,7 @@ class TraderSkillEngine:
 
         # 6. /trader-tax or tax queries
         if q.startswith("/trader-tax") or any(k in q for k in ["tax", "taxes", "stcg", "ltcg", "పన్ను", "టాక్స్"]):
-            return cls.tax_skill(88.04, is_te)
+            return cls.tax_skill(realized_gains, total_fees, is_te)
 
         # 7. /trader-alerts or alert queries
         if q.startswith("/trader-alerts") or any(k in q for k in ["alert", "alerts", "అలర్ట్", "నోటిఫికేషన్"]):
@@ -485,7 +497,7 @@ class TraderSkillEngine:
             return cls.rebalance_skill(tot_val, cash, is_te)
 
         # 11. /trader-compounding or compounding queries
-        if q.startswith("/trader-compounding"):
-            return cls.compounding_skill(tot_val, 5500.0, is_te)
+        if q.startswith("/trader-compounding") or any(k in q for k in ["compounding", "కాంపౌండింగ్"]):
+            return cls.compounding_skill(tot_val, initial_cap, is_te)
 
         return None

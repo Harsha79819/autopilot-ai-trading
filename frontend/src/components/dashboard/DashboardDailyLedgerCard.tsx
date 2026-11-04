@@ -53,45 +53,26 @@ export const DashboardDailyLedgerCard: React.FC = () => {
     return () => { isMounted = false; };
   }, [lastPortfolioUpdate]);
 
-  // Verified Fallback dataset if API is loading or offline
-  const fallbackDays: DailyLedgerEntry[] = useMemo(() => [
-    { day_number: 1, day_label: 'Day 1', date: '2026-10-19', opening_capital: 500, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 500, total_equity: 500, day_return_pct: 0, cumulative_return_pct: 0, discipline_status: 'CAPITAL_PRESERVED', ai_decision_summary: 'Day 1 Setup: Initial ₹500 paper trading deposit calibrated. Strict risk rules initialized.' },
-    { day_number: 2, day_label: 'Day 2', date: '2026-10-20', opening_capital: 500, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 500, total_equity: 500, day_return_pct: 0, cumulative_return_pct: 0, discipline_status: 'CAPITAL_PRESERVED', ai_decision_summary: 'Live real-time feed connected; friction filter blocked low-edge penny setups.' },
-    { day_number: 3, day_label: 'Day 3', date: '2026-10-21', opening_capital: 500, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 500, total_equity: 500, day_return_pct: 0, cumulative_return_pct: 0, discipline_status: 'CAPITAL_PRESERVED', ai_decision_summary: 'Scanning Nifty 50 constituents for 20/50 EMA momentum breakout setups.' },
-    { day_number: 4, day_label: 'Day 4', date: '2026-10-22', opening_capital: 500, buys_count: 3, sells_count: 3, total_trades: 6, stocks_traded: 'IDEA, SBIN, SUZLON', gross_pnl: -198.50, charges_fees: 8.21, net_pnl: -206.71, closing_capital: 293.29, total_equity: 293.29, day_return_pct: -41.34, cumulative_return_pct: -41.34, discipline_status: 'CAPITAL_PRESERVED', ai_decision_summary: 'Early small test run; SBIN stop-loss hit strictly at ₹201.59 to prevent account wipeout.' },
-    { day_number: 5, day_label: 'Day 5', date: '2026-10-23', opening_capital: 293.29, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 293.29, total_equity: 293.29, day_return_pct: 0, cumulative_return_pct: -41.34, discipline_status: 'MARKET_STANDBY', ai_decision_summary: 'Risk audit & parameter refinement; avoided revenge trading.' },
-    { day_number: 6, day_label: 'Day 6', date: '2026-10-24', opening_capital: 293.29, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 293.29, total_equity: 293.29, day_return_pct: 0, cumulative_return_pct: -41.34, discipline_status: 'MARKET_STANDBY', ai_decision_summary: 'Capital preservation mode engaged; waiting for high-probability setups.' },
-    { day_number: 7, day_label: 'Day 7', date: '2026-10-25', opening_capital: 293.29, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 293.29, total_equity: 293.29, day_return_pct: 0, cumulative_return_pct: -41.34, discipline_status: 'MARKET_STANDBY', ai_decision_summary: '15-Day Strategy roadmap formulated; prepared large-cap universe expansion.' },
-    { day_number: 8, day_label: 'Day 8', date: '2026-10-26', opening_capital: 293.29, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 293.29, total_equity: 293.29, day_return_pct: 0, cumulative_return_pct: -41.34, discipline_status: 'MARKET_STANDBY', ai_decision_summary: 'Pre-upgrade financial architecture verification and Telugu Copilot integration.' },
-    { day_number: 9, day_label: 'Day 9', date: '2026-10-27', opening_capital: 293.29, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 5293.29, total_equity: 5293.29, day_return_pct: 0, cumulative_return_pct: -3.76, discipline_status: 'MARKET_STANDBY', ai_decision_summary: 'Capital Upgrade: User deposited ₹5,000 virtual capital to unlock Nifty 50 shares.' },
-    { day_number: 10, day_label: 'Day 10', date: '2026-10-28', opening_capital: 5293.29, buys_count: 2, sells_count: 1, total_trades: 3, stocks_traded: 'BEL, ITC, WIPRO', gross_pnl: 31.00, charges_fees: 3.70, net_pnl: 27.30, closing_capital: 5297.29, total_equity: 5297.29, day_return_pct: 0.52, cumulative_return_pct: -3.69, compounding_achieved: true, discipline_status: 'TARGET_HIT', ai_decision_summary: 'ITC reached +3.10% target (+₹27.30 net profit booked); BEL and WIPRO accumulated.' },
-    { day_number: 11, day_label: 'Day 11', date: '2026-10-29', opening_capital: 5297.29, buys_count: 2, sells_count: 1, total_trades: 3, stocks_traded: 'BEL, COALINDIA', gross_pnl: 30.50, charges_fees: 3.53, net_pnl: 26.97, closing_capital: 5321.21, total_equity: 5321.21, day_return_pct: 0.51, cumulative_return_pct: -3.25, compounding_achieved: true, discipline_status: 'TARGET_HIT', ai_decision_summary: 'BEL reached +3.12% target (+₹26.97 net profit booked); rotated profit into Coal India.' },
-    { day_number: 12, day_label: 'Day 12', date: '2026-10-30', opening_capital: 5321.21, buys_count: 2, sells_count: 1, total_trades: 3, stocks_traded: 'IOC, POWERGRID, WIPRO', gross_pnl: 35.00, charges_fees: 3.46, net_pnl: 31.54, closing_capital: 3178.75, total_equity: 5727.75, day_return_pct: 7.64, cumulative_return_pct: 4.14, compounding_achieved: true, discipline_status: 'TARGET_HIT', ai_decision_summary: 'WIPRO hit target (+₹31.54 booked); added PowerGrid and IOC. Open portfolio surged to ₹5,727.75.' },
-    { day_number: 13, day_label: 'Day 13', date: '2026-10-31', opening_capital: 3178.75, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 3178.75, total_equity: 5727.75, day_return_pct: 0, cumulative_return_pct: 4.14, discipline_status: 'MARKET_STANDBY', ai_decision_summary: 'Weekend holding; Coal India (2), PowerGrid (3), IOC (4) held securely.' },
-    { day_number: 14, day_label: 'Day 14', date: '2026-11-01', opening_capital: 3178.75, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 3178.75, total_equity: 5727.75, day_return_pct: 0, cumulative_return_pct: 4.14, discipline_status: 'MARKET_STANDBY', ai_decision_summary: 'Market closed; risk limits validated and 0 margin exposure maintained.' },
-    { day_number: 15, day_label: 'Day 15', date: '2026-11-02', opening_capital: 3178.75, buys_count: 0, sells_count: 0, total_trades: 0, stocks_traded: 'None', gross_pnl: 0, charges_fees: 0, net_pnl: 0, closing_capital: 3178.75, total_equity: 5727.75, day_return_pct: 0, cumulative_return_pct: 4.14, discipline_status: 'MARKET_STANDBY', ai_decision_summary: 'Live market scanner active. Capital intact at ₹5,727.75 (+₹227.75 net profit).' }
-  ], []);
-
   const displayData = useMemo(() => {
-    const list = ledgerDays.length > 0 ? ledgerDays : fallbackDays;
-    let filtered = list;
+    let filtered = ledgerDays;
     if (filterMode === 'TRADES_ONLY') {
-      filtered = list.filter(d => (d.total_trades ?? (d.buys_count + d.sells_count)) > 0);
+      filtered = ledgerDays.filter(d => (d.total_trades ?? (d.buys_count + d.sells_count)) > 0);
     } else if (filterMode === 'PROFIT_DAYS') {
-      filtered = list.filter(d => d.net_pnl > 0);
+      filtered = ledgerDays.filter(d => d.net_pnl > 0);
     }
     const sorted = [...filtered].sort((a, b) => {
       return sortOrder === 'DESC' ? b.day_number - a.day_number : a.day_number - b.day_number;
     });
     return sorted;
-  }, [ledgerDays, fallbackDays, filterMode, sortOrder]);
+  }, [ledgerDays, filterMode, sortOrder]);
 
   const maxRecordedDay = useMemo(() => {
-    const list = ledgerDays.length > 0 ? ledgerDays : fallbackDays;
-    return Math.max(...list.map(d => d.day_number), 1);
-  }, [ledgerDays, fallbackDays]);
+    if (ledgerDays.length === 0) return 1;
+    return Math.max(...ledgerDays.map(d => d.day_number), 1);
+  }, [ledgerDays]);
 
   const handleDownload = async () => {
+    if (ledgerDays.length === 0) return;
     try {
       setIsDownloading(true);
       await api.downloadDailyLedgerCsv();
@@ -99,7 +80,7 @@ export const DashboardDailyLedgerCard: React.FC = () => {
       console.error('Download failed, generating client-side CSV:', err);
       // Client-side fallback CSV download
       const headers = ['Day', 'Date', 'Opening Capital', 'Buys', 'Sells', 'Stocks Traded', 'Gross PnL', 'Fees', 'Net PnL', 'Closing Cash', 'Total Equity', 'Status', 'AI Decision Rationale'];
-      const rows = (ledgerDays.length > 0 ? ledgerDays : fallbackDays).map(d => [
+      const rows = ledgerDays.map(d => [
         d.day_number,
         d.date,
         d.opening_capital,
@@ -226,49 +207,57 @@ export const DashboardDailyLedgerCard: React.FC = () => {
       </div>
 
       {/* Summary KPI Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5">
-          <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
-            {t('మొత్తం డిపాజిట్ (Day 1 + Day 9)', 'Total Deposits (Day 1 + 9)')}
-          </div>
-          <div className="text-base font-bold text-white mt-0.5">₹5,500.00</div>
-          <div className="text-[10px] text-slate-500">₹500 (Day 1) + ₹5,000 (Day 9)</div>
-        </div>
+      {(() => {
+        const totalDeposit = portfolio?.initial_cash ?? 0;
+        const currentEquity = portfolio?.total_portfolio_value ?? (portfolio?.cash_balance ?? 0);
+        const liquidCash = portfolio?.cash_balance ?? 0;
+        const holdingsVal = Math.max(0, currentEquity - liquidCash);
+        const netLifetimeGain = currentEquity - totalDeposit;
+        const netLifetimeReturnPct = totalDeposit > 0 ? (netLifetimeGain / totalDeposit) * 100 : 0;
 
-        <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5">
-          <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
-            {t('ప్రస్తుత నికర విలువ (Total Equity)', 'Current Net Equity')}
-          </div>
-          <div className="text-base font-bold text-white mt-0.5">₹5,727.75</div>
-          <div className="text-[10px] text-slate-500">Cash ₹3,178.75 + Shares ₹2,549</div>
-        </div>
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5">
+              <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
+                {t('ప్రారంభ డిపాజిట్', 'Initial Deposit')}
+              </div>
+              <div className="text-base font-bold text-white mt-0.5">{formatINR(totalDeposit)}</div>
+              <div className="text-[10px] text-slate-500">{t('కేటాయించిన మూలధనం', 'Allocated capital')}</div>
+            </div>
 
-        <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/20">
-          <div className="text-[11px] text-emerald-300 uppercase tracking-wider font-semibold">
-            {t('మొత్తం నికర లాభం (Net Profit)', 'Overall Lifetime Net Profit')}
-          </div>
-          <div className="text-base font-bold text-emerald-400 mt-0.5 flex items-center gap-1">
-            +₹227.75
-            <span className="text-xs font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
-              +4.14%
-            </span>
-          </div>
-          <div className="text-[10px] text-emerald-500/80">₹5,727.75 - ₹5,500.00 (All Deposits)</div>
-        </div>
+            <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5">
+              <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
+                {t('ప్రస్తుత నికర విలువ', 'Current Net Equity')}
+              </div>
+              <div className="text-base font-bold text-white mt-0.5">{formatINR(currentEquity)}</div>
+              <div className="text-[10px] text-slate-500">{t(`నగదు ${formatINR(liquidCash)} + షేర్లు ${formatINR(holdingsVal)}`, `Cash ${formatINR(liquidCash)} + Stock ${formatINR(holdingsVal)}`)}</div>
+            </div>
 
-        <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-500/20">
-          <div className="text-[11px] text-blue-300 uppercase tracking-wider font-semibold">
-            {t('₹5K అప్‌గ్రేడ్ తర్వాత లాభం', 'Growth Since ₹5K Upgrade')}
+            <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/20">
+              <div className="text-[11px] text-emerald-300 uppercase tracking-wider font-semibold">
+                {t('మొత్తం నికర లాభం', 'Lifetime Net Return')}
+              </div>
+              <div className="text-base font-bold text-emerald-400 mt-0.5 flex items-center gap-1">
+                {netLifetimeGain >= 0 ? `+${formatINR(netLifetimeGain)}` : formatINR(netLifetimeGain)}
+                <span className="text-xs font-semibold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
+                  {netLifetimeReturnPct >= 0 ? `+${netLifetimeReturnPct.toFixed(2)}%` : `${netLifetimeReturnPct.toFixed(2)}%`}
+                </span>
+              </div>
+              <div className="text-[10px] text-emerald-500/80">{t('లైవ్ నికర లాభం / నష్టం', 'Live verified net P&L')}</div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-500/20">
+              <div className="text-[11px] text-blue-300 uppercase tracking-wider font-semibold">
+                {t('రికార్డ్ అయిన రోజులు', 'Recorded Ledger Days')}
+              </div>
+              <div className="text-base font-bold text-blue-400 mt-0.5 flex items-center gap-1">
+                {ledgerDays.length} {t('రోజులు', 'Days')}
+              </div>
+              <div className="text-[10px] text-blue-500/80">{t('డేటాబేస్ డైలీ లెడ్జర్', 'Database verified ledger')}</div>
+            </div>
           </div>
-          <div className="text-base font-bold text-blue-400 mt-0.5 flex items-center gap-1">
-            +₹434.46
-            <span className="text-xs font-semibold px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300">
-              +8.2%
-            </span>
-          </div>
-          <div className="text-[10px] text-blue-500/80">Growth from ₹5,293.29 base</div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Mobile Swipe Guidance Banner */}
       <div className="sm:hidden flex items-center justify-between text-[11px] text-blue-300 bg-blue-950/50 border border-blue-500/20 px-3 py-1.5 rounded-lg mb-2.5">
@@ -298,6 +287,15 @@ export const DashboardDailyLedgerCard: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5 text-slate-300">
+            {displayData.length === 0 ? (
+              <tr>
+                <td colSpan={11} className="py-12 text-center text-slate-400">
+                  <Calendar className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-slate-300">{loading ? t('లోడ్ అవుతోంది...', 'Loading daily ledger...') : t('డేటా లభించలేదు', 'No daily ledger records yet')}</p>
+                  <p className="text-xs text-slate-500 mt-1">{t('రోజువారీ ట్రేడింగ్ ముగిసిన తర్వాత నివేదిక ఇక్కడ కనిపిస్తుంది.', 'Daily trading ledgers will populate automatically after each market session.')}</p>
+                </td>
+              </tr>
+            ) : null}
             {displayData.map((row) => {
               const isProfit = row.net_pnl > 0;
               const isLoss = row.net_pnl < 0;

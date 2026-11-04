@@ -38,79 +38,47 @@ export const PerformanceChart: React.FC = () => {
     return () => { isMounted = false; };
   }, [lastPortfolioUpdate]);
 
-  // Fallback data if ledger is loading
-  const daysData = useMemo(() => {
-    if (ledgerDays.length > 0) return ledgerDays;
-    
-    // Default 15 days trajectory mirroring verified financial history
-    return [
-      { day_number: 1, date: '2026-10-19', total_equity: 500, closing_capital: 500, net_pnl: 0, discipline_status: 'CAPITAL_PRESERVED', stocks_traded: 'None', ai_decision_summary: 'Day 1: Platform setup, ₹500 initial paper capital.' },
-      { day_number: 2, date: '2026-10-20', total_equity: 500, closing_capital: 500, net_pnl: 0, discipline_status: 'CAPITAL_PRESERVED', stocks_traded: 'None', ai_decision_summary: 'Day 2: Live monitoring, cost-gate friction calibrated.' },
-      { day_number: 3, date: '2026-10-21', total_equity: 500, closing_capital: 500, net_pnl: 0, discipline_status: 'CAPITAL_PRESERVED', stocks_traded: 'None', ai_decision_summary: 'Day 3: 20/50 EMA momentum breakout checks.' },
-      { day_number: 4, date: '2026-10-22', total_equity: 293.29, closing_capital: 293.29, net_pnl: -206.71, discipline_status: 'CAPITAL_PRESERVED', stocks_traded: 'IDEA, SBIN, SUZLON', ai_decision_summary: 'Day 4: SBIN stop-loss hit. Risk controls protected capital.' },
-      { day_number: 5, date: '2026-10-23', total_equity: 293.29, closing_capital: 293.29, net_pnl: 0, discipline_status: 'MARKET_STANDBY', stocks_traded: 'None', ai_decision_summary: 'Day 5: Portfolio review, capital protection mode.' },
-      { day_number: 6, date: '2026-10-24', total_equity: 293.29, closing_capital: 293.29, net_pnl: 0, discipline_status: 'MARKET_STANDBY', stocks_traded: 'None', ai_decision_summary: 'Day 6: Standby verification.' },
-      { day_number: 7, date: '2026-10-25', total_equity: 293.29, closing_capital: 293.29, net_pnl: 0, discipline_status: 'MARKET_STANDBY', stocks_traded: 'None', ai_decision_summary: 'Day 7: 15-Day Roadmap alignment.' },
-      { day_number: 8, date: '2026-10-26', total_equity: 293.29, closing_capital: 293.29, net_pnl: 0, discipline_status: 'MARKET_STANDBY', stocks_traded: 'None', ai_decision_summary: 'Day 8: Financial calculators & voice copilot integration.' },
-      { day_number: 9, date: '2026-10-27', total_equity: 5293.29, closing_capital: 5293.29, net_pnl: 0, discipline_status: 'MARKET_STANDBY', stocks_traded: 'None', ai_decision_summary: 'Day 9: +₹5,000 capital upgrade deposited for Nifty 50 large-caps.' },
-      { day_number: 10, date: '2026-10-28', total_equity: 5297.29, closing_capital: 5297.29, net_pnl: 4.00, discipline_status: 'TARGET_HIT', stocks_traded: 'BEL, ITC, WIPRO', ai_decision_summary: 'Day 10: ITC hit +3.10% profit target (+₹27.30 profit).' },
-      { day_number: 11, date: '2026-10-29', total_equity: 5321.21, closing_capital: 5321.21, net_pnl: 23.92, discipline_status: 'TARGET_HIT', stocks_traded: 'BEL, COALINDIA', ai_decision_summary: 'Day 11: BEL reached +3.12% target (+₹26.97 profit). Reinvested into Coal India.' },
-      { day_number: 12, date: '2026-10-30', total_equity: 5727.75, closing_capital: 3178.75, net_pnl: 27.28, discipline_status: 'TARGET_HIT', stocks_traded: 'IOC, POWERGRID, WIPRO', ai_decision_summary: 'Day 12: WIPRO reached +3.09% target (+₹31.54 profit). PowerGrid & IOC acquired.' },
-      { day_number: 13, date: '2026-10-31', total_equity: 5727.75, closing_capital: 3178.75, net_pnl: 0, discipline_status: 'MARKET_STANDBY', stocks_traded: 'None', ai_decision_summary: 'Day 13: Weekend standby, open positions maintained safely.' },
-      { day_number: 14, date: '2026-11-01', total_equity: 5727.75, closing_capital: 3178.75, net_pnl: 0, discipline_status: 'MARKET_STANDBY', stocks_traded: 'None', ai_decision_summary: 'Day 14: Portfolio value steady at ₹5,727.75.' },
-      { day_number: 15, date: '2026-11-02', total_equity: 5727.75, closing_capital: 3178.75, net_pnl: 0, discipline_status: 'MARKET_STANDBY', stocks_traded: 'None', ai_decision_summary: 'Day 15: AI active, market scanning in progress.' }
-    ] as DailyLedgerEntry[];
-  }, [ledgerDays]);
+  const daysData = ledgerDays;
 
-  const currentEquity = portfolio?.total_portfolio_value || (daysData[daysData.length - 1]?.total_equity ?? 5727.75);
-  const liquidCash = portfolio?.cash_balance ?? 3178.75;
-  const totalDeposited = 5500.00; // ₹500 initial + ₹5,000 upgrade
-  const netLifetimeGain = currentEquity - totalDeposited; // +₹227.75
-  const postUpgradeBase = 5293.29;
-  const postUpgradeGain = currentEquity - postUpgradeBase; // +₹434.46
+  const currentEquity = portfolio?.total_portfolio_value ?? (portfolio?.cash_balance ?? 0);
+  const liquidCash = portfolio?.cash_balance ?? 0;
+  const totalDeposited = portfolio?.initial_cash ?? 0;
+  const netLifetimeGain = currentEquity - totalDeposited;
+  const netLifetimeReturnPct = totalDeposited > 0 ? (netLifetimeGain / totalDeposited) * 100 : 0;
 
   // Coordinate scaling
   const equityValues = daysData.map(d => d.total_equity || d.closing_capital);
-  const minVal = 0; // Show from zero for honest baseline scaling
-  const maxVal = Math.max(6500, ...equityValues) * 1.08;
+  const minVal = equityValues.length > 0 ? Math.min(0, Math.min(...equityValues)) : 0;
+  const maxVal = equityValues.length > 0 ? Math.max(...equityValues, totalDeposited) * 1.1 : 1000;
   const range = maxVal - minVal || 1;
 
   const points = useMemo(() => {
     const n = daysData.length;
+    if (n === 0) return [];
     return daysData.map((d, i) => {
       const eq = d.total_equity || d.closing_capital;
       const x = n > 1 ? (i / (n - 1)) * 100 : 50;
       const y = 100 - ((eq - minVal) / range) * 100;
       
-      // Calculate golden compounding formula curve (+1% daily target)
-      let compTargetY: number | null = null;
-      if (d.day_number >= 9) {
-        const compoundDays = d.day_number - 9;
-        const targetVal = 5293.29 * Math.pow(1.01, compoundDays);
-        compTargetY = 100 - ((targetVal - minVal) / range) * 100;
-      }
-
       return {
         ...d,
         index: i,
         equity: eq,
         x,
         y,
-        compTargetY
+        compTargetY: null
       };
     });
   }, [daysData, minVal, range]);
 
   // Paths
-  const netPath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
-  const areaPath = `${netPath} L 100 100 L 0 100 Z`;
-
-  // Compounding path (starting from Day 9 upgrade)
-  const compPoints = points.filter(p => p.compTargetY !== null);
-  const compPath = compPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.compTargetY!.toFixed(2)}`).join(' ');
+  const netPath = points.length > 0 
+    ? points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ')
+    : '';
+  const areaPath = points.length > 0 ? `${netPath} L 100 100 L 0 100 Z` : '';
 
   // Active or hovered point
-  const activePoint = hoveredIndex !== null && points[hoveredIndex] ? points[hoveredIndex] : points[points.length - 1];
+  const activePoint = hoveredIndex !== null && points[hoveredIndex] ? points[hoveredIndex] : (points.length > 0 ? points[points.length - 1] : null);
 
   return (
     <GlassCard className="mt-4 overflow-hidden border border-slate-800/80 shadow-2xl relative">
@@ -152,27 +120,27 @@ export const PerformanceChart: React.FC = () => {
         <div className="bg-slate-900/60 rounded-lg p-2.5 border border-slate-800">
           <span className="text-[10px] text-slate-400 block">మొత్తం డిపాజిట్లు (Total Deposits)</span>
           <span className="text-xs sm:text-sm font-bold text-white font-mono">{formatINR(totalDeposited)}</span>
-          <span className="text-[9px] text-slate-500 block">₹500 (Day 1) + ₹5,000 (Day 9)</span>
+          <span className="text-[9px] text-slate-500 block">కేటాయించిన మూలధనం</span>
         </div>
 
         <div className="bg-slate-900/60 rounded-lg p-2.5 border border-slate-800">
           <span className="text-[10px] text-slate-400 block">ప్రస్తుత మొత్తం విలువ (Net Worth)</span>
           <span className="text-xs sm:text-sm font-bold text-cyan-400 font-mono">{formatINR(currentEquity)}</span>
-          <span className="text-[9px] text-slate-500 block">క్యాష్ ({formatINR(liquidCash)}) + షేర్లు</span>
+          <span className="text-[9px] text-slate-500 block">క్యాష్ ({formatINR(liquidCash)})</span>
         </div>
 
         <div className="bg-slate-900/60 rounded-lg p-2.5 border border-slate-800">
-          <span className="text-[10px] text-slate-400 block">నికర లాభం (Net Profit vs Deposits)</span>
+          <span className="text-[10px] text-slate-400 block">నికర లాభం (Net Return)</span>
           <span className={`text-xs sm:text-sm font-bold font-mono ${netLifetimeGain >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {netLifetimeGain >= 0 ? `+${formatINR(netLifetimeGain)}` : formatINR(netLifetimeGain)}
           </span>
-          <span className="text-[9px] text-emerald-400/80 block">పాత నష్టం పోనూ నికర లాభం</span>
+          <span className="text-[9px] text-emerald-400/80 block">{netLifetimeReturnPct >= 0 ? `+${netLifetimeReturnPct.toFixed(2)}%` : `${netLifetimeReturnPct.toFixed(2)}%`}</span>
         </div>
 
         <div className="bg-slate-900/60 rounded-lg p-2.5 border border-slate-800">
-          <span className="text-[10px] text-slate-400 block">అప్‌గ్రేడ్ తర్వాత వృద్ధి (Growth)</span>
-          <span className="text-xs sm:text-sm font-bold text-purple-400 font-mono">+{formatINR(postUpgradeGain)}</span>
-          <span className="text-[9px] text-purple-400/80 block">Days 10-15 లార్జ్-క్యాప్ పెర్ఫార్మెన్స్</span>
+          <span className="text-[10px] text-slate-400 block">రికార్డ్ అయిన రోజులు (Days)</span>
+          <span className="text-xs sm:text-sm font-bold text-purple-400 font-mono">{daysData.length} రోజులు</span>
+          <span className="text-[9px] text-purple-400/80 block">డైలీ సెషన్‌ల చరిత్ర</span>
         </div>
       </div>
 
@@ -188,231 +156,186 @@ export const PerformanceChart: React.FC = () => {
               <p>
                 <strong className="text-cyan-400">🔵 Cyan Solid Line (Net Equity):</strong> మీ మొత్తం పోర్ట్‌ఫోలియో అసలు విలువ. ఎక్స్ఛేంజ్ ఛార్జీలు, పన్నులు అన్నీ పోను మీ చేతిలో నికరంగా మిగిలిన మొత్తం (క్యాష్ + షేర్ల విలువ).
               </p>
-              <p>
-                <strong className="text-purple-400">🟣 Purple Dashed Line (Compounding Target):</strong> మీ గోల్డెన్ ఫార్ములా (+1% రోజువారీ కాంపౌండింగ్ టార్గెట్). ఈ లైన్ కంటే బ్లూ లైన్ పైన ఉంటే మీరు టార్గెట్ కంటే ఎక్కువ లాభాల్లో ఉన్నారని అర్థం!
-              </p>
             </div>
             <div className="space-y-1.5">
               <p>
-                <strong className="text-amber-400">⚠️ Day 4 డిప్ (-₹206):</strong> ప్రారంభంలో ₹500 తో చిన్న పెన్నీ స్టాక్స్ ట్రేడ్ చేసినప్పుడు స్టాప్-లాస్ హిట్ అయి నష్టం వచ్చింది.
-              </p>
-              <p>
-                <strong className="text-emerald-400">💎 Day 9 నుండి జంప్:</strong> ₹5,000 అప్‌గ్రేడ్ చేసి లార్జ్-క్యాప్ నిఫ్టీ 50 (ITC, BEL, WIPRO) షేర్లలో వరుసగా లాభాలు తీసి మొత్తం రికవరీ చేసి +₹227 నికర లాభానికి చేరింది.
+                <strong className="text-emerald-400">🛡️ రిస్క్ మేనేజ్‌మెంట్:</strong> 1:2 రిస్క్-రివార్డ్ క్రమశిక్షణతో కూడిన రక్షణ.
               </p>
             </div>
           </div>
-          <p className="text-[10px] text-slate-400 border-t border-slate-700/50 pt-1.5">
-            💡 <em>చిట్కా: గ్రాఫ్‌పై ఎక్కడైనా మౌస్ ఉంచండి (లేదా టచ్ చేయండి) — ఆ రోజున జరిగిన ట్రేడ్స్, బుక్ చేసిన లాభం/నష్టం పూర్తి వివరాలు కనిపిస్తాయి!</em>
-          </p>
         </div>
       )}
 
-      {/* SVG Interactive Chart Container */}
-      <div 
-        className="w-full h-56 sm:h-64 relative select-none pt-2 cursor-crosshair"
-        onMouseLeave={() => setHoveredIndex(null)}
-        onMouseMove={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const relativeX = (e.clientX - rect.left) / rect.width;
-          const targetIndex = Math.min(
-            points.length - 1, 
-            Math.max(0, Math.round(relativeX * (points.length - 1)))
-          );
-          setHoveredIndex(targetIndex);
-        }}
-        onTouchMove={(e) => {
-          if (e.touches.length > 0) {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const relativeX = (e.touches[0].clientX - rect.left) / rect.width;
-            const targetIndex = Math.min(
-              points.length - 1, 
-              Math.max(0, Math.round(relativeX * (points.length - 1)))
-            );
-            setHoveredIndex(targetIndex);
-          }
-        }}
-      >
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-          <defs>
-            <linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#06B6D4" stopOpacity="0.35" />
-              <stop offset="60%" stopColor="#06B6D4" stopOpacity="0.08" />
-              <stop offset="100%" stopColor="#06B6D4" stopOpacity="0.0" />
-            </linearGradient>
-          </defs>
-
-          {/* Grid Horizontal Guidelines */}
-          {[0, 2000, 4000, 5000, 6000].map(val => {
-            const y = 100 - ((val - minVal) / range) * 100;
-            return (
-              <g key={val}>
-                <line
-                  x1="0"
-                  y1={y}
-                  x2="100"
-                  y2={y}
-                  stroke="rgba(255, 255, 255, 0.07)"
-                  strokeDasharray="1.5,1.5"
-                  strokeWidth="0.4"
-                />
-              </g>
-            );
-          })}
-
-          {/* Area Fill */}
-          <path d={areaPath} fill="url(#equityGrad)" />
-
-          {/* 1% Compounding Target Curve */}
-          {compPath && (
-            <path
-              d={compPath}
-              fill="none"
-              stroke="#A855F7"
-              strokeWidth="1.2"
-              strokeDasharray="2,2"
-              opacity="0.85"
-            />
-          )}
-
-          {/* Net Equity Curve */}
-          <path
-            d={netPath}
-            fill="none"
-            stroke="#06B6D4"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-
-          {/* Key Milestone Nodes on SVG */}
-          {points.map((p) => {
-            const isMilestone = [4, 9, 10, 11, 12, 15].includes(p.day_number);
-            const isSelected = activePoint && activePoint.day_number === p.day_number;
-
-            if (!isMilestone && !isSelected) return null;
-
-            let fill = '#06B6D4';
-            if (p.day_number === 4) fill = '#F43F5E'; // Red for loss
-            if (p.day_number === 9) fill = '#8B5CF6'; // Purple for deposit
-            if ([10, 11, 12].includes(p.day_number)) fill = '#10B981'; // Green for profits
-
-            return (
-              <g key={p.day_number}>
-                {isSelected && (
-                  <circle
-                    cx={p.x}
-                    cy={p.y}
-                    r="4"
-                    fill={fill}
-                    opacity="0.4"
-                    className="animate-ping"
-                  />
-                )}
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={isSelected ? 2.5 : 1.6}
-                  fill={fill}
-                  stroke="#0F172A"
-                  strokeWidth="0.6"
-                />
-              </g>
-            );
-          })}
-
-          {/* Active Hover Tracking Vertical Line */}
-          {activePoint && (
-            <g>
-              <line
-                x1={activePoint.x}
-                y1="0"
-                x2={activePoint.x}
-                y2="100"
-                stroke="rgba(6, 182, 212, 0.4)"
-                strokeDasharray="1,1"
-                strokeWidth="0.5"
-              />
-            </g>
-          )}
-        </svg>
-
-        {/* Y-Axis Value Labels Overlay */}
-        <div className="absolute top-1 left-1.5 flex flex-col justify-between h-48 pointer-events-none text-[9px] font-mono text-slate-500">
-          <span>₹6,000</span>
-          <span>₹5,000</span>
-          <span>₹4,000</span>
-          <span>₹2,000</span>
-          <span>₹0</span>
+      {points.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 text-center text-slate-400 bg-slate-950/40 rounded-xl border border-white/5 my-4">
+          <TrendingUp className="w-10 h-10 text-slate-600 mb-2" />
+          <p className="text-sm font-semibold text-slate-300">చరిత్ర లేదు (No Performance History Yet)</p>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm">
+            రోజువారీ మార్కెట్ సెషన్‌లు పూర్తయిన తర్వాత మీ పోర్ట్‌ఫోలియో గ్రోత్ కర్వ్ ఇక్కడ కనిపిస్తుంది.
+          </p>
         </div>
-
-        {/* Floating Interactive Tooltip */}
-        {activePoint && (
+      ) : (
+        <>
+          {/* SVG Interactive Chart Container */}
           <div 
-            className="absolute top-2 pointer-events-none z-20 transition-all duration-150 ease-out"
-            style={{
-              left: `${Math.min(75, Math.max(10, activePoint.x))}%`,
-              transform: 'translateX(-50%)'
+            className="w-full h-56 sm:h-64 relative select-none pt-2 cursor-crosshair"
+            onMouseLeave={() => setHoveredIndex(null)}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const relativeX = (e.clientX - rect.left) / rect.width;
+              const targetIndex = Math.min(
+                points.length - 1, 
+                Math.max(0, Math.round(relativeX * (points.length - 1)))
+              );
+              setHoveredIndex(targetIndex);
+            }}
+            onTouchMove={(e) => {
+              if (e.touches.length > 0) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const relativeX = (e.touches[0].clientX - rect.left) / rect.width;
+                const targetIndex = Math.min(
+                  points.length - 1, 
+                  Math.max(0, Math.round(relativeX * (points.length - 1)))
+                );
+                setHoveredIndex(targetIndex);
+              }
             }}
           >
-            <div className="bg-slate-900/95 border border-slate-700/80 rounded-lg p-2.5 shadow-2xl backdrop-blur-md min-w-[210px] text-xs space-y-1.5">
-              <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-accent-cyan" />
-                  <span className="font-bold text-white">Day {activePoint.day_number}</span>
-                  <span className="text-[10px] text-slate-400">({activePoint.date})</span>
-                </div>
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${
-                  activePoint.discipline_status === 'TARGET_HIT' 
-                    ? 'bg-emerald-500/20 text-emerald-400' 
-                    : activePoint.discipline_status === 'CAPITAL_PRESERVED' 
-                    ? 'bg-amber-500/20 text-amber-300' 
-                    : 'bg-slate-800 text-slate-400'
-                }`}>
-                  {activePoint.discipline_status.replace('_', ' ')}
-                </span>
-              </div>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+              <defs>
+                <linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#06B6D4" stopOpacity="0.35" />
+                  <stop offset="60%" stopColor="#06B6D4" stopOpacity="0.08" />
+                  <stop offset="100%" stopColor="#06B6D4" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
 
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">మొత్తం విలువ (Net Equity):</span>
-                <span className="font-bold text-cyan-300 font-mono">
-                  {formatINR(activePoint.equity)}
-                </span>
-              </div>
+              {/* Area Fill */}
+              <path d={areaPath} fill="url(#equityGrad)" />
 
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">ఆ రోజు నికర ఫలితం (Net PnL):</span>
-                <span className={`font-bold font-mono ${
-                  activePoint.net_pnl > 0 ? 'text-emerald-400' : activePoint.net_pnl < 0 ? 'text-rose-400' : 'text-slate-400'
-                }`}>
-                  {activePoint.net_pnl > 0 ? `+${formatINR(activePoint.net_pnl)}` : activePoint.net_pnl < 0 ? formatINR(activePoint.net_pnl) : '₹0.00 (Standby)'}
-                </span>
-              </div>
+              {/* Net Equity Curve */}
+              <path
+                d={netPath}
+                fill="none"
+                stroke="#06B6D4"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
 
-              {activePoint.stocks_traded && activePoint.stocks_traded !== 'None (Standby)' && activePoint.stocks_traded !== 'None' && (
-                <div className="text-[10px] text-slate-300 flex items-center gap-1">
-                  <span className="text-slate-500">ట్రేడెడ్ స్టాక్స్:</span>
-                  <span className="font-medium text-amber-300">{activePoint.stocks_traded}</span>
-                </div>
+              {/* Day Nodes on SVG */}
+              {points.map((p) => {
+                const isSelected = activePoint && activePoint.day_number === p.day_number;
+                const fill = p.net_pnl > 0 ? '#10B981' : p.net_pnl < 0 ? '#F43F5E' : '#06B6D4';
+
+                return (
+                  <g key={p.day_number}>
+                    {isSelected && (
+                      <circle
+                        cx={p.x}
+                        cy={p.y}
+                        r="4"
+                        fill={fill}
+                        opacity="0.4"
+                        className="animate-ping"
+                      />
+                    )}
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={isSelected ? 2.5 : 1.6}
+                      fill={fill}
+                      stroke="#0F172A"
+                      strokeWidth="0.6"
+                    />
+                  </g>
+                );
+              })}
+
+              {/* Active Hover Tracking Vertical Line */}
+              {activePoint && (
+                <g>
+                  <line
+                    x1={activePoint.x}
+                    y1="0"
+                    x2={activePoint.x}
+                    y2="100"
+                    stroke="rgba(6, 182, 212, 0.4)"
+                    strokeDasharray="1,1"
+                    strokeWidth="0.5"
+                  />
+                </g>
               )}
+            </svg>
 
-              {activePoint.ai_decision_summary && (
-                <div className="text-[10px] text-slate-400 italic bg-slate-950/60 p-1.5 rounded border border-slate-800/80 leading-snug">
-                  {activePoint.ai_decision_summary}
+            {/* Floating Interactive Tooltip */}
+            {activePoint && (
+              <div 
+                className="absolute top-2 pointer-events-none z-20 transition-all duration-150 ease-out"
+                style={{
+                  left: `${Math.min(75, Math.max(10, activePoint.x))}%`,
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                <div className="bg-slate-900/95 border border-slate-700/80 rounded-lg p-2.5 shadow-2xl backdrop-blur-md min-w-[210px] text-xs space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-accent-cyan" />
+                      <span className="font-bold text-white">Day {activePoint.day_number}</span>
+                      <span className="text-[10px] text-slate-400">({activePoint.date})</span>
+                    </div>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${
+                      activePoint.discipline_status === 'TARGET_HIT' 
+                        ? 'bg-emerald-500/20 text-emerald-400' 
+                        : activePoint.discipline_status === 'CAPITAL_PRESERVED' 
+                        ? 'bg-amber-500/20 text-amber-300' 
+                        : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      {activePoint.discipline_status.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">మొత్తం విలువ (Net Equity):</span>
+                    <span className="font-bold text-cyan-300 font-mono">
+                      {formatINR(activePoint.equity)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">ఆ రోజు నికర ఫలితం (Net PnL):</span>
+                    <span className={`font-bold font-mono ${
+                      activePoint.net_pnl > 0 ? 'text-emerald-400' : activePoint.net_pnl < 0 ? 'text-rose-400' : 'text-slate-400'
+                    }`}>
+                      {activePoint.net_pnl > 0 ? `+${formatINR(activePoint.net_pnl)}` : activePoint.net_pnl < 0 ? formatINR(activePoint.net_pnl) : '₹0.00 (Standby)'}
+                    </span>
+                  </div>
+
+                  {activePoint.stocks_traded && activePoint.stocks_traded !== 'None (Standby)' && activePoint.stocks_traded !== 'None' && (
+                    <div className="text-[10px] text-slate-300 flex items-center gap-1">
+                      <span className="text-slate-500">ట్రేడెడ్ స్టాక్స్:</span>
+                      <span className="font-medium text-amber-300">{activePoint.stocks_traded}</span>
+                    </div>
+                  )}
+
+                  {activePoint.ai_decision_summary && (
+                    <div className="text-[10px] text-slate-400 italic bg-slate-950/60 p-1.5 rounded border border-slate-800/80 leading-snug">
+                      {activePoint.ai_decision_summary}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* X-Axis Timeline Milestones */}
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 px-2 border-t border-slate-800/60 mt-1">
-        <span>Day 1 (₹500 Start)</span>
-        <span className="text-rose-400 font-semibold">Day 4 (Loss)</span>
-        <span className="text-purple-400 font-semibold">Day 9 (+₹5K Upgrade)</span>
-        <span className="text-emerald-400 font-semibold">Day 10-12 (ITC, BEL, WIPRO)</span>
-        <span className="text-cyan-400 font-bold">Day 15 (₹5,728)</span>
-      </div>
+          {/* X-Axis Timeline Milestones */}
+          <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-3 px-2 border-t border-slate-800/60 mt-1">
+            <span>Day {points[0].day_number}</span>
+            {points.length > 2 && <span>Day {points[Math.floor(points.length / 2)].day_number}</span>}
+            <span>Day {points[points.length - 1].day_number}</span>
+          </div>
+        </>
+      )}
 
       {/* Chart Legend Footer */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-3 mt-2 border-t border-slate-800/40 text-slate-400">
@@ -420,14 +343,6 @@ export const PerformanceChart: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-accent-cyan shadow-sm" />
             <span className="text-slate-300 font-medium">Net Portfolio Equity</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-0.5 bg-accent-violet border-dashed" />
-            <span className="text-accent-violet font-medium">+1% Daily Compounding Target</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-500" />
-            <span className="text-slate-400">Day 4 Loss Recovery</span>
           </div>
         </div>
 
