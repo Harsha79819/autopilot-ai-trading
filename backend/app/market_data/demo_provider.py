@@ -30,6 +30,14 @@ class DemoMarketDataProvider(MarketDataProvider):
     def is_demo(self) -> bool:
         return True
 
+    @property
+    def data_delay_seconds(self) -> int:
+        return 0
+
+    @property
+    def is_realtime(self) -> bool:
+        return False  # Synthetic simulation
+
     def _initialize_history(self):
         """Generate 100 historical 1-minute candles for each symbol using random walk."""
         now = datetime.utcnow()

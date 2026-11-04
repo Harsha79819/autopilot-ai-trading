@@ -51,7 +51,7 @@ import { api } from './services/api';
 import { Sliders, TrendingUp, BarChart2, Layers, Receipt, Table, ShoppingCart, Radio, Sparkles, Activity, Columns } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  const { activeTab, portfolio } = useTrading();
+  const { activeTab, portfolio, aiStatus } = useTrading();
   const { t } = useLanguage();
   const [chartViewMode, setChartViewMode] = useState<'equity' | 'live_market' | 'both'>('equity');
   
@@ -229,6 +229,21 @@ const MainContent: React.FC = () => {
 
   return (
     <main className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-3 sm:py-5 pb-24 md:pb-12 relative z-10">
+      {/* Persistent Delayed Data Warning Banner */}
+      {aiStatus && aiStatus.is_realtime === false && (
+        <div className="mb-3.5 w-full bg-amber-500/15 border border-amber-500/40 text-amber-200 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-between gap-3 shadow-lg animate-fade-in">
+          <div className="flex items-center gap-2">
+            <span className="text-base flex-shrink-0">⚠️</span>
+            <span>
+              <strong>Delayed data (about 15 min):</strong> Do not use for real trading decisions.
+            </span>
+          </div>
+          <span className="text-[11px] text-amber-300/80 hidden sm:inline whitespace-nowrap bg-amber-950/50 px-2 py-0.5 rounded border border-amber-500/20">
+            Free Live NSE Feed · Paper Execution
+          </span>
+        </div>
+      )}
+
       {/* Risk modal trigger floating button */}
       <button
         onClick={() => setShowRiskModal(true)}

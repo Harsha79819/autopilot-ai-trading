@@ -291,6 +291,8 @@ export interface AIStatus {
   autopilot_enabled?: boolean;
   intraday_only?: boolean;
   kill_switch_closes_positions?: boolean;
+  is_realtime?: boolean;
+  data_delay_seconds?: number;
   updated_at?: string;
 }
 

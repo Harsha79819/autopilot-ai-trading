@@ -272,6 +272,18 @@ class AngelOneSmartApiProvider(MarketDataProvider):
     def is_demo(self) -> bool:
         return False
 
+    @property
+    def data_delay_seconds(self) -> int:
+        if self.is_configured():
+            return 0
+        return self._fallback_provider.data_delay_seconds
+
+    @property
+    def is_realtime(self) -> bool:
+        if self.is_configured():
+            return True
+        return self._fallback_provider.is_realtime
+
     def is_market_open(self) -> bool:
         return self._fallback_provider.is_market_open()
 

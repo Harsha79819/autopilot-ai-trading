@@ -70,6 +70,14 @@ class LiveNseMarketDataProvider(MarketDataProvider):
     def is_demo(self) -> bool:
         return False
 
+    @property
+    def data_delay_seconds(self) -> int:
+        return 900  # Yahoo Finance NSE feed has ~15 min delay
+
+    @property
+    def is_realtime(self) -> bool:
+        return False
+
     def is_market_open(self) -> bool:
         """Check if market is currently within active NSE regular session (09:15 - 15:30 IST Mon-Fri)."""
         from backend.app.market_data import is_market_session_active

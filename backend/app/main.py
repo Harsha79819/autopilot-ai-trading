@@ -137,14 +137,19 @@ from fastapi.responses import FileResponse
 
 @app.get("/api/health")
 def health_check():
+    from backend.app.market_data import market_provider
     return {
         "status": "healthy",
         "app_name": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "paper_trading_mode": True,
         "live_trading_enabled": False,
-        "data_provider": settings.MARKET_DATA_PROVIDER,
-        "initial_capital_inr": settings.INITIAL_VIRTUAL_CAPITAL_INR
+        "data_provider": market_provider.get_provider_name(),
+        "is_realtime": market_provider.is_realtime,
+        "data_delay_seconds": market_provider.data_delay_seconds,
+        "initial_capital_inr": settings.INITIAL_VIRTUAL_CAPITAL_INR,
+        "intraday_only": settings.INTRADAY_ONLY,
+        "kill_switch_closes_positions": settings.KILL_SWITCH_CLOSES_POSITIONS
     }
 
 # Production Unified SPA Static File Server

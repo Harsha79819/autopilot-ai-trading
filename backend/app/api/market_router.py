@@ -45,6 +45,8 @@ def get_market_status():
         current_time_utc=datetime.utcnow(),
         provider_name=demo_provider.get_provider_name(),
         is_demo=demo_provider.is_demo(),
+        is_realtime=demo_provider.is_realtime,
+        data_delay_seconds=demo_provider.data_delay_seconds,
         active_symbols_count=len(UNIVERSE_SYMBOLS),
         staleness_threshold_seconds=settings.STALE_DATA_THRESHOLD_SECONDS,
         disclaimer="SIMULATED PAPER TRADING: Real-time NSE feed with simulated paper execution. No real money or real brokerage orders are placed."

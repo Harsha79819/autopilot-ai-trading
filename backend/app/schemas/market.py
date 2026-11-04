@@ -52,6 +52,8 @@ class MarketStatusResponse(BaseModel):
     current_time_utc: datetime
     provider_name: str
     is_demo: bool
+    is_realtime: bool = True
+    data_delay_seconds: int = 0
     active_symbols_count: int
     staleness_threshold_seconds: int
     disclaimer: str

@@ -42,3 +42,13 @@ class MarketDataProvider(ABC):
     def is_market_open(self) -> bool:
         """Check if market is currently within regular trading hours (09:15 - 15:30 IST)."""
         pass
+
+    @property
+    def data_delay_seconds(self) -> int:
+        """Estimated feed delay in seconds (e.g. 900 for 15-min delayed Yahoo feed, 0 for realtime)."""
+        return 0
+
+    @property
+    def is_realtime(self) -> bool:
+        """True if feed is sub-second real-time streaming, False if delayed or synthetic."""
+        return True

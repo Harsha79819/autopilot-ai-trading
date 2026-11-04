@@ -96,6 +96,8 @@ class AutoPilotRunner:
         status_copy = dict(self._last_ai_status)
         status_copy["intraday_only"] = getattr(settings, "INTRADAY_ONLY", True)
         status_copy["kill_switch_closes_positions"] = getattr(settings, "KILL_SWITCH_CLOSES_POSITIONS", False)
+        status_copy["data_delay_seconds"] = market_provider.data_delay_seconds
+        status_copy["is_realtime"] = market_provider.is_realtime
         return status_copy
 
     def set_autopilot_enabled(self, enabled: bool) -> bool:
