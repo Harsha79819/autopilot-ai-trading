@@ -10,6 +10,7 @@ from backend.app.models.portfolio import Portfolio
 from backend.app.models.position import Position
 from backend.app.models.trade import Trade
 from backend.app.models.audit_log import AuditLog
+from backend.app.models.position_risk_state import PositionRiskState
 from backend.app.schemas.order import OrderCreate
 from backend.app.schemas.market import Quote, Candle
 from backend.app.market_data import market_provider, candle_aggregator, is_market_session_active
@@ -153,9 +154,72 @@ class AutoPilotRunner:
         except Exception as e:
             logger.debug(f"AGI learning sync note: {e}")
 
+    def _load_persisted_risk_state(self, db: Session):
+        """Loads persisted risk state (peaks, trailed stops, targets) from DB into in-memory structures."""
+        try:
+            states = db.query(PositionRiskState).all()
+            for s in states:
+                key = (s.user_id, s.symbol)
+                self._position_highs[key] = s.peak_price
+                self._position_entry_times[key] = s.opened_at
+                self._position_targets[key] = {
+                    "entry": s.entry_price,
+                    "take_profit": s.take_profit,
+                    "stop_loss": s.trailed_stop or s.stop_loss,
+                    "is_trailed": (s.trailed_stop > s.stop_loss) if (s.trailed_stop and s.stop_loss) else False
+                }
+
+            # Check open positions that might not have a state row (older data/restarts)
+            sl_pct = getattr(settings, "STOP_LOSS_PCT", 1.5)
+            rr_ratio = getattr(settings, "RISK_REWARD_RATIO", 2.0)
+            tp_pct = getattr(settings, "TAKE_PROFIT_PCT", round(sl_pct * rr_ratio, 2))
+
+            open_positions = db.query(Position).join(Portfolio).filter(Position.quantity > 0).all()
+            for pos in open_positions:
+                user_id = pos.portfolio.user_id
+                key = (user_id, pos.symbol)
+                if key not in self._position_targets:
+                    logger.warning(
+                        f"Rebuilding safe defaults for open position user {user_id} {pos.symbol} "
+                        f"from average_buy_price ₹{pos.average_buy_price:.2f}"
+                    )
+                    entry_p = pos.average_buy_price
+                    sl = round(entry_p * (1.0 - sl_pct / 100.0), 2)
+                    tp = round(entry_p * (1.0 + tp_pct / 100.0), 2)
+                    opened_at = pos.created_at or datetime.utcnow()
+
+                    state = PositionRiskState(
+                        user_id=user_id,
+                        symbol=pos.symbol,
+                        entry_price=entry_p,
+                        stop_loss=sl,
+                        take_profit=tp,
+                        peak_price=entry_p,
+                        trailed_stop=sl,
+                        opened_at=opened_at
+                    )
+                    db.add(state)
+                    db.commit()
+
+                    self._position_highs[key] = entry_p
+                    self._position_entry_times[key] = opened_at
+                    self._position_targets[key] = {
+                        "entry": entry_p,
+                        "take_profit": tp,
+                        "stop_loss": sl,
+                        "is_trailed": False
+                    }
+        except Exception as e:
+            logger.error(f"Error loading persisted risk state: {e}")
+
     def start(self):
         if not self._is_running:
             self._is_running = True
+            db = SessionLocal()
+            try:
+                self._load_persisted_risk_state(db)
+            finally:
+                db.close()
             self._task = asyncio.create_task(self._run_loop())
             logger.info("AutoPilot Runner background loop started.")
 
@@ -286,6 +350,7 @@ class AutoPilotRunner:
         # 2. Evaluate User Portfolio & Execute AI Auto-Trading
         db = SessionLocal()
         try:
+            self._load_persisted_risk_state(db)
             users = db.query(User).filter(User.is_active == True).all()
             for user in users:
                 portfolio = user.portfolio
@@ -321,11 +386,14 @@ class AutoPilotRunner:
 
                     cur_price = quote.current_price
                     high_key = (user.id, pos.symbol)
-                    current_high = max(self._position_highs.get(high_key, cur_price), cur_price)
+                    prev_high = self._position_highs.get(high_key, cur_price)
+                    current_high = max(prev_high, cur_price)
+                    high_changed = current_high != prev_high
                     self._position_highs[high_key] = current_high
 
                     # Dynamic Trailing Stop-Loss Engine (+2.0% profit lock)
                     peak_gain_pct = ((current_high - pos.average_buy_price) / pos.average_buy_price) * 100.0
+                    sl_changed = False
                     if peak_gain_pct >= 2.0:
                         # Lock in at least +0.8% net profit (guaranteed green after slippage and taxes)
                         trailed_sl = round(pos.average_buy_price * 1.008, 2)
@@ -335,6 +403,22 @@ class AutoPilotRunner:
                             entry_info["stop_loss"] = trailed_sl
                             entry_info["is_trailed"] = True
                             self._position_targets[high_key] = entry_info
+                            sl_changed = True
+
+                    # Persist peak or trailed stop update to DB
+                    if high_changed or sl_changed:
+                        try:
+                            risk_state = db.query(PositionRiskState).filter(
+                                PositionRiskState.user_id == user.id,
+                                PositionRiskState.symbol == pos.symbol
+                            ).first()
+                            if risk_state:
+                                risk_state.peak_price = current_high
+                                risk_state.trailed_stop = entry_info["stop_loss"]
+                                risk_state.updated_at = now
+                                db.commit()
+                        except Exception as persist_err:
+                            logger.error(f"Error persisting trailing stop/peak: {persist_err}")
 
                     entry_time = self._position_entry_times.get((user.id, pos.symbol), now - timedelta(seconds=60))
                     holding_seconds = (now - entry_time).total_seconds()
@@ -407,6 +491,15 @@ class AutoPilotRunner:
                             db.commit()
                         except Exception as log_err:
                             logger.error(f"Error recording trading journal: {log_err}")
+
+                        try:
+                            db.query(PositionRiskState).filter(
+                                PositionRiskState.user_id == user.id,
+                                PositionRiskState.symbol == pos.symbol
+                            ).delete()
+                            db.commit()
+                        except Exception as del_err:
+                            logger.error(f"Error deleting PositionRiskState on close: {del_err}")
 
                         self._position_targets.pop((user.id, pos.symbol), None)
                         self._position_entry_times.pop((user.id, pos.symbol), None)
@@ -550,6 +643,35 @@ class AutoPilotRunner:
                                 f"AI Swing Setup: Score {score}/100, D/E < 1.0, ROE > 12%, "
                                 f"Risk: ₹{min(capital_at_risk, qty*risk_per_share):.2f} (<= {max_risk_pct}%), Target 1:{int(rr_ratio)} RR"
                             )
+                            # Persist PositionRiskState in DB
+                            try:
+                                risk_state = db.query(PositionRiskState).filter(
+                                    PositionRiskState.user_id == user.id,
+                                    PositionRiskState.symbol == best_sym
+                                ).first()
+                                if not risk_state:
+                                    risk_state = PositionRiskState(
+                                        user_id=user.id,
+                                        symbol=best_sym,
+                                        entry_price=fill_price,
+                                        stop_loss=sl,
+                                        take_profit=tp,
+                                        peak_price=fill_price,
+                                        trailed_stop=sl,
+                                        opened_at=now
+                                    )
+                                    db.add(risk_state)
+                                else:
+                                    risk_state.entry_price = fill_price
+                                    risk_state.stop_loss = sl
+                                    risk_state.take_profit = tp
+                                    risk_state.peak_price = fill_price
+                                    risk_state.trailed_stop = sl
+                                    risk_state.updated_at = now
+                                db.commit()
+                            except Exception as persist_err:
+                                logger.error(f"Error persisting initial PositionRiskState: {persist_err}")
+
                             executed_buys.append(f"{best_sym} ({qty}sh @ ₹{fill_price:.2f})")
                             held_symbols.add(best_sym)
 

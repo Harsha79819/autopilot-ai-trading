@@ -11,6 +11,7 @@ from backend.app.models.financial_planner import ExpenseItem, MonthlyBudget, Sav
 from backend.app.models.watchlist_alert import WatchlistItem, AlertRule, NotificationLog
 from backend.app.models.market_research import NewsArticle, CompanyProfile
 from backend.app.models.financial_document import FinancialDocument
+from backend.app.models.position_risk_state import PositionRiskState
 
 __all__ = [
     "User",
@@ -30,5 +31,6 @@ __all__ = [
     "NewsArticle",
     "CompanyProfile",
     "FinancialDocument",
+    "PositionRiskState",
 ]
 
