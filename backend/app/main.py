@@ -48,34 +48,36 @@ async def lifespan(app: FastAPI):
     # Initialize DB tables
     init_db()
 
-    # Seed default demo user with exact starting balance of INR 100.00
-    db = SessionLocal()
-    try:
-        demo_user = db.query(User).filter(User.email == "demo@autopilot.ai").first()
-        if not demo_user:
-            demo_user = User(
-                email="demo@autopilot.ai",
-                hashed_password=get_password_hash("demo1234"),
-                full_name="Paper Trader Demo",
-                is_active=True
-            )
-            db.add(demo_user)
-            db.flush()
+    # Seed default demo user for local testing (disabled in production)
+    is_prod = str(settings.APP_ENV).lower() in ("production", "prod") or bool(os.getenv("RENDER"))
+    if not is_prod:
+        db = SessionLocal()
+        try:
+            demo_user = db.query(User).filter(User.email == "demo@autopilot.ai").first()
+            if not demo_user:
+                demo_user = User(
+                    email="demo@autopilot.ai",
+                    hashed_password=get_password_hash("demo1234"),
+                    full_name="Paper Trader Demo",
+                    is_active=True
+                )
+                db.add(demo_user)
+                db.flush()
 
-            portfolio = Portfolio(
-                user_id=demo_user.id,
-                initial_cash=settings.INITIAL_VIRTUAL_CAPITAL_INR,
-                cash_balance=settings.INITIAL_VIRTUAL_CAPITAL_INR,
-                realized_pnl=0.0,
-                total_fees_paid=0.0,
-                peak_portfolio_value=settings.INITIAL_VIRTUAL_CAPITAL_INR,
-                is_kill_switched=False
-            )
-            db.add(portfolio)
-            db.commit()
-            logger.info(f"Default demo user created with initial virtual cash: INR {settings.INITIAL_VIRTUAL_CAPITAL_INR:.2f}")
-    finally:
-        db.close()
+                portfolio = Portfolio(
+                    user_id=demo_user.id,
+                    initial_cash=settings.INITIAL_VIRTUAL_CAPITAL_INR,
+                    cash_balance=settings.INITIAL_VIRTUAL_CAPITAL_INR,
+                    realized_pnl=0.0,
+                    total_fees_paid=0.0,
+                    peak_portfolio_value=settings.INITIAL_VIRTUAL_CAPITAL_INR,
+                    is_kill_switched=False
+                )
+                db.add(portfolio)
+                db.commit()
+                logger.info(f"Default demo user created with initial virtual cash: INR {settings.INITIAL_VIRTUAL_CAPITAL_INR:.2f}")
+        finally:
+            db.close()
 
     # Start continuous background auto-pilot runner
     if settings.AUTOPILOT_RUNNER_ENABLED:

@@ -75,7 +75,7 @@ class LiveNseMarketDataProvider(MarketDataProvider):
         from backend.app.market_data import is_market_session_active
         return is_market_session_active()[0]
 
-    def _build_quote(self, symbol: str, price: float, open_p: float, high_p: float, low_p: float, volume: int, prev_close: float) -> Quote:
+    def _build_quote(self, symbol: str, price: float, open_p: float, high_p: float, low_p: float, volume: int, prev_close: float, is_stale: bool = False) -> Quote:
         now = datetime.utcnow()
         spread_rate = settings.SIMULATED_SPREAD_BPS / 10000.0  # 0.0010
         half_spread = price * (spread_rate / 2.0)
@@ -85,6 +85,9 @@ class LiveNseMarketDataProvider(MarketDataProvider):
         change = round(price - prev_close, 2)
         change_pct = round(((price - prev_close) / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
         company_name = NSE_STOCKS.get(symbol, {}).get("name", symbol)
+
+        if not self.is_market_open():
+            is_stale = True
 
         return Quote(
             symbol=symbol,
@@ -101,9 +104,9 @@ class LiveNseMarketDataProvider(MarketDataProvider):
             spread_pct=round((ask - bid) / price * 100.0, 3) if price > 0 else 0.1,
             volume=volume,
             timestamp=now,
-            is_stale=False,
+            is_stale=is_stale,
             is_demo=False,
-            disclaimer="REAL-TIME LIVE NSE FEED - FOR PAPER TRADING ONLY"
+            disclaimer="NSE Market Feed (Delayed ~15m via Yahoo Finance) - PAPER TRADING ONLY"
         )
 
     def _do_fetch_quotes(self):
@@ -245,7 +248,7 @@ class LiveNseMarketDataProvider(MarketDataProvider):
 
         # Fallback quote if symbol not in universe
         base_p = NSE_STOCKS.get(sym_clean, {}).get("base_price", 50.0)
-        return self._build_quote(sym_clean, base_p, base_p, base_p * 1.01, base_p * 0.99, 100000, base_p)
+        return self._build_quote(sym_clean, base_p, base_p, base_p * 1.01, base_p * 0.99, 100000, base_p, is_stale=True)
 
     def get_quotes(self, symbols: List[str]) -> Dict[str, Quote]:
         # Trigger non-blocking refresh if TTL expired

@@ -17,3 +17,5 @@ services:
         value: true
       - key: INITIAL_VIRTUAL_CAPITAL_INR
         value: 5000.00
+      - key: JWT_SECRET_KEY
+        generateValue: true

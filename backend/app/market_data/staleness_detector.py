@@ -16,6 +16,8 @@ class StalenessDetector:
         """
         now = datetime.utcnow()
         age_seconds = (now - quote.timestamp).total_seconds()
+        if getattr(quote, "is_stale", False):
+            return False, max(age_seconds, float(self.max_stale_seconds + 1))
         is_fresh = age_seconds <= self.max_stale_seconds
         return is_fresh, age_seconds
 

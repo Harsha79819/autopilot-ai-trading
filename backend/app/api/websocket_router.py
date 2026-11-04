@@ -56,8 +56,8 @@ async def websocket_stream(
         # Initial greeting and connection confirmation
         await websocket.send_json({
             "type": "CONNECTION_ESTABLISHED",
-            "message": "Connected to AutoPilot live stream (Real-Time Live NSE Feed)",
-            "disclaimer": "REAL-TIME LIVE NSE FEED - STRICT PAPER TRADING ONLY",
+            "message": "Connected to AutoPilot live stream (NSE Market Feed)",
+            "disclaimer": "NSE MARKET FEED - STRICT PAPER TRADING ONLY",
             "user_id": user_id
         })
 
