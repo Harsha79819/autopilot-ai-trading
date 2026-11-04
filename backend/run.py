@@ -21,5 +21,6 @@ if __name__ == "__main__":
         "backend.app.main:app",
         host="0.0.0.0",
         port=port,
-        reload=False if is_prod else settings.DEBUG
+        reload=False if is_prod else settings.DEBUG,
+        workers=1
     )

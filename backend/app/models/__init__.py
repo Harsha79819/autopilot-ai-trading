@@ -12,6 +12,7 @@ from backend.app.models.watchlist_alert import WatchlistItem, AlertRule, Notific
 from backend.app.models.market_research import NewsArticle, CompanyProfile
 from backend.app.models.financial_document import FinancialDocument
 from backend.app.models.position_risk_state import PositionRiskState
+from backend.app.models.runner_lock import RunnerLock
 
 __all__ = [
     "User",
@@ -32,5 +33,6 @@ __all__ = [
     "CompanyProfile",
     "FinancialDocument",
     "PositionRiskState",
+    "RunnerLock",
 ]
 

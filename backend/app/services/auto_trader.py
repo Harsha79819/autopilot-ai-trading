@@ -1,6 +1,7 @@
 """Continuous Auto-Pilot Trading Runner service with Best-Stock AI Scoring."""
 import asyncio
 import logging
+import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Set, Optional, List, Any, Tuple
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ from backend.app.models.position import Position
 from backend.app.models.trade import Trade
 from backend.app.models.audit_log import AuditLog
 from backend.app.models.position_risk_state import PositionRiskState
+from backend.app.models.runner_lock import RunnerLock
 from backend.app.schemas.order import OrderCreate
 from backend.app.schemas.market import Quote, Candle
 from backend.app.market_data import market_provider, candle_aggregator, is_market_session_active
@@ -34,6 +36,8 @@ class AutoPilotRunner:
     def __init__(self):
         self._is_running = False
         self.autopilot_enabled = True  # Can be toggled on/off
+        self.runner_id = str(uuid.uuid4())
+        self._executed_cycle_keys: Set[str] = set()
         self._task: Optional[asyncio.Task] = None
         self._listeners: Dict[asyncio.Queue, Optional[int]] = {}
 
@@ -212,6 +216,51 @@ class AutoPilotRunner:
         except Exception as e:
             logger.error(f"Error loading persisted risk state: {e}")
 
+    def _acquire_or_renew_leader_lock(self, db: Session, ttl_seconds: int = 30) -> bool:
+        """
+        Acquires or refreshes DB-based leader lock. Returns True if this runner holds the lock.
+        Allows taking over stale locks after expiry.
+        """
+        try:
+            now = datetime.utcnow()
+            lock = db.query(RunnerLock).filter(RunnerLock.lock_key == "autopilot_runner").first()
+
+            if not lock:
+                lock = RunnerLock(
+                    lock_key="autopilot_runner",
+                    owner_id=self.runner_id,
+                    heartbeat=now,
+                    expires_at=now + timedelta(seconds=ttl_seconds)
+                )
+                db.add(lock)
+                db.commit()
+                return True
+
+            if lock.owner_id == self.runner_id:
+                # Renew lease
+                lock.heartbeat = now
+                lock.expires_at = now + timedelta(seconds=ttl_seconds)
+                db.commit()
+                return True
+
+            # Held by another instance: check if expired
+            if now > lock.expires_at or (now - lock.heartbeat).total_seconds() > ttl_seconds:
+                logger.warning(
+                    f"Runner {self.runner_id} taking over expired leader lock from {lock.owner_id} "
+                    f"(expired at {lock.expires_at})"
+                )
+                lock.owner_id = self.runner_id
+                lock.heartbeat = now
+                lock.expires_at = now + timedelta(seconds=ttl_seconds)
+                db.commit()
+                return True
+
+            # Active lock held by another runner
+            return False
+        except Exception as e:
+            logger.error(f"Error managing runner leader lock: {e}")
+            return False
+
     def start(self):
         if not self._is_running:
             self._is_running = True
@@ -350,6 +399,10 @@ class AutoPilotRunner:
         # 2. Evaluate User Portfolio & Execute AI Auto-Trading
         db = SessionLocal()
         try:
+            if not self._acquire_or_renew_leader_lock(db):
+                logger.info(f"Runner {self.runner_id} standing by (leader lock held by another active instance).")
+                return 10.0
+
             self._load_persisted_risk_state(db)
             users = db.query(User).filter(User.is_active == True).all()
             for user in users:
@@ -610,6 +663,14 @@ class AutoPilotRunner:
                     budget_qty = int(trade_budget // unit_cost_est)
                     qty = max(1, min(risk_qty, budget_qty)) if unit_cost_est <= trade_budget else 0
 
+                    interval = max(int(getattr(settings, "AUTOPILOT_INTERVAL_SECONDS", 10.0)), 1)
+                    cycle_slot = int(now.timestamp() // interval)
+                    cycle_token = f"{user.id}_{best_sym}_{cycle_slot}"
+
+                    if cycle_token in self._executed_cycle_keys:
+                        logger.info(f"Skipping duplicate order for {best_sym}: cycle token {cycle_token} already executed.")
+                        continue
+
                     if qty >= 1:
                         order_in = OrderCreate(
                             symbol=best_sym,
@@ -628,6 +689,9 @@ class AutoPilotRunner:
                         )
 
                         if res.status == "FILLED":
+                            self._executed_cycle_keys.add(cycle_token)
+                            if len(self._executed_cycle_keys) > 2000:
+                                self._executed_cycle_keys.clear()
                             fill_price = res.executed_price or best_quote.current_price
                             tp = round(fill_price * (1.0 + (sl_pct * rr_ratio) / 100.0), 2)
                             sl = round(fill_price * (1.0 - sl_pct / 100.0), 2)
