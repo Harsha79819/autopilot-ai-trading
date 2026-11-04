@@ -15,7 +15,13 @@ from backend.app.models.position_risk_state import PositionRiskState
 from backend.app.models.runner_lock import RunnerLock
 from backend.app.schemas.order import OrderCreate
 from backend.app.schemas.market import Quote, Candle
-from backend.app.market_data import market_provider, candle_aggregator, is_market_session_active
+from backend.app.market_data import (
+    market_provider,
+    candle_aggregator,
+    is_market_session_active,
+    get_next_open_time,
+    get_seconds_until_next_open,
+)
 from backend.app.scanner.universe import UNIVERSE_SYMBOLS
 from backend.app.scanner.fundamental_gate import fundamental_gate
 from backend.app.strategies import STRATEGY_REGISTRY
@@ -366,7 +372,10 @@ class AutoPilotRunner:
                 "updated_at": now.isoformat()
             }
             await self.broadcast_ai_status_if_changed(new_status)
-            return 30.0  # Conserve CPU and prevent heating when market is closed
+            sleep_sec = min(get_seconds_until_next_open(), 300.0)
+            if self._last_ai_status.get("status") != "MARKET_CLOSED":
+                logger.info(f"Market is closed: {session_msg}. Sleeping for {sleep_sec:.0f}s")
+            return sleep_sec
 
         if not self.autopilot_enabled:
             new_status = {

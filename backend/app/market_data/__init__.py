@@ -17,32 +17,24 @@ except ImportError:
     IST = pytz.timezone("Asia/Kolkata")
 
 
+from backend.app.market_data.market_calendar import (
+    is_trading_day,
+    is_market_open,
+    get_market_status,
+    get_next_open_time,
+    get_seconds_until_next_open,
+)
+
+
 def is_market_session_active() -> Tuple[bool, str]:
     """
-    Check if NSE regular market session is currently active (09:15 to 15:30 IST, Monday-Friday).
+    Check if NSE regular market session is currently active using official calendar.
     Returns (is_open: bool, message: str).
     """
     if not settings.MARKET_HOURS_GATE_ENABLED:
         return True, "Market Session Active (Test Mode Enabled)"
 
-    now_ist = datetime.now(IST)
-    weekday = now_ist.weekday()  # 0 = Monday, 4 = Friday, 5 = Saturday, 6 = Sunday
-
-    # Weekend check
-    if weekday >= 5:
-        day_name = "Saturday" if weekday == 5 else "Sunday"
-        return False, f"Market Closed ({day_name} Weekend · Paper trading paused)"
-
-    cur_time = now_ist.time()
-    market_open = time(9, 15)
-    market_close = time(15, 30)
-
-    if cur_time < market_open:
-        return False, f"Market Closed (Pre-market opens at 09:15 IST · Paper trading paused)"
-    elif cur_time > market_close:
-        return False, "Market Closed (Paper trading paused)"
-    else:
-        return True, "Market Open (09:15 - 15:30 IST)"
+    return get_market_status()
 
 
 import logging
@@ -84,5 +76,10 @@ __all__ = [
     "demo_provider",
     "candle_aggregator",
     "is_market_session_active",
+    "is_trading_day",
+    "is_market_open",
+    "get_market_status",
+    "get_next_open_time",
+    "get_seconds_until_next_open",
     "get_market_provider"
 ]
