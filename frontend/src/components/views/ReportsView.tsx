@@ -358,9 +358,15 @@ export const ReportsView: React.FC = () => {
           </div>
         </div>
 
+        {/* Mobile Swipe Guidance Banner */}
+        <div className="sm:hidden flex items-center justify-between text-[11px] text-emerald-300 bg-emerald-950/50 border border-emerald-500/20 px-3 py-1.5 rounded-lg mb-2">
+          <span>👈 👉 Swipe horizontally to view all 12 ledger columns</span>
+          <span className="text-[10px] text-slate-400 font-mono">12 Cols</span>
+        </div>
+
         {/* Ledger Table */}
-        <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto touch-scroll rounded-xl border border-white/10 shadow-inner">
+          <table className="w-full min-w-[950px] text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-950/80 text-slate-400 border-b border-white/10">
                 <th className="py-3 px-3 font-semibold">Day & Date</th>

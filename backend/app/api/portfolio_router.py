@@ -34,14 +34,18 @@ def get_portfolio(current_user: User = Depends(get_current_user), db: Session = 
     if not portfolio:
         raise HTTPException(status_code=404, detail="Portfolio not found.")
 
-    # Get latest quotes for real-time unrealized P&L
-    quotes = demo_provider.get_quotes(UNIVERSE_SYMBOLS)
-    latest_prices = {sym: q.current_price for sym, q in quotes.items()}
+    # Query positions first and only fetch quotes for actively held positions
+    positions_db = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
+    held_symbols = list({pos.symbol for pos in positions_db})
+
+    latest_prices = {}
+    if held_symbols:
+        quotes = demo_provider.get_quotes(held_symbols)
+        latest_prices = {sym: q.current_price for sym, q in quotes.items()}
 
     metrics = portfolio_ledger.calculate_metrics(db, portfolio, latest_prices)
 
     # Format positions
-    positions_db = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
     position_responses = []
     for pos in positions_db:
         cur_price = latest_prices.get(pos.symbol, pos.current_price)

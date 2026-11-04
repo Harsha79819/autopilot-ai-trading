@@ -141,8 +141,8 @@ export const WatchlistView: React.FC = () => {
             <span className="text-[10px] text-slate-400">NSE Regular Market Quotes</span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-white/5 bg-slate-950/40">
-            <table className="w-full text-xs text-left text-slate-300">
+          <div className="overflow-x-auto touch-scroll rounded-xl border border-white/5 bg-slate-950/40">
+            <table className="w-full min-w-[600px] text-xs text-left text-slate-300">
               <thead className="bg-slate-900/80 text-[10px] text-slate-400 uppercase tracking-wider">
                 <tr>
                   <th className="p-3">Symbol</th>

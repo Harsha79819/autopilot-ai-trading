@@ -183,7 +183,7 @@ export const RealizedPnLCard: React.FC = () => {
   };
 
   return (
-    <GlassCard className="p-5 sm:p-6 mb-8 border border-white/10 bg-slate-900/70 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+    <GlassCard className="p-3.5 sm:p-6 mb-8 border border-white/10 bg-slate-900/70 backdrop-blur-xl shadow-2xl relative overflow-hidden">
       {/* Decorative ambient orbs */}
       <div className="absolute top-0 right-10 w-80 h-32 bg-emerald-500/10 blur-3xl pointer-events-none rounded-full" />
       <div className="absolute bottom-0 left-10 w-80 h-32 bg-cyan-500/10 blur-3xl pointer-events-none rounded-full" />
@@ -196,7 +196,7 @@ export const RealizedPnLCard: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-base sm:text-lg font-bold text-white">
                 {t('అమ్మేసిన ట్రేడ్స్‌లో బుక్ చేసిన లాభం & నష్టం (Realized Trades)', 'Realized Trades & Closed P&L Reconciliation')}
               </h3>
               <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
@@ -283,7 +283,7 @@ export const RealizedPnLCard: React.FC = () => {
       {activeTab === 'records' && (
         <div className="space-y-5 animate-fade-in">
           {/* Day / Period Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 text-xs">
             <span className="text-slate-400 text-[11px] font-semibold uppercase tracking-wider shrink-0">
               {t('ఫిల్టర్:', 'Filter:')}
             </span>
@@ -349,9 +349,18 @@ export const RealizedPnLCard: React.FC = () => {
             </button>
           </div>
 
+          {/* Mobile swipe helper badge */}
+          <div className="sm:hidden flex items-center justify-between text-[11px] text-cyan-300 bg-cyan-950/50 border border-cyan-500/20 px-3 py-1.5 rounded-lg mb-2">
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>👈 👉</span>
+              <span>{t('కాలమ్స్ చూడటానికి స్క్రోల్ చేయండి', 'Swipe horizontally to view columns')}</span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">3 {t('కాలమ్స్', 'Cols')}</span>
+          </div>
+
           {/* Main User Requested Table */}
-          <div className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/70">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto touch-scroll rounded-xl border border-white/10 bg-slate-950/70">
+            <table className="w-full min-w-[620px] text-left text-xs">
               <thead className="bg-slate-900/90 text-slate-300 border-b border-white/10 text-[11px] uppercase tracking-wider">
                 <tr>
                   <th className="py-3 px-4 font-bold w-1/4">{t('రకం (Category)', 'Category')}</th>

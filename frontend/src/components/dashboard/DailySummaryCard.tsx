@@ -217,10 +217,10 @@ export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ onOpenJourna
           <span>Timeline of Today's Activity (ఈరోజు జరిగిన అన్ని అప్‌డేట్స్)</span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 overflow-x-auto touch-scroll no-scrollbar py-0.5">
           <button
             onClick={() => setFilter('ALL')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               filter === 'ALL'
                 ? 'bg-cyan-500/20 text-accent-cyan border border-cyan-500/30 font-bold'
                 : 'text-slate-400 hover:text-white bg-white/5'
@@ -230,7 +230,7 @@ export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ onOpenJourna
           </button>
           <button
             onClick={() => setFilter('TRADES')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               filter === 'TRADES'
                 ? 'bg-cyan-500/20 text-accent-cyan border border-cyan-500/30 font-bold'
                 : 'text-slate-400 hover:text-white bg-white/5'
@@ -240,7 +240,7 @@ export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ onOpenJourna
           </button>
           <button
             onClick={() => setFilter('DEPOSITS')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               filter === 'DEPOSITS'
                 ? 'bg-cyan-500/20 text-accent-cyan border border-cyan-500/30 font-bold'
                 : 'text-slate-400 hover:text-white bg-white/5'

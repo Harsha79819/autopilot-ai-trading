@@ -34,14 +34,31 @@ interface TradingContextType {
 
 const TradingContext = createContext<TradingContextType | undefined>(undefined);
 
+const PORTFOLIO_CACHE_KEY = 'autopilot_portfolio_cache';
+
 export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  // Synchronously initialize portfolio from localStorage cache if available for 0ms instant loading
+  const [portfolio, setPortfolio] = useState<Portfolio | null>(() => {
+    try {
+      const cached = typeof window !== 'undefined' ? localStorage.getItem(PORTFOLIO_CACHE_KEY) : null;
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (_) {}
+    return null;
+  });
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [scannerData, setScannerData] = useState<ScannerResponse | null>(null);
   const [riskStatus, setRiskStatus] = useState<RiskStatus | null>(null);
   const [aiStatus, setAiStatus] = useState<AIStatus | null>(null);
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' ? !localStorage.getItem(PORTFOLIO_CACHE_KEY) : true;
+    } catch (_) {
+      return true;
+    }
+  });
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [lastPortfolioUpdate, setLastPortfolioUpdate] = useState<number>(Date.now());
 
@@ -49,6 +66,11 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const data = await api.getPortfolio();
       setPortfolio(data);
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(PORTFOLIO_CACHE_KEY, JSON.stringify(data));
+        }
+      } catch (_) {}
     } catch (err) {
       console.error('Error fetching portfolio:', err);
     }
@@ -96,21 +118,24 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // Initial load
+  // Initial load: fast-path for portfolio and risk, non-blocking background for scanner & quotes
   useEffect(() => {
     const init = async () => {
-      setIsLoading(true);
       try {
         await Promise.allSettled([
           refreshPortfolio(),
-          refreshQuotes(),
-          refreshScanner(),
           refreshRisk(),
           refreshAutoPilot()
         ]);
       } finally {
         setIsLoading(false);
       }
+
+      // Fetch heavier scanner opportunities and quotes in background without blocking screen
+      Promise.allSettled([
+        refreshQuotes(),
+        refreshScanner()
+      ]).catch(console.error);
     };
     init();
 
@@ -177,12 +202,18 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const resetCapital = async (capital: number = 500.0) => {
     const updated = await api.resetPortfolio(capital);
     setPortfolio(updated);
+    try {
+      localStorage.setItem(PORTFOLIO_CACHE_KEY, JSON.stringify(updated));
+    } catch (_) {}
     await Promise.allSettled([refreshRisk(), refreshScanner(), refreshAutoPilot()]);
   };
 
   const depositCapital = async (amount: number, note?: string) => {
     const updated = await api.depositVirtualFunds(amount, note);
     setPortfolio(updated);
+    try {
+      localStorage.setItem(PORTFOLIO_CACHE_KEY, JSON.stringify(updated));
+    } catch (_) {}
     await Promise.allSettled([refreshRisk(), refreshScanner(), refreshAutoPilot()]);
   };
 

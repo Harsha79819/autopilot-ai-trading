@@ -52,8 +52,13 @@ export const OrderHistory: React.FC = () => {
           description="Your virtual order book is empty. Simulated orders placed manually or via AutoPilot will appear here."
         />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto touch-scroll">
+          {/* Mobile swipe helper */}
+          <div className="sm:hidden flex items-center justify-between text-[11px] text-cyan-300 bg-cyan-950/40 border border-cyan-500/20 px-2.5 py-1 rounded-lg mb-2">
+            <span>👈 👉 Scroll horizontally to view order audit details</span>
+            <span className="text-[10px] text-slate-400">8 Cols</span>
+          </div>
+          <table className="w-full min-w-[620px] text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-white/[0.08] text-slate-400 font-medium">
                 <th className="pb-3 pl-2">Time</th>

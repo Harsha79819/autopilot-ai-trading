@@ -118,7 +118,7 @@ export const DashboardDailyLedgerCard: React.FC = () => {
   };
 
   return (
-    <GlassCard className="p-5 sm:p-6 mb-8 border border-white/10 bg-slate-900/60 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+    <GlassCard className="p-3.5 sm:p-6 mb-8 border border-white/10 bg-slate-900/60 backdrop-blur-xl shadow-2xl relative overflow-hidden">
       {/* Decorative ambient accent */}
       <div className="absolute top-0 right-1/4 w-96 h-28 bg-emerald-500/10 blur-3xl pointer-events-none rounded-full" />
       <div className="absolute bottom-0 left-1/4 w-96 h-28 bg-blue-500/10 blur-3xl pointer-events-none rounded-full" />
@@ -241,12 +241,21 @@ export const DashboardDailyLedgerCard: React.FC = () => {
         </div>
       </div>
 
+      {/* Mobile Swipe Guidance Banner */}
+      <div className="sm:hidden flex items-center justify-between text-[11px] text-blue-300 bg-blue-950/50 border border-blue-500/20 px-3 py-1.5 rounded-lg mb-2.5">
+        <span className="flex items-center gap-1.5 font-medium">
+          <span>👈 👉</span>
+          <span>{t('అన్ని 11 కాలమ్స్ చూడటానికి స్క్రోల్ చేయండి', 'Swipe horizontally to view all 11 columns')}</span>
+        </span>
+        <span className="text-[10px] text-slate-400 font-mono">11 {t('కాలమ్స్', 'Cols')}</span>
+      </div>
+
       {/* Main Table Responsive Container */}
-      <div className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/60">
-        <table className="w-full text-left text-xs whitespace-nowrap">
+      <div className="overflow-x-auto touch-scroll rounded-xl border border-white/10 bg-slate-950/60 shadow-inner">
+        <table className="w-full min-w-[880px] text-left text-xs whitespace-nowrap">
           <thead className="bg-slate-900/90 text-slate-300 border-b border-white/10 text-[11px] uppercase tracking-wider">
             <tr>
-              <th className="py-3 px-3.5 font-bold sticky left-0 bg-slate-900 z-10">{t('రోజు / తేది', 'Day / Date')}</th>
+              <th className="py-3 px-3.5 font-bold sticky left-0 bg-slate-900 z-20 shadow-r border-r border-white/10">{t('రోజు / తేది', 'Day / Date')}</th>
               <th className="py-3 px-3 font-semibold text-right">{t('ప్రారంభ నగదు', 'Open Capital')}</th>
               <th className="py-3 px-3 font-semibold text-center">{t('ఆర్డర్లు (Buy / Sell)', 'Orders (B/S)')}</th>
               <th className="py-3 px-3 font-semibold">{t('స్టాక్స్', 'Stocks')}</th>
@@ -274,7 +283,7 @@ export const DashboardDailyLedgerCard: React.FC = () => {
                   }`}
                 >
                   {/* Day / Date */}
-                  <td className="py-3 px-3.5 font-semibold text-white sticky left-0 bg-slate-950/90 z-10 flex items-center gap-2">
+                  <td className="py-3 px-3.5 font-semibold text-white sticky left-0 bg-slate-950 z-10 shadow-r border-r border-white/10 flex items-center gap-2">
                     <span className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-xs font-bold text-slate-200">
                       D{row.day_number}
                     </span>

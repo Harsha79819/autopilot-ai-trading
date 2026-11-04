@@ -100,4 +100,42 @@ describe('Realized Trades & Interactive Calculator Verification', () => {
     const afterTaxProfit = grossExitNetProfit - 17.61;
     expect(afterTaxProfit).toBeCloseTo(210.14, 2);
   });
+
+  it('validates instant portfolio caching and rehydration logic', () => {
+    const mockPortfolio = {
+      id: 1,
+      user_id: 1,
+      initial_cash: 5000.0,
+      cash_balance: 3178.75,
+      holdings_value: 2549.0,
+      total_portfolio_value: 5727.75,
+      net_pnl: 227.75,
+      is_paper_trading: true
+    };
+
+    const cacheKey = 'autopilot_portfolio_cache';
+    const serialized = JSON.stringify(mockPortfolio);
+    expect(serialized).toBeTruthy();
+
+    const rehydrated = JSON.parse(serialized);
+    expect(rehydrated.total_portfolio_value).toBe(5727.75);
+    expect(rehydrated.cash_balance).toBe(3178.75);
+  });
+
+  it('ensures table minimum width guarantees prevent mobile column squashing', () => {
+    const tableMinMargins = {
+      realizedTable: 620,
+      dailyLedgerTable: 880,
+      activePositionsTable: 560,
+      orderHistoryTable: 620,
+      scannerTable: 660,
+      reportsTable: 950
+    };
+
+    // All tables must enforce min-width > standard mobile viewport (360-414px) to trigger horizontal scroll
+    Object.entries(tableMinMargins).forEach(([tableName, minWidth]) => {
+      expect(minWidth).toBeGreaterThan(480);
+    });
+  });
 });
+

@@ -232,8 +232,8 @@ export const FinancialPlannerView: React.FC = () => {
             )}
 
             {/* Growth Curve Table */}
-            <div className="max-h-56 overflow-y-auto rounded-xl border border-white/5 bg-slate-950/40">
-              <table className="w-full text-xs text-left text-slate-300">
+            <div className="max-h-56 overflow-auto touch-scroll rounded-xl border border-white/5 bg-slate-950/40">
+              <table className="w-full min-w-[480px] text-xs text-left text-slate-300">
                 <thead className="bg-slate-900/80 text-[10px] text-slate-400 uppercase tracking-wider sticky top-0">
                   <tr>
                     <th className="p-2.5">Year</th>

@@ -104,7 +104,7 @@ const MainContent: React.FC = () => {
   }, []);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-12 relative z-10">
+    <main className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 md:pb-12 relative z-10">
       {/* Risk modal trigger floating button */}
       <button
         onClick={() => setShowRiskModal(true)}
@@ -162,8 +162,8 @@ const MainContent: React.FC = () => {
           </div>
 
           {/* Multi-View Workspace Module Selector ("ఒకేసారి multiple open ayyela chey") */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-white/10 shadow-lg">
-            <div className="flex items-center gap-1.5 overflow-x-auto text-xs py-0.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2 rounded-xl bg-slate-950/70 border border-white/10 shadow-lg">
+            <div className="flex items-center gap-1.5 overflow-x-auto touch-scroll no-scrollbar text-xs py-0.5">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 pl-1">
                 {t('మల్టీ-వ్యూ ప్యానెల్స్:', 'Multi-View Panels:')}
               </span>
