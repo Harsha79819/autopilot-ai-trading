@@ -34,7 +34,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy backend application source
 COPY backend/ ./backend/
-COPY .env.example ./.env
 
 # Copy built frontend assets
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist

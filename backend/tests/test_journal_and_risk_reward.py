@@ -51,7 +51,6 @@ client = TestClient(app)
 
 def test_trading_journal_model_and_api(db, test_user, auth_headers):
     """Verify Golden Rule 4: Trading Journal entry persistence and API endpoint retrieval."""
-    app.dependency_overrides[get_db] = lambda: db
     portfolio = test_user.portfolio
 
     # Create dummy journal entry

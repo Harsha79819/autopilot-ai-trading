@@ -12,6 +12,22 @@ from backend.app.risk.kill_switch import kill_switch_manager
 from backend.app.config import settings
 
 
+def get_today_ist_start_utc() -> datetime:
+    """Return naive UTC datetime representing start of current day (00:00:00) in Indian Standard Time (IST)."""
+    try:
+        from zoneinfo import ZoneInfo
+        ist_tz = ZoneInfo(settings.TIMEZONE)
+        now_ist = datetime.now(ist_tz)
+        today_midnight_ist = datetime.combine(now_ist.date(), datetime.min.time(), tzinfo=ist_tz)
+        return today_midnight_ist.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    except Exception:
+        from datetime import timezone, timedelta
+        ist_offset = timezone(timedelta(hours=5, minutes=30))
+        now_ist = datetime.now(ist_offset)
+        today_midnight_ist = datetime.combine(now_ist.date(), datetime.min.time(), tzinfo=ist_offset)
+        return today_midnight_ist.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 class RiskManager:
     """Enforces non-bypassable pre-trade and continuous risk guardrails."""
 
@@ -43,8 +59,8 @@ class RiskManager:
                 f"(limit: {settings.MAX_PORTFOLIO_DRAWDOWN_PCT}%). Trading halted for capital protection."
             )
 
-        # 4. Maximum Daily Loss threshold
-        today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
+        # 4. Maximum Daily Loss threshold (Calculated from IST calendar midnight)
+        today_start = get_today_ist_start_utc()
         today_trades = db.query(Trade).filter(
             Trade.portfolio_id == portfolio.id,
             Trade.executed_at >= today_start,
@@ -76,7 +92,7 @@ class RiskManager:
         metrics = portfolio_ledger.calculate_metrics(db, portfolio)
         is_stopped = kill_switch_manager.is_stopped(portfolio)
 
-        today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
+        today_start = get_today_ist_start_utc()
         today_trades = db.query(Trade).filter(
             Trade.portfolio_id == portfolio.id,
             Trade.executed_at >= today_start,

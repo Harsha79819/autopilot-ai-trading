@@ -1,7 +1,7 @@
 """AutoPilot AI Trading Platform - Application Configuration."""
 from typing import List, Union
 import os
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -85,6 +85,19 @@ class Settings(BaseSettings):
         if isinstance(self.CORS_ORIGINS, list):
             return self.CORS_ORIGINS
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+    @model_validator(mode="after")
+    def validate_production_security(self):
+        is_prod = str(self.APP_ENV).lower() in ("production", "prod") or bool(os.getenv("RENDER"))
+        insecure_default = "autopilot-super-secret-jwt-key-minimum-32-chars-long"
+        if is_prod:
+            if self.JWT_SECRET_KEY == insecure_default or len(self.JWT_SECRET_KEY) < 32:
+                raise ValueError(
+                    "CRITICAL SECURITY CONFIGURATION ERROR: Running in production with default or insecure "
+                    "JWT_SECRET_KEY is strictly disallowed. Please supply a secure, random secret key "
+                    "(minimum 32 characters) via the JWT_SECRET_KEY environment variable."
+                )
+        return self
 
 
 settings = Settings()

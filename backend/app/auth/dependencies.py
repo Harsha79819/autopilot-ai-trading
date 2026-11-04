@@ -32,30 +32,21 @@ def get_current_user(
                     user_id = int(user_id_str)
                     user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
                     if user:
+                        if not user.portfolio:
+                            portfolio = Portfolio(
+                                user_id=user.id,
+                                initial_cash=settings.INITIAL_VIRTUAL_CAPITAL_INR,
+                                cash_balance=settings.INITIAL_VIRTUAL_CAPITAL_INR,
+                                realized_pnl=0.0,
+                                total_fees_paid=0.0,
+                                peak_portfolio_value=settings.INITIAL_VIRTUAL_CAPITAL_INR,
+                                is_kill_switched=False
+                            )
+                            db.add(portfolio)
+                            db.commit()
+                            db.refresh(user)
                         return user
                 except ValueError:
                     pass
 
-    # Seamless fallback to default demo user for local testing
-    demo_user = db.query(User).filter(User.email == "demo@autopilot.ai").first()
-    if demo_user:
-        return demo_user
-
     raise credentials_exception
-
-    # Ensure portfolio exists with exactly INR 100.00 initial capital
-    if not user.portfolio:
-        portfolio = Portfolio(
-            user_id=user.id,
-            initial_cash=settings.INITIAL_VIRTUAL_CAPITAL_INR,
-            cash_balance=settings.INITIAL_VIRTUAL_CAPITAL_INR,
-            realized_pnl=0.0,
-            total_fees_paid=0.0,
-            peak_portfolio_value=settings.INITIAL_VIRTUAL_CAPITAL_INR,
-            is_kill_switched=False
-        )
-        db.add(portfolio)
-        db.commit()
-        db.refresh(user)
-
-    return user

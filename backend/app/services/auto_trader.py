@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Set, Optional, List, Any
+from typing import Dict, Set, Optional, List, Any, Tuple
 from sqlalchemy.orm import Session
 from backend.app.database import SessionLocal
 from backend.app.models.user import User
@@ -34,12 +34,12 @@ class AutoPilotRunner:
         self._is_running = False
         self.autopilot_enabled = True  # Can be toggled on/off
         self._task: Optional[asyncio.Task] = None
-        self._listeners: Set[asyncio.Queue] = set()
+        self._listeners: Dict[asyncio.Queue, Optional[int]] = {}
 
-        # Track entry timestamps, setup reasons, and price targets per symbol to avoid rapid churning
-        self._position_targets: Dict[str, Dict[str, float]] = {}  # symbol -> {entry, take_profit, stop_loss}
-        self._position_entry_times: Dict[str, datetime] = {}
-        self._position_setup_reasons: Dict[str, str] = {}
+        # Track entry timestamps, setup reasons, and price targets per (user_id, symbol) to isolate users
+        self._position_targets: Dict[Tuple[int, str], Dict[str, float]] = {}  # (user_id, symbol) -> {entry, take_profit, stop_loss}
+        self._position_entry_times: Dict[Tuple[int, str], datetime] = {}
+        self._position_setup_reasons: Dict[Tuple[int, str], str] = {}
         self._last_ai_status: Dict[str, Any] = {
             "status": "INITIALIZING",
             "message": "AI AutoPilot is initializing market feed...",
@@ -50,14 +50,16 @@ class AutoPilotRunner:
             "updated_at": datetime.utcnow().isoformat()
         }
 
-    def register_listener(self, queue: asyncio.Queue):
-        self._listeners.add(queue)
+    def register_listener(self, queue: asyncio.Queue, user_id: Optional[int] = None):
+        self._listeners[queue] = user_id
 
     def unregister_listener(self, queue: asyncio.Queue):
-        self._listeners.discard(queue)
+        self._listeners.pop(queue, None)
 
-    async def broadcast(self, message: dict):
-        for q in list(self._listeners):
+    async def broadcast(self, message: dict, target_user_id: Optional[int] = None):
+        for q, q_user_id in list(self._listeners.items()):
+            if target_user_id is not None and q_user_id is not None and q_user_id != target_user_id:
+                continue
             try:
                 await q.put(message)
             except Exception:
@@ -83,10 +85,17 @@ class AutoPilotRunner:
         )
         return self.autopilot_enabled
 
-    def reset_state(self):
+    def reset_state(self, user_id: Optional[int] = None):
         """Reset internal positions tracking and status after portfolio reset."""
-        self._position_targets.clear()
-        self._position_entry_times.clear()
+        if user_id is not None:
+            self._position_targets = {k: v for k, v in self._position_targets.items() if k[0] != user_id}
+            self._position_entry_times = {k: v for k, v in self._position_entry_times.items() if k[0] != user_id}
+            self._position_setup_reasons = {k: v for k, v in self._position_setup_reasons.items() if k[0] != user_id}
+        else:
+            self._position_targets.clear()
+            self._position_entry_times.clear()
+            self._position_setup_reasons.clear()
+
         self._last_ai_status = {
             "status": "SCANNING",
             "message": "AI AutoPilot reset. Scanning universe for best stocks...",
@@ -243,14 +252,14 @@ class AutoPilotRunner:
                     if not quote:
                         continue
 
-                    entry_info = self._position_targets.get(pos.symbol, {
+                    entry_info = self._position_targets.get((user.id, pos.symbol), {
                         "entry": pos.average_buy_price,
                         "take_profit": round(pos.average_buy_price * (1.0 + tp_pct / 100.0), 2),
                         "stop_loss": round(pos.average_buy_price * (1.0 - sl_pct / 100.0), 2)
                     })
 
                     cur_price = quote.current_price
-                    entry_time = self._position_entry_times.get(pos.symbol, now - timedelta(seconds=60))
+                    entry_time = self._position_entry_times.get((user.id, pos.symbol), now - timedelta(seconds=60))
                     holding_seconds = (now - entry_time).total_seconds()
 
                     # Enforce minimum holding cooldown of 10 seconds to avoid tick jitter,
@@ -286,7 +295,7 @@ class AutoPilotRunner:
                                 if hit_take_profit else
                                 f"Capital protected via pre-calculated stop-loss (-{sl_pct}%). Risk strictly contained."
                             )
-                            setup_text = self._position_setup_reasons.pop(pos.symbol, "AI Quantitative Quality Swing Setup (D/E < 1.0, ROE > 12%)")
+                            setup_text = self._position_setup_reasons.pop((user.id, pos.symbol), "AI Quantitative Quality Swing Setup (D/E < 1.0, ROE > 12%)")
 
                             journal_record = TradingJournal(
                                 user_id=user.id,
@@ -315,9 +324,9 @@ class AutoPilotRunner:
                         except Exception as log_err:
                             logger.error(f"Error recording trading journal: {log_err}")
 
-                        self._position_targets.pop(pos.symbol, None)
-                        self._position_entry_times.pop(pos.symbol, None)
-                        logger.info(f"AutoPilot SELL {pos.symbol}: {reason}")
+                        self._position_targets.pop((user.id, pos.symbol), None)
+                        self._position_entry_times.pop((user.id, pos.symbol), None)
+                        logger.info(f"AutoPilot SELL {pos.symbol} for user {user.id}: {reason}")
                         self._last_ai_status = {
                             "status": "SCANNING",
                             "message": f"Auto-Sold {pos.symbol} @ ₹{cur_price:.2f} ({reason}). Scanning for next opportunity...",
@@ -329,7 +338,7 @@ class AutoPilotRunner:
                             "autopilot_enabled": True,
                             "updated_at": now.isoformat()
                         }
-                        break
+                        # Continue evaluating remaining positions rather than breaking
 
                 # Re-query positions after potential sell
                 positions = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
@@ -340,7 +349,7 @@ class AutoPilotRunner:
                 )
 
                 # B. Halt & Pause Check: Daily loss limit or emergency risk kill-switch
-                # When triggered, suppress candidate evaluation loops and sleep 30.0s
+                # When triggered for this user, skip candidate evaluation for this user without starving other users
                 risk_status = risk_manager.get_risk_status(db, portfolio)
                 is_halted = kill_switch_manager.is_stopped(portfolio) or risk_status.risk_state in ("HALTED", "EMERGENCY_STOP")
                 if is_halted:
@@ -361,8 +370,8 @@ class AutoPilotRunner:
                         "updated_at": now.isoformat()
                     }
                     await self.broadcast_ai_status_if_changed(self._last_ai_status)
-                    logger.info(f"AutoPilot loop throttled: {halt_reason}. Returning 30s standby.")
-                    return 30.0
+                    logger.info(f"AutoPilot loop paused for user {user.id}: {halt_reason}. Continuing with other users.")
+                    continue
 
                 # C. Screening Pipeline with Fundamental Health, Penny Stock Cutoff & 20% Position Sizing
                 held_symbols = {p.symbol for p in positions}
@@ -443,13 +452,13 @@ class AutoPilotRunner:
                                 rr_ratio = getattr(settings, "RISK_REWARD_RATIO", 2.0)
                                 tp = round(fill_price * (1.0 + (sl_pct * rr_ratio) / 100.0), 2)
                                 sl = round(fill_price * (1.0 - sl_pct / 100.0), 2)
-                                self._position_targets[best_sym] = {
+                                self._position_targets[(user.id, best_sym)] = {
                                     "entry": fill_price,
                                     "take_profit": tp,
                                     "stop_loss": sl
                                 }
-                                self._position_entry_times[best_sym] = now
-                                self._position_setup_reasons[best_sym] = (
+                                self._position_entry_times[(user.id, best_sym)] = now
+                                self._position_setup_reasons[(user.id, best_sym)] = (
                                     f"AI Swing Setup: Score {score}/100, D/E < 1.0, ROE > 12%, "
                                     f"Risk: ₹{min(capital_at_risk, qty*risk_per_share):.2f} (<= {max_risk_pct}%), Target 1:{int(rr_ratio)} RR"
                                 )
@@ -509,8 +518,8 @@ class AutoPilotRunner:
                                 "best_stock": positions[0].symbol,
                                 "best_score": 85,
                                 "active_positions_count": len(positions),
-                                "target_profit": self._position_targets.get(positions[0].symbol, {}).get("take_profit"),
-                                "stop_loss": self._position_targets.get(positions[0].symbol, {}).get("stop_loss"),
+                                "target_profit": self._position_targets.get((user.id, positions[0].symbol), {}).get("take_profit"),
+                                "stop_loss": self._position_targets.get((user.id, positions[0].symbol), {}).get("stop_loss"),
                                 "autopilot_enabled": True,
                                 "updated_at": now.isoformat()
                             }
@@ -518,7 +527,7 @@ class AutoPilotRunner:
                 elif len(positions) > 0:
                     pos_summary = ", ".join([f"{p.symbol} ({p.quantity}sh)" for p in positions])
                     first_pos = positions[0]
-                    first_targets = self._position_targets.get(first_pos.symbol, {})
+                    first_targets = self._position_targets.get((user.id, first_pos.symbol), {})
                     tp = first_targets.get("take_profit", round(first_pos.average_buy_price * (1.0 + tp_pct / 100.0), 2))
                     sl = first_targets.get("stop_loss", round(first_pos.average_buy_price * (1.0 - sl_pct / 100.0), 2))
 
@@ -562,7 +571,7 @@ class AutoPilotRunner:
                     "metrics": metrics.model_dump(mode="json"),
                     "cash_balance": portfolio.cash_balance,
                     "total_portfolio_value": metrics.total_portfolio_value
-                })
+                }, target_user_id=user.id)
 
                 await self.broadcast_ai_status_if_changed(self._last_ai_status)
 

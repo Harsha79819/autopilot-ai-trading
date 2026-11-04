@@ -10,3 +10,7 @@ __pycache__/
 *.log
 memory/
 chat_history.txt
+*.db
+*.sqlite
+*.sqlite3
+backend/data/*.db

@@ -21,7 +21,9 @@ export class AutoPilotWebSocket {
   public connect() {
     this.isExplicitlyClosed = false;
     try {
-      this.socket = new WebSocket(this.url);
+      const token = localStorage.getItem('token');
+      const wsUrl = token ? `${this.url}?token=${encodeURIComponent(token)}` : this.url;
+      this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = () => {
         // Start ping heartbeat
@@ -81,6 +83,11 @@ export class AutoPilotWebSocket {
       this.socket.close();
       this.socket = null;
     }
+  }
+
+  public reconnect() {
+    this.disconnect();
+    this.connect();
   }
 }
 

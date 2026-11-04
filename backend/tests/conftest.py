@@ -47,6 +47,17 @@ def db():
     connection.close()
 
 
+@pytest.fixture(autouse=True)
+def override_db_dependency(db):
+    """Ensure all FastAPI route executions in tests share the isolated test db transaction."""
+    from backend.app.main import app
+    def _get_db():
+        yield db
+    app.dependency_overrides[get_db] = _get_db
+    yield
+    app.dependency_overrides.pop(get_db, None)
+
+
 @pytest.fixture
 def test_user(db):
     user = User(

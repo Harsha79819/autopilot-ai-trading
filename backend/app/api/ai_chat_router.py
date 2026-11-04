@@ -165,7 +165,11 @@ Instructions:
 - Never repeat a hardcoded canned summary. Answer their actual question thoroughly.
 """
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+        headers = {
+            "x-goog-api-key": api_key,
+            "Content-Type": "application/json"
+        }
         payload = {
             "contents": [
                 {
@@ -180,7 +184,7 @@ Instructions:
         }
 
         with httpx.Client(timeout=2.5) as client:
-            resp = client.post(url, json=payload)
+            resp = client.post(url, headers=headers, json=payload)
             if resp.status_code == 200:
                 data = resp.json()
                 candidates = data.get("candidates", [])
@@ -274,7 +278,7 @@ Here is the exact financial ledger breakdown of your capital, profits, and losse
 👉 **Summary**: Your account is currently in net positive profit of **+₹227.75** over all deposits and **+₹434.46** since the upgrade, with ₹3,178.75 in liquid cash reserves."""
 
     # 2. If Gemini API key is configured, invoke real LLM
-    effective_key = api_key or getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get("GEMINI_API_KEY", "")
+    effective_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get("GEMINI_API_KEY", "") or api_key
     if effective_key:
         llm_reply = call_gemini_api(effective_key, query, ctx, is_te)
         if llm_reply:

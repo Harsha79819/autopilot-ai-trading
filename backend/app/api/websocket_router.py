@@ -2,26 +2,63 @@
 import asyncio
 import json
 import logging
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from typing import Optional
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends, status
+from sqlalchemy.orm import Session
 from backend.app.services.auto_trader import autopilot_runner
+from backend.app.auth.security import decode_access_token
+from backend.app.database import get_db
+from backend.app.models.user import User
 
 router = APIRouter(tags=["WebSocket"])
 logger = logging.getLogger("autopilot.ws")
 
 
 @router.websocket("/ws/stream")
-async def websocket_stream(websocket: WebSocket):
+async def websocket_stream(
+    websocket: WebSocket,
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    # Retrieve token from query parameter
+    if not token:
+        token = websocket.query_params.get("token")
+
+    if not token:
+        logger.warning("WebSocket handshake rejected: No authentication token provided.")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Authentication token required")
+        return
+
+    payload = decode_access_token(token)
+    if not payload or not payload.get("sub"):
+        logger.warning("WebSocket handshake rejected: Invalid or expired token.")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token")
+        return
+
+    try:
+        user_id = int(payload.get("sub"))
+    except (ValueError, TypeError):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Malformed token subject")
+        return
+
+    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    if not user:
+        logger.warning(f"WebSocket handshake rejected: User {user_id} not found or inactive.")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="User inactive")
+        return
+
     await websocket.accept()
     queue = asyncio.Queue()
-    autopilot_runner.register_listener(queue)
-    logger.info("WebSocket client connected to live stream.")
+    autopilot_runner.register_listener(queue, user_id=user_id)
+    logger.info(f"WebSocket client connected for user {user_id}.")
 
     try:
         # Initial greeting and connection confirmation
         await websocket.send_json({
             "type": "CONNECTION_ESTABLISHED",
             "message": "Connected to AutoPilot live stream (Real-Time Live NSE Feed)",
-            "disclaimer": "REAL-TIME LIVE NSE FEED - STRICT PAPER TRADING ONLY"
+            "disclaimer": "REAL-TIME LIVE NSE FEED - STRICT PAPER TRADING ONLY",
+            "user_id": user_id
         })
 
         # Immediately send cached quotes and AI status so UI is populated instantly
@@ -69,8 +106,8 @@ async def websocket_stream(websocket: WebSocket):
                 await websocket.send_json(msg)
 
     except WebSocketDisconnect:
-        logger.info("WebSocket client disconnected.")
+        logger.info(f"WebSocket client for user {user_id} disconnected.")
     except Exception as e:
-        logger.warning(f"WebSocket session terminated: {e}")
+        logger.warning(f"WebSocket session for user {user_id} terminated: {e}")
     finally:
         autopilot_runner.unregister_listener(queue)
