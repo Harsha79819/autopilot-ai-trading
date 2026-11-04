@@ -38,3 +38,14 @@ async def trigger_autopilot_scan(current_user: User = Depends(get_current_user))
         "success": True,
         "status": autopilot_runner.get_ai_status()
     }
+
+
+@router.post("/deploy-all")
+async def trigger_deploy_all(current_user: User = Depends(get_current_user)):
+    """Immediately deploy remaining idle cash into top-scoring Nifty 50 stocks."""
+    result = await autopilot_runner.deploy_remaining_capital(user_id=current_user.id)
+    return {
+        "success": True,
+        "result": result,
+        "status": autopilot_runner.get_ai_status()
+    }

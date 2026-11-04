@@ -239,6 +239,15 @@ export const api = {
     return res.json();
   },
 
+  async deployAllCapital(): Promise<any> {
+    const res = await fetch(`${BASE_URL}/autopilot/deploy-all`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to deploy capital');
+    return res.json();
+  },
+
   // AI Market Copilot Chat
   async chatWithAi(messages: { role: string; content: string }[]): Promise<{
     reply: string;

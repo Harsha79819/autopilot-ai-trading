@@ -171,66 +171,71 @@ const MainContent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => togglePanel('realizedTable')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   panels.realizedTable
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                    ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/60 shadow-sm ring-1 ring-emerald-400/40'
                     : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
                 }`}
               >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.realizedTable ? 'bg-emerald-400 ring-2 ring-emerald-400/50' : 'border border-slate-500'}`} />
                 <Receipt className="w-3.5 h-3.5" />
-                <span>{t('🟢 అమ్మేసిన ట్రేడ్స్ & కాలిక్యులేటర్', '🟢 Realized Trades & Calculator')}</span>
+                <span>{t('అమ్మేసిన ట్రేడ్స్ & కాలిక్యులేటర్', 'Realized Trades & Calculator')}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => togglePanel('charts')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   panels.charts
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                    ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/60 shadow-sm ring-1 ring-cyan-400/40'
                     : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
                 }`}
               >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.charts ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
                 <TrendingUp className="w-3.5 h-3.5" />
-                <span>{t('📈 చార్టులు', '📈 Charts')}</span>
+                <span>{t('చార్టులు', 'Charts')}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => togglePanel('dailyLedger')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   panels.dailyLedger
-                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-sm'
+                    ? 'bg-blue-500/20 text-blue-200 border border-blue-400/60 shadow-sm ring-1 ring-blue-400/40'
                     : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
                 }`}
               >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.dailyLedger ? 'bg-blue-400 ring-2 ring-blue-400/50' : 'border border-slate-500'}`} />
                 <Table className="w-3.5 h-3.5" />
-                <span>{t('📑 15-రోజుల లెడ్జర్', '📑 15-Day Ledger')}</span>
+                <span>{t('15-రోజుల లెడ్జర్', '15-Day Ledger')}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => togglePanel('orders')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   panels.orders
-                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500/40 shadow-sm'
+                    ? 'bg-violet-500/20 text-violet-200 border border-violet-400/60 shadow-sm ring-1 ring-violet-400/40'
                     : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
                 }`}
               >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.orders ? 'bg-violet-400 ring-2 ring-violet-400/50' : 'border border-slate-500'}`} />
                 <ShoppingCart className="w-3.5 h-3.5" />
-                <span>{t('⚡ ఆర్డర్లు', '⚡ Orders')}</span>
+                <span>{t('ఆర్డర్లు', 'Orders')}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => togglePanel('scanner')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   panels.scanner
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    ? 'bg-amber-500/20 text-amber-200 border border-amber-400/60 shadow-sm ring-1 ring-amber-400/40'
                     : 'bg-white/5 text-slate-400 hover:text-white border border-white/5'
                 }`}
               >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${panels.scanner ? 'bg-amber-400 ring-2 ring-amber-400/50' : 'border border-slate-500'}`} />
                 <Radio className="w-3.5 h-3.5" />
-                <span>{t('🔍 స్కానర్ టేబుల్', '🔍 Scanner Table')}</span>
+                <span>{t('స్కానర్ టేబుల్', 'Scanner Table')}</span>
               </button>
             </div>
 
@@ -255,43 +260,46 @@ const MainContent: React.FC = () => {
           {/* Module 2: Equity Trajectory & Live Stock Market Chart Section */}
           {panels.charts && (
             <div className="pt-2 space-y-3 animate-fade-in">
-              {/* Chart View Switcher Controls */}
+              {/* Chart View Switcher Controls with Distinct Radio Pills */}
               <div className="flex flex-wrap items-center justify-between gap-2.5">
-                <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+                <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-white/10 text-xs">
                   <button
                     onClick={() => setChartViewMode('equity')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                       chartViewMode === 'equity'
-                        ? 'bg-accent-cyan text-slate-950 font-bold shadow-md shadow-accent-cyan/20'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-cyan-500/25 text-cyan-200 font-bold border border-cyan-400/60 shadow-sm ring-1 ring-cyan-400/40'
+                        : 'text-slate-400 hover:text-white border border-transparent'
                     }`}
                   >
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${chartViewMode === 'equity' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
                     <TrendingUp className="w-3.5 h-3.5" />
-                    <span>{t('📈 ఈక్విటీ ట్రాజెక్టరీ (పోర్ట్‌ఫోలియో ప్రయాణం)', '📈 Equity Trajectory Chart')}</span>
+                    <span>{t('ఈక్విటీ ట్రాజెక్టరీ', 'Equity Trajectory')}</span>
                   </button>
 
                   <button
                     onClick={() => setChartViewMode('live_market')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                       chartViewMode === 'live_market'
-                        ? 'bg-emerald-400 text-slate-950 font-bold shadow-md shadow-emerald-400/20'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-emerald-500/25 text-emerald-200 font-bold border border-emerald-400/60 shadow-sm ring-1 ring-emerald-400/40'
+                        : 'text-slate-400 hover:text-white border border-transparent'
                     }`}
                   >
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${chartViewMode === 'live_market' ? 'bg-emerald-400 ring-2 ring-emerald-400/50' : 'border border-slate-500'}`} />
                     <BarChart2 className="w-3.5 h-3.5" />
-                    <span>{t('📊 లైవ్ మార్కెట్ చార్ట్ (రియల్-టైమ్)', '📊 Live Stock Market Graph')}</span>
+                    <span>{t('లైవ్ మార్కెట్ చార్ట్', 'Live Stock Market')}</span>
                   </button>
 
                   <button
                     onClick={() => setChartViewMode('both')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                       chartViewMode === 'both'
-                        ? 'bg-accent-violet text-white font-bold shadow-md shadow-accent-violet/20'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-violet-500/25 text-violet-200 font-bold border border-violet-400/60 shadow-sm ring-1 ring-violet-400/40'
+                        : 'text-slate-400 hover:text-white border border-transparent'
                     }`}
                   >
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${chartViewMode === 'both' ? 'bg-violet-400 ring-2 ring-violet-400/50' : 'border border-slate-500'}`} />
                     <Layers className="w-3.5 h-3.5" />
-                    <span>{t('⚡ రెండు చార్టులు (Both)', '⚡ Both Charts')}</span>
+                    <span>{t('రెండు చార్టులు (Both)', 'Both Charts')}</span>
                   </button>
                 </div>
 

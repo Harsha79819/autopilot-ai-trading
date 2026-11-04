@@ -12,6 +12,7 @@ import {
   Sparkles,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowUpDown,
   HelpCircle,
   Database
 } from 'lucide-react';
@@ -25,6 +26,7 @@ export const ReportsView: React.FC = () => {
   const [compounding, setCompounding] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'DESC' | 'ASC'>('DESC');
 
   const fetchReportsData = async () => {
     setLoading(true);
@@ -335,6 +337,17 @@ export const ReportsView: React.FC = () => {
             <span className="text-xs text-slate-400">
               Total Recorded Days: <strong className="text-white">{ledgerEntries.length}</strong>
             </span>
+
+            {/* Sort Toggle Button */}
+            <button
+              onClick={() => setSortOrder(prev => (prev === 'DESC' ? 'ASC' : 'DESC'))}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-900/40 transition-colors cursor-pointer"
+              title="Toggle Sort Order"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              <span>{sortOrder === 'DESC' ? 'Latest First' : 'Oldest First'}</span>
+            </button>
+
             <button
               onClick={handleDownloadDailyLedger}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors cursor-pointer"
@@ -384,23 +397,33 @@ export const ReportsView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-mono">
-              {ledgerEntries.map((entry) => {
-                const isPositive = entry.net_pnl > 0;
-                const isNegative = entry.net_pnl < 0;
+              {[...ledgerEntries]
+                .sort((a, b) => (sortOrder === 'DESC' ? b.day_number - a.day_number : a.day_number - b.day_number))
+                .map((entry) => {
+                  const isPositive = entry.net_pnl > 0;
+                  const isNegative = entry.net_pnl < 0;
+                  const maxDay = Math.max(...ledgerEntries.map(e => e.day_number), 1);
+                  const isLatest = entry.day_number === maxDay;
 
-
-                return (
-                  <tr
-                    key={entry.day_number}
-                    className="hover:bg-slate-800/40 transition-colors text-slate-300"
-                  >
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <div className="font-bold text-white">{entry.day_label}</div>
-                      <div className="text-[10px] text-slate-400 font-sans">{entry.date}</div>
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap text-slate-200">
-                      ₹{entry.opening_capital.toFixed(2)}
-                    </td>
+                  return (
+                    <tr
+                      key={entry.day_number}
+                      className="hover:bg-slate-800/40 transition-colors text-slate-300"
+                    >
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 font-bold text-white">
+                          <span>{entry.day_label}</span>
+                          {isLatest && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                              🔥 Latest
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-sans">{entry.date}</div>
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap text-slate-200">
+                        ₹{entry.opening_capital.toFixed(2)}
+                      </td>
                     <td className="py-3 px-3 whitespace-nowrap">
                       {entry.total_trades > 0 ? (
                         <span className="text-cyan-300">

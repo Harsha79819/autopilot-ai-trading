@@ -1,9 +1,12 @@
 import React from 'react';
 import { useTrading } from '../../context/TradingContext';
 import { formatINR } from '../../utils/currency';
+import { useLanguage } from '../../context/LanguageContext';
+import { Radio } from 'lucide-react';
 
 export const MarketScannerCard: React.FC = () => {
   const { scannerData, triggerAutoPilotScan } = useTrading();
+  const { t } = useLanguage();
 
   // Reference items matching screenshot or dynamic scanner data
   const rawOpportunities = scannerData?.opportunities || [];
@@ -27,28 +30,29 @@ export const MarketScannerCard: React.FC = () => {
   const decision = scannerData?.scanner_decision || 'Decision: NO TRADE';
 
   return (
-    <div className="liquid-glass p-6 sm:p-7 flex flex-col justify-between">
+    <div className="liquid-glass p-4 sm:p-5 flex flex-col justify-between rounded-2xl border border-white/10 shadow-xl">
       {/* Desktop view */}
       <div className="hidden sm:block">
-        <h3 className="text-base sm:text-lg font-bold text-white tracking-tight mb-4">
-          Market scanner
+        <h3 className="text-sm sm:text-base font-bold text-white tracking-tight mb-3 flex items-center gap-2">
+          <Radio className="w-4 h-4 text-violet-400" />
+          <span>{t('మార్కెట్ స్కానర్', 'Market Scanner')}</span>
         </h3>
 
         {/* Scanned Items Rows */}
-        <div className="space-y-2 mb-4">
+        <div className="space-y-1.5 mb-3">
           {displayRows.map((row) => (
             <div
               key={row.symbol}
-              className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs"
+              className="flex items-center justify-between p-2 rounded-xl bg-white/[0.02] border border-white/5 text-xs"
             >
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white tracking-wide">{row.symbol}</span>
                 <span className="text-muted-labels">·</span>
-                <span className="text-slate-300 font-medium">{formatINR(row.price)}</span>
+                <span className="text-slate-300 font-mono font-medium">{formatINR(row.price)}</span>
               </div>
 
               <div
-                className={`font-medium ${
+                className={`font-medium text-[11px] ${
                   row.isAlert
                     ? 'text-loss'
                     : row.isWarning
@@ -67,10 +71,9 @@ export const MarketScannerCard: React.FC = () => {
       <div>
         <button
           onClick={() => triggerAutoPilotScan()}
-          className="w-full py-3 px-4 rounded-xl border border-violet-500/40 bg-violet-950/20 hover:bg-violet-900/30 text-white font-bold text-xs sm:text-sm tracking-wide transition-all shadow-lg shadow-violet-950/30 text-center flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+          className="w-full py-2.5 px-3.5 rounded-xl border border-violet-500/40 bg-violet-950/20 hover:bg-violet-900/30 text-white font-bold text-xs tracking-wide transition-all shadow-md shadow-violet-950/30 text-center flex items-center justify-center gap-2 cursor-pointer active:scale-98"
           title="Click to trigger on-demand scan"
         >
-          {/* On mobile, screenshot has: "Scanner decision: NO TRADE" */}
           <span className="sm:hidden">
             Scanner {decision.toLowerCase()}
           </span>

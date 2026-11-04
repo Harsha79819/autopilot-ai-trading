@@ -8,12 +8,13 @@ import {
   Sparkles, 
   Calendar, 
   Filter, 
-  ChevronRight,
-  Info,
-  CheckCircle2,
-  Clock,
-  ArrowUpRight,
-  HelpCircle
+  ChevronRight, 
+  Info, 
+  CheckCircle2, 
+  Clock, 
+  ArrowUpRight, 
+  ArrowUpDown, 
+  HelpCircle 
 } from 'lucide-react';
 import { GlassCard } from '../common/GlassCard';
 import { api } from '../../services/api';
@@ -30,6 +31,7 @@ export const DashboardDailyLedgerCard: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [selectedDay, setSelectedDay] = useState<DailyLedgerEntry | null>(null);
   const [filterMode, setFilterMode] = useState<'ALL' | 'TRADES_ONLY' | 'PROFIT_DAYS'>('ALL');
+  const [sortOrder, setSortOrder] = useState<'DESC' | 'ASC'>('DESC');
 
   useEffect(() => {
     let isMounted = true;
@@ -72,14 +74,22 @@ export const DashboardDailyLedgerCard: React.FC = () => {
 
   const displayData = useMemo(() => {
     const list = ledgerDays.length > 0 ? ledgerDays : fallbackDays;
+    let filtered = list;
     if (filterMode === 'TRADES_ONLY') {
-      return list.filter(d => (d.total_trades ?? (d.buys_count + d.sells_count)) > 0);
+      filtered = list.filter(d => (d.total_trades ?? (d.buys_count + d.sells_count)) > 0);
+    } else if (filterMode === 'PROFIT_DAYS') {
+      filtered = list.filter(d => d.net_pnl > 0);
     }
-    if (filterMode === 'PROFIT_DAYS') {
-      return list.filter(d => d.net_pnl > 0);
-    }
-    return list;
-  }, [ledgerDays, fallbackDays, filterMode]);
+    const sorted = [...filtered].sort((a, b) => {
+      return sortOrder === 'DESC' ? b.day_number - a.day_number : a.day_number - b.day_number;
+    });
+    return sorted;
+  }, [ledgerDays, fallbackDays, filterMode, sortOrder]);
+
+  const maxRecordedDay = useMemo(() => {
+    const list = ledgerDays.length > 0 ? ledgerDays : fallbackDays;
+    return Math.max(...list.map(d => d.day_number), 1);
+  }, [ledgerDays, fallbackDays]);
 
   const handleDownload = async () => {
     try {
@@ -140,48 +150,67 @@ export const DashboardDailyLedgerCard: React.FC = () => {
               <p className="text-xs text-slate-400 mt-0.5">
                 {t(
                   'ప్రారంభ మూలధనం నుండి నేటి వరకు ప్రతి రోజు లెక్కలు, ఆర్డర్లు, లాభాలు, ఖర్చులు మరియు పోర్ట్‌ఫోలియో వివరాలు.',
-                  'Complete Day-by-Day ledger from Day 1 to Day 15: capital, orders, fees, net gains, and equity.'
+                  'Complete Day-by-Day ledger: newest days displayed first with instant sort toggle and Excel export.'
                 )}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          {/* Filter Pills */}
-          <div className="flex items-center p-1 rounded-xl bg-slate-950/60 border border-white/10 text-xs">
+        {/* Action Buttons & Distinct Radio Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Distinct Radio Filter Pills */}
+          <div className="flex items-center p-1 rounded-xl bg-slate-950/80 border border-white/10 text-xs">
             <button
               onClick={() => setFilterMode('ALL')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+              className={`flex items-center px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
                 filterMode === 'ALL'
-                  ? 'bg-blue-600/40 text-blue-200 border border-blue-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/60 shadow-sm font-bold ring-1 ring-cyan-400/40'
+                  : 'text-slate-400 hover:text-white border border-transparent'
               }`}
             >
-              {t('అన్నీ (15 రోజులు)', 'All (15 Days)')}
+              <span className={`w-2 h-2 rounded-full mr-1.5 inline-block ${filterMode === 'ALL' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
+              <span>{t('అన్నీ (15 రోజులు)', 'All (15 Days)')}</span>
             </button>
+
             <button
               onClick={() => setFilterMode('TRADES_ONLY')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+              className={`flex items-center px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
                 filterMode === 'TRADES_ONLY'
-                  ? 'bg-blue-600/40 text-blue-200 border border-blue-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-blue-500/20 text-blue-200 border border-blue-400/60 shadow-sm font-bold ring-1 ring-blue-400/40'
+                  : 'text-slate-400 hover:text-white border border-transparent'
               }`}
             >
-              {t('ట్రేడ్స్ మాత్రమే', 'Trades Only')}
+              <span className={`w-2 h-2 rounded-full mr-1.5 inline-block ${filterMode === 'TRADES_ONLY' ? 'bg-blue-400 ring-2 ring-blue-400/50' : 'border border-slate-500'}`} />
+              <span>{t('ట్రేడ్స్ మాత్రమే', 'Trades Only')}</span>
             </button>
+
             <button
               onClick={() => setFilterMode('PROFIT_DAYS')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+              className={`flex items-center px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
                 filterMode === 'PROFIT_DAYS'
-                  ? 'bg-emerald-600/40 text-emerald-200 border border-emerald-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/60 shadow-sm font-bold ring-1 ring-emerald-400/40'
+                  : 'text-slate-400 hover:text-white border border-transparent'
               }`}
             >
-              {t('లాభాల రోజులు', 'Profitable Days')}
+              <span className={`w-2 h-2 rounded-full mr-1.5 inline-block ${filterMode === 'PROFIT_DAYS' ? 'bg-emerald-400 ring-2 ring-emerald-400/50' : 'border border-slate-500'}`} />
+              <span>{t('లాభాల రోజులు', 'Profitable Days')}</span>
             </button>
           </div>
+
+          {/* Sort Order Toggle Button (Latest First vs Oldest First) */}
+          <button
+            onClick={() => setSortOrder(prev => (prev === 'DESC' ? 'ASC' : 'DESC'))}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-cyan-300 bg-cyan-950/60 hover:bg-cyan-900/50 border border-cyan-500/40 transition-all cursor-pointer shadow-sm active:scale-95"
+            title={t('క్రమాన్ని మార్చు (నవీన రోజులు పైన / పాత రోజులు పైన)', 'Toggle Sort Order')}
+          >
+            <ArrowUpDown className="w-3.5 h-3.5 text-cyan-400" />
+            <span>
+              {sortOrder === 'DESC'
+                ? t(`🔥 నవీన రోజులు పైన (Day ${maxRecordedDay} → 1)`, `Latest First (Day ${maxRecordedDay} → 1)`)
+                : t(`పాత రోజులు పైన (Day 1 → ${maxRecordedDay})`, `Oldest First (Day 1 → ${maxRecordedDay})`)}
+            </span>
+          </button>
 
           {/* 1-Click Excel CSV Export */}
           <button
@@ -282,12 +311,21 @@ export const DashboardDailyLedgerCard: React.FC = () => {
                     isSelected ? 'bg-blue-950/40 border-l-2 border-l-blue-400' : ''
                   }`}
                 >
-                  {/* Day / Date */}
+                  {/* Day / Date with Latest Day Badge */}
                   <td className="py-3 px-3.5 font-semibold text-white sticky left-0 bg-slate-950 z-10 shadow-r border-r border-white/10 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center text-xs font-bold text-slate-200">
+                    <span className={`w-7 h-6 rounded-md flex items-center justify-center text-xs font-bold ${
+                      row.day_number === maxRecordedDay
+                        ? 'bg-amber-500/25 text-amber-300 border border-amber-500/50'
+                        : 'bg-white/5 text-slate-200'
+                    }`}>
                       D{row.day_number}
                     </span>
                     <span className="text-slate-300">{row.date}</span>
+                    {row.day_number === maxRecordedDay && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse shrink-0">
+                        🔥 {t('నేటి రోజు', 'Today / Latest')}
+                      </span>
+                    )}
                   </td>
 
                   {/* Open Capital */}

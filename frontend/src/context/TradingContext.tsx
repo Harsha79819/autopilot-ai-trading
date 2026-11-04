@@ -19,6 +19,7 @@ interface TradingContextType {
   refreshAutoPilot: () => Promise<void>;
   toggleAutoPilot: (enabled: boolean) => Promise<void>;
   triggerAutoPilotScan: () => Promise<void>;
+  deployAllCapital: () => Promise<any>;
   resetCapital: (capital?: number) => Promise<void>;
   depositCapital: (amount: number, note?: string) => Promise<void>;
   toggleKillSwitch: (activate: boolean) => Promise<void>;
@@ -199,6 +200,12 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await Promise.allSettled([refreshAutoPilot(), refreshPortfolio()]);
   };
 
+  const deployAllCapital = async () => {
+    const res = await api.deployAllCapital();
+    await Promise.allSettled([refreshPortfolio(), refreshAutoPilot(), refreshRisk(), refreshScanner()]);
+    return res;
+  };
+
   const resetCapital = async (capital: number = 500.0) => {
     const updated = await api.resetPortfolio(capital);
     setPortfolio(updated);
@@ -254,6 +261,7 @@ export const TradingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         refreshAutoPilot,
         toggleAutoPilot,
         triggerAutoPilotScan,
+        deployAllCapital,
         resetCapital,
         depositCapital,
         toggleKillSwitch,

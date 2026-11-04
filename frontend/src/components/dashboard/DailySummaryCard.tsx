@@ -97,7 +97,7 @@ export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ onOpenJourna
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl p-5 sm:p-6 border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-indigo-950/30 shadow-2xl">
+    <div className="relative overflow-hidden rounded-2xl p-4 sm:p-5 border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-indigo-950/30 shadow-2xl">
       {/* Background ambient glow */}
       <div className="absolute top-0 right-1/3 w-80 h-32 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-10 w-64 h-32 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -210,43 +210,48 @@ export const DailySummaryCard: React.FC<DailySummaryCardProps> = ({ onOpenJourna
         </div>
       </div>
 
-      {/* Filter Tabs & Timeline Subheader */}
-      <div className="flex items-center justify-between gap-2 mb-3 pt-2 flex-wrap">
+      {/* Filter Tabs with Distinct Radio Circles */}
+      <div className="flex items-center justify-between gap-2 mb-2.5 pt-1 flex-wrap">
         <div className="text-xs font-bold text-white tracking-wide flex items-center gap-1.5">
           <Clock className="w-3.5 h-3.5 text-cyan-400" />
           <span>Timeline of Today's Activity (ఈరోజు జరిగిన అన్ని అప్‌డేట్స్)</span>
         </div>
 
-        <div className="flex items-center gap-1 overflow-x-auto touch-scroll no-scrollbar py-0.5">
+        <div className="flex items-center gap-1.5 overflow-x-auto touch-scroll no-scrollbar py-0.5 bg-slate-950/60 p-1 rounded-xl border border-white/10">
           <button
             onClick={() => setFilter('ALL')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               filter === 'ALL'
-                ? 'bg-cyan-500/20 text-accent-cyan border border-cyan-500/30 font-bold'
-                : 'text-slate-400 hover:text-white bg-white/5'
+                ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/60 font-bold ring-1 ring-cyan-400/40 shadow-sm'
+                : 'text-slate-400 hover:text-white border border-transparent'
             }`}
           >
-            All Updates
+            <span className={`w-2 h-2 rounded-full mr-1.5 inline-block ${filter === 'ALL' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
+            <span>All Updates</span>
           </button>
+
           <button
             onClick={() => setFilter('TRADES')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               filter === 'TRADES'
-                ? 'bg-cyan-500/20 text-accent-cyan border border-cyan-500/30 font-bold'
-                : 'text-slate-400 hover:text-white bg-white/5'
+                ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/60 font-bold ring-1 ring-cyan-400/40 shadow-sm'
+                : 'text-slate-400 hover:text-white border border-transparent'
             }`}
           >
-            Executed Trades ({buyCount + sellCount})
+            <span className={`w-2 h-2 rounded-full mr-1.5 inline-block ${filter === 'TRADES' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
+            <span>Executed Trades ({buyCount + sellCount})</span>
           </button>
+
           <button
             onClick={() => setFilter('DEPOSITS')}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`flex items-center px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               filter === 'DEPOSITS'
-                ? 'bg-cyan-500/20 text-accent-cyan border border-cyan-500/30 font-bold'
-                : 'text-slate-400 hover:text-white bg-white/5'
+                ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/60 font-bold ring-1 ring-cyan-400/40 shadow-sm'
+                : 'text-slate-400 hover:text-white border border-transparent'
             }`}
           >
-            Deposits & System
+            <span className={`w-2 h-2 rounded-full mr-1.5 inline-block ${filter === 'DEPOSITS' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
+            <span>Deposits & System</span>
           </button>
         </div>
       </div>
