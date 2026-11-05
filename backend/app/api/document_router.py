@@ -24,10 +24,26 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Uploads and safely parses a financial transaction CSV or statement."""
-    content_bytes = await file.read()
-    if len(content_bytes) > 5 * 1024 * 1024:  # 5MB limit
-        raise HTTPException(status_code=400, detail="File size exceeds 5MB limit.")
+    """Uploads and safely parses a financial transaction CSV or statement with chunked memory safety."""
+    MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB limit
+    CHUNK_SIZE = 64 * 1024  # 64KB streaming chunks
+
+    chunks: List[bytes] = []
+    total_bytes = 0
+
+    while True:
+        chunk = await file.read(CHUNK_SIZE)
+        if not chunk:
+            break
+        total_bytes += len(chunk)
+        if total_bytes > MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="Payload Too Large: File size exceeds 5MB limit."
+            )
+        chunks.append(chunk)
+
+    content_bytes = b"".join(chunks)
 
     try:
         content_text = content_bytes.decode("utf-8", errors="replace")
