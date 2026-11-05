@@ -1,3 +1,4 @@
+# Dependencies
 node_modules/
 frontend/node_modules/
 .venv/
@@ -6,11 +7,26 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
-.env
 *.log
 memory/
 chat_history.txt
+
+# Databases and SQLite artifacts
 *.db
+*.db-wal
+*.db-journal
 *.sqlite
 *.sqlite3
 backend/data/*.db
+backend/data/
+
+# Environment files and credentials (preserve .env.example)
+.env
+.env.*
+!.env.example
+
+# WhatsApp bot session credentials and browser cache
+_legacy_whatsapp_bot/.wwebjs_auth/
+_legacy_whatsapp_bot/.wwebjs_cache/
+.wwebjs_auth/
+.wwebjs_cache/
