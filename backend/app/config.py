@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     BASE_CURRENCY: str = "INR"
 
     # Strict Paper Trading Safety Assertion
-    INITIAL_VIRTUAL_CAPITAL_INR: float = 5000.00
+    INITIAL_VIRTUAL_CAPITAL_INR: float = 50000.00
     STRICT_PAPER_TRADING_ONLY: bool = True
 
     # Market Data

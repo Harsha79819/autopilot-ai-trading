@@ -64,6 +64,7 @@ async def lifespan(app: FastAPI):
                 db.add(demo_user)
                 db.flush()
 
+            if not demo_user.portfolio:
                 portfolio = Portfolio(
                     user_id=demo_user.id,
                     initial_cash=settings.INITIAL_VIRTUAL_CAPITAL_INR,
@@ -74,8 +75,16 @@ async def lifespan(app: FastAPI):
                     is_kill_switched=False
                 )
                 db.add(portfolio)
+                db.add(AuditLog(
+                    user_id=demo_user.id,
+                    event_type="ACCOUNT_INITIALIZATION",
+                    symbol="INR",
+                    decision="SEEDED",
+                    reason=f"Initialized paper trading capital of ₹{settings.INITIAL_VIRTUAL_CAPITAL_INR:.2f}",
+                    timestamp=datetime.utcnow()
+                ))
                 db.commit()
-                logger.info(f"Default demo user created with initial virtual cash: INR {settings.INITIAL_VIRTUAL_CAPITAL_INR:.2f}")
+                logger.info(f"Default demo user initialized with virtual cash: INR {settings.INITIAL_VIRTUAL_CAPITAL_INR:.2f}")
         finally:
             db.close()
 

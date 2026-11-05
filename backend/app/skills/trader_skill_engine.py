@@ -436,9 +436,9 @@ class TraderSkillEngine:
         quotes = ctx.get("quotes", {})
         positions = ctx.get("positions", [])
 
-        cash = portfolio.cash_balance if portfolio else 0.0
+        cash = getattr(portfolio, 'cash_balance', 0.0) if portfolio else 0.0
         tot_val = metrics.total_portfolio_value if metrics else (cash if portfolio else 0.0)
-        initial_cap = portfolio.initial_balance if portfolio else 0.0
+        initial_cap = getattr(portfolio, 'initial_cash', 0.0) or getattr(portfolio, 'initial_balance', 0.0) if portfolio else 0.0
         realized_gains = metrics.realized_pnl if metrics else 0.0
         total_fees = getattr(metrics, 'total_fees', 0.0) if metrics else 0.0
 

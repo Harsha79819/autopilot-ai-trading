@@ -202,11 +202,10 @@ def generate_copilot_response(query: str, ctx: Dict[str, Any], api_key: Optional
     is_te = is_telugu_query(query)
     q_lower = query.lower()
 
-    # 0. High-Priority Intent: Explicit /trader-* skill command from trader-skill
-    if q_lower.startswith("/trader-"):
-        skill_res = TraderSkillEngine.dispatch_skill_query(query, ctx, is_te)
-        if skill_res:
-            return skill_res
+    # 0. Omni Skill Router: Automatically route to matching quantitative trader skill
+    skill_res = TraderSkillEngine.dispatch_skill_query(query, ctx, is_te)
+    if skill_res:
+        return skill_res
 
     # 1. High-Priority Intent: Bottom-line Overall Profit & Loss Reconciliation
     is_overall_pnl_query = (
@@ -235,9 +234,9 @@ def generate_copilot_response(query: str, ctx: Dict[str, Any], api_key: Optional
         init_cap = getattr(portfolio, 'initial_cash', 0.0) or getattr(portfolio, 'initial_balance', 0.0) or 0.0
         cash = getattr(portfolio, 'cash_balance', 0.0) or 0.0
         tot_equity = metrics.total_portfolio_value if metrics else cash
-        realized_pnl = metrics.realized_pnl if metrics else 0.0
-        unrealized_pnl = metrics.total_unrealized_pnl if metrics else 0.0
-        total_fees = getattr(metrics, 'total_fees', 0.0) if metrics else 0.0
+        realized_pnl = getattr(metrics, 'realized_pnl', 0.0) if metrics else 0.0
+        unrealized_pnl = (getattr(metrics, 'unrealized_pnl', 0.0) or getattr(metrics, 'total_unrealized_pnl', 0.0)) if metrics else 0.0
+        total_fees = (getattr(metrics, 'total_fees_paid', 0.0) or getattr(metrics, 'total_fees', 0.0)) if metrics else 0.0
         net_profit = tot_equity - init_cap
         pct_gain = (net_profit / init_cap * 100.0) if init_cap > 0 else 0.0
 
@@ -326,8 +325,8 @@ def generate_copilot_response(query: str, ctx: Dict[str, Any], api_key: Optional
     historical_errors = ctx["historical_errors"]
     recent_trades = ctx["recent_trades"]
 
-    cash_val = portfolio.cash_balance if portfolio else 3178.75
-    tot_val = metrics.total_portfolio_value if metrics else 5727.75
+    cash_val = portfolio.cash_balance if portfolio else 0.0
+    tot_val = metrics.total_portfolio_value if metrics else cash_val
 
     # Command & AI Transparency Intent Detection
     is_pause_command = (
@@ -968,8 +967,8 @@ def copilot_chat(
     metrics = ctx["metrics"]
 
     snapshot = {
-        "cash_balance": portfolio.cash_balance if portfolio else 5000.0,
-        "total_portfolio_value": metrics.total_portfolio_value if metrics else 5000.0,
+        "cash_balance": portfolio.cash_balance if portfolio else 0.0,
+        "total_portfolio_value": metrics.total_portfolio_value if metrics else (portfolio.cash_balance if portfolio else 0.0),
         "open_positions_count": len(ctx["positions"]),
         "status": ctx["autopilot_status"].get("status", "SCANNING")
     }
