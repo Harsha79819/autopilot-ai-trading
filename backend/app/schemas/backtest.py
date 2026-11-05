@@ -6,7 +6,8 @@ from pydantic import BaseModel, Field
 
 class BacktestRequest(BaseModel):
     strategy_name: str
-    symbol: str
+    symbol: str = "INFY"
+    symbols: Optional[List[str]] = None
     initial_capital: float = Field(100.00, ge=10.0)
     lookback_days: int = Field(30, ge=5, le=365)
     train_split_pct: float = Field(60.0, ge=30.0, le=80.0)
@@ -47,6 +48,7 @@ class SplitPerformance(BaseModel):
 class BacktestResponse(BaseModel):
     strategy_name: str
     symbol: str
+    symbols_tested: Optional[List[str]] = None
     initial_capital: float
     final_equity: float
     gross_return_pct: float
@@ -58,6 +60,8 @@ class BacktestResponse(BaseModel):
     max_drawdown_pct: float
     profit_factor: float
     sharpe_ratio: float
+    benchmark_symbol: Optional[str] = "NIFTY_50"
+    benchmark_return_pct: Optional[float] = None
     splits: List[SplitPerformance]
     equity_curve: List[Dict[str, Any]]
     sample_trades: List[BacktestTradeRecord]
