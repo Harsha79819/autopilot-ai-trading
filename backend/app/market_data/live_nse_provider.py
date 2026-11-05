@@ -279,17 +279,27 @@ class LiveNseMarketDataProvider(MarketDataProvider):
         yt = NSE_STOCKS.get(sym_clean, {}).get("yahoo_ticker", f"{sym_clean}.NS")
 
         try:
-            interval = "1m" if timeframe == "1m" else "5m"
-            period = "1d" if timeframe == "1m" else "5d"
+            if timeframe == "1m":
+                interval = "1m"
+                period = "1d"
+            elif timeframe == "15m":
+                interval = "15m"
+                period = "5d"
+            else:
+                interval = "5m"
+                period = "2d"
 
-            df = yf.download(
-                tickers=yt,
-                period=period,
-                interval=interval,
-                progress=False,
-                auto_adjust=False,
-                timeout=5.0
-            )
+            ticker = yf.Ticker(yt)
+            df = ticker.history(period=period, interval=interval)
+            if df is None or df.empty:
+                df = yf.download(
+                    tickers=yt,
+                    period=period,
+                    interval=interval,
+                    progress=False,
+                    auto_adjust=False,
+                    timeout=5.0
+                )
 
             if df is not None and not df.empty:
                 for idx, row in df.iterrows():

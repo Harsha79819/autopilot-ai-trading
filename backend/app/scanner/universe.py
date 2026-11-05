@@ -65,9 +65,9 @@ NSE_STOCKS: Dict[str, Dict[str, Any]] = {
         "volatility": 0.018
     },
     "TATAMOTORS": {
-        "name": "Tata Motors Ltd",
+        "name": "Tata Consumer Products / Motors",
         "symbol": "TATAMOTORS",
-        "yahoo_ticker": "TATAMOTORS.NS",
+        "yahoo_ticker": "TATACONSUM.NS",
         "smartapi_token": "3456",
         "base_price": 840.00,
         "tick_size": 0.05,
@@ -175,16 +175,6 @@ NSE_STOCKS: Dict[str, Dict[str, Any]] = {
         "tick_size": 0.05,
         "lot_size": 1,
         "volatility": 0.010
-    },
-    "ZOMATO": {
-        "name": "Zomato Ltd",
-        "symbol": "ZOMATO",
-        "yahoo_ticker": "ZOMATO.NS",
-        "smartapi_token": "5097",
-        "base_price": 93.20,
-        "tick_size": 0.05,
-        "lot_size": 1,
-        "volatility": 0.020
     },
     # Extended High-Quality Nifty 50 Liquid Equities
     "COALINDIA": {
