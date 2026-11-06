@@ -45,6 +45,7 @@ import { AlertsManagerView } from './components/views/AlertsManagerView';
 import { DocumentsView } from './components/views/DocumentsView';
 import { ReportsView } from './components/views/ReportsView';
 import { SettingsView } from './components/views/SettingsView';
+import { OrderBlockView } from './components/views/OrderBlockView';
 import { ProductTourModal } from './components/onboarding/ProductTourModal';
 import { ProCommandBar } from './components/dashboard/ProCommandBar';
 import { StrategyInfo } from './types';
@@ -505,6 +506,13 @@ const MainContent: React.FC = () => {
           <AlertsManagerView />
           <DocumentsView />
           <SettingsView />
+        </div>
+      )}
+
+      {/* Tab: Live Order Block & Liquidity Terminal (SMC) */}
+      {activeTab === 'orderblock' && (
+        <div className="space-y-6 animate-fade-in">
+          <OrderBlockView />
         </div>
       )}
 

@@ -69,6 +69,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
       subIds: ['risk-centre', 'reports', 'strategies', 'backtest'] 
     },
     { 
+      id: 'orderblock', 
+      labelTe: 'ఆర్డర్ బ్లాక్స్', 
+      labelEn: 'Order Blocks', 
+      icon: Layers,
+      subIds: ['orderblock'] 
+    },
+    { 
       id: 'planner', 
       labelTe: 'టూల్స్ & ప్లానర్', 
       labelEn: 'Tools & Planner', 

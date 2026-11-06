@@ -38,6 +38,7 @@ export const MobileTabs: React.FC = () => {
     { id: 'portfolio', label: 'Portfolio Intelligence', icon: Briefcase },
     { id: 'orders', label: 'Paper Trading Simulator', icon: LineChart },
     { id: 'risk-centre', label: 'Risk Centre & Stress Test', icon: ShieldAlert },
+    { id: 'orderblock', label: 'Order Blocks (SMC)', icon: LineChart },
     { id: 'research', label: 'News & Market Research', icon: Newspaper },
     { id: 'planner', label: 'Personal Finance Planner', icon: PieChart },
     { id: 'alerts', label: 'Alerts & Notifications', icon: Bell },

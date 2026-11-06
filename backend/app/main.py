@@ -29,6 +29,7 @@ from backend.app.api.research_router import router as research_router
 from backend.app.api.scenario_router import router as scenario_router
 from backend.app.api.document_router import router as document_router
 from backend.app.api.reports_router import router as reports_router
+from backend.app.api.orderblock_router import router as orderblock_router
 
 # Configure logging
 logging.basicConfig(
@@ -138,6 +139,7 @@ app.include_router(research_router)
 app.include_router(scenario_router)
 app.include_router(document_router)
 app.include_router(reports_router)
+app.include_router(orderblock_router, prefix="/api/v1")
 
 
 import os
