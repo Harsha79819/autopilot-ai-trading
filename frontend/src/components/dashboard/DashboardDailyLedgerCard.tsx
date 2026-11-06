@@ -123,7 +123,7 @@ export const DashboardDailyLedgerCard: React.FC = () => {
             </div>
             <div>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                {t('15-రోజుల రోజువారీ ట్రేడింగ్ లెడ్జర్ (Excel షీట్ వ్యూ)', '15-Day Daily Trading Ledger (Excel Sheet View)')}
+                {t('రోజువారీ ట్రేడింగ్ లెడ్జర్ (Excel షీట్ వ్యూ)', 'Daily Trading Ledger (Excel Sheet View)')}
                 <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                   {t('100% పారదర్శకత', '100% Transparent')}
                 </span>
@@ -151,7 +151,7 @@ export const DashboardDailyLedgerCard: React.FC = () => {
               }`}
             >
               <span className={`w-2 h-2 rounded-full mr-1.5 inline-block ${filterMode === 'ALL' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
-              <span>{t('అన్నీ (15 రోజులు)', 'All (15 Days)')}</span>
+              <span>{t('అన్నీ (రోజువారీ)', 'All Days')}</span>
             </button>
 
             <button

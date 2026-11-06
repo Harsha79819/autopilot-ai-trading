@@ -311,8 +311,8 @@ const MainContent: React.FC = () => {
               >
                 <span className={`w-2 h-2 rounded-full shrink-0 ${dashboardTab === 'ledger' ? 'bg-cyan-400 ring-2 ring-cyan-400/50' : 'border border-slate-500'}`} />
                 <Table className="w-3.5 h-3.5" />
-                <span>{t('15-రోజుల లెడ్జర్ (Day 17 Top)', '15-Day Ledger (Day 17 Top)')}</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] bg-cyan-400/20 text-cyan-300 font-mono font-bold">D17</span>
+                <span>{t('రోజువారీ లెడ్జర్ (Day 2 లైవ్)', 'Daily Ledger (Day 2 Live)')}</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] bg-cyan-400/20 text-cyan-300 font-mono font-bold">Day 2</span>
               </button>
 
               {/* Tab 2: Live Trading & Scanner */}
@@ -418,7 +418,7 @@ const MainContent: React.FC = () => {
                     onChange={(e) => setSplitLeftTab(e.target.value as any)}
                     className="bg-slate-800 text-white text-xs rounded-lg px-2.5 py-1 border border-white/10"
                   >
-                    <option value="ledger">📑 15-Day Ledger (Day 17 Top)</option>
+                    <option value="ledger">📑 Daily Ledger (Day 2 Live)</option>
                     <option value="trading">⚡ Live Trading & Scanner</option>
                     <option value="charts">📊 Realized Trades & Charts</option>
                     <option value="brain">🧠 AGI Brain & Automation</option>
@@ -435,7 +435,7 @@ const MainContent: React.FC = () => {
                     className="bg-slate-800 text-white text-xs rounded-lg px-2.5 py-1 border border-white/10"
                   >
                     <option value="trading">⚡ Live Trading & Scanner</option>
-                    <option value="ledger">📑 15-Day Ledger (Day 17 Top)</option>
+                    <option value="ledger">📑 Daily Ledger (Day 2 Live)</option>
                     <option value="charts">📊 Realized Trades & Charts</option>
                     <option value="brain">🧠 AGI Brain & Automation</option>
                   </select>
