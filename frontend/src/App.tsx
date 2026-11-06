@@ -16,6 +16,7 @@ import { PerformanceChart } from './components/dashboard/PerformanceChart';
 import { LiveStockChart } from './components/dashboard/LiveStockChart';
 import { DashboardDailyLedgerCard } from './components/dashboard/DashboardDailyLedgerCard';
 import { RealizedPnLCard } from './components/dashboard/RealizedPnLCard';
+import { AiDailyLearningCard } from './components/dashboard/AiDailyLearningCard';
 import { useLanguage } from './context/LanguageContext';
 import { ScannerTable } from './components/scanner/ScannerTable';
 import { StrategyCard } from './components/strategies/StrategyCard';
@@ -220,6 +221,7 @@ const MainContent: React.FC = () => {
         return (
           <div className="animate-fade-in space-y-4">
             <AutoPilotBanner />
+            <AiDailyLearningCard />
             <DailySummaryCard onOpenJournal={() => setShowJournalModal(true)} />
             <BottomStatusGrid onOpenDiagnostics={() => setShowDiagnosticsModal(true)} />
           </div>

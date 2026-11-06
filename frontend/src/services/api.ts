@@ -32,6 +32,38 @@ function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
+export async function authFetch(url: string, init?: RequestInit): Promise<Response> {
+  const token = localStorage.getItem('autopilot_token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers as Record<string, string> || {}),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  let res = await fetch(url, { ...init, headers });
+  if (res.status === 401) {
+    // Attempt transparent auto-recovery via demo login
+    try {
+      const loginRes = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'demo@autopilot.ai', password: 'demo1234' }),
+      });
+      if (loginRes.ok) {
+        const loginData = await loginRes.json();
+        if (loginData.access_token) {
+          localStorage.setItem('autopilot_token', loginData.access_token);
+          headers['Authorization'] = `Bearer ${loginData.access_token}`;
+          res = await fetch(url, { ...init, headers });
+        }
+      }
+    } catch (_) {}
+  }
+  return res;
+}
+
 export const api = {
   // Auth
   async login(email: string, password: string) {
@@ -62,9 +94,7 @@ export const api = {
 
   // Portfolio
   async getPortfolio(): Promise<Portfolio> {
-    const res = await fetch(`${BASE_URL}/portfolio`, {
-      headers: getAuthHeaders(),
-    });
+    const res = await authFetch(`${BASE_URL}/portfolio`);
     if (!res.ok) throw new Error('Failed to fetch portfolio');
     return res.json();
   },
@@ -185,9 +215,7 @@ export const api = {
   },
 
   async getAuditLogs(limit: number = 40): Promise<AuditLog[]> {
-    const res = await fetch(`${BASE_URL}/risk/audit-logs?limit=${limit}`, {
-      headers: getAuthHeaders(),
-    });
+    const res = await authFetch(`${BASE_URL}/risk/audit-logs?limit=${limit}`);
     if (!res.ok) throw new Error('Failed to fetch audit logs');
     return res.json();
   },
@@ -257,9 +285,8 @@ export const api = {
     timestamp: string;
   }> {
     const geminiKey = localStorage.getItem('gemini_api_key') || undefined;
-    const res = await fetch(`${BASE_URL}/ai/chat`, {
+    const res = await authFetch(`${BASE_URL}/ai/chat`, {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify({ messages, include_context: true, gemini_api_key: geminiKey }),
     });
     if (!res.ok) {
