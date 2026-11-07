@@ -20,7 +20,8 @@ import {
   Settings,
   ChevronDown,
   Compass,
-  Globe
+  Globe,
+  Sparkles
 } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -74,6 +75,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
       labelEn: 'Order Blocks', 
       icon: Layers,
       subIds: ['orderblock'] 
+    },
+    { 
+      id: 'ai-learning', 
+      labelTe: 'AI లెర్నింగ్', 
+      labelEn: 'AI Learning', 
+      icon: Sparkles,
+      subIds: ['ai-learning'] 
     },
     { 
       id: 'planner', 

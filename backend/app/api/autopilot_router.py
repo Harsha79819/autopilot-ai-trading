@@ -49,3 +49,32 @@ async def trigger_deploy_all(current_user: User = Depends(get_current_user)):
         "result": result,
         "status": autopilot_runner.get_ai_status()
     }
+
+
+@router.get("/learning-state")
+def get_learning_state(current_user: User = Depends(get_current_user)):
+    """Retrieve active AGI learning penalties, boosts, and self-correction rules."""
+    penalties = {
+        sym: score
+        for (uid, sym), score in getattr(autopilot_runner, "_agi_error_penalties", {}).items()
+        if uid == current_user.id
+    }
+    boosts = {
+        sym: score
+        for (uid, sym), score in getattr(autopilot_runner, "_agi_win_boosts", {}).items()
+        if uid == current_user.id
+    }
+    return {
+        "user_id": current_user.id,
+        "active_penalties": penalties,
+        "active_boosts": boosts,
+        "learning_algorithm": "Reinforcement Learning via Trading Journal Post-Mortem",
+        "parameters": {
+            "penalty_per_loss": -6.0,
+            "max_penalty_cap": -18.0,
+            "boost_per_win": +4.0,
+            "max_boost_cap": +12.0,
+            "cooldown_period_days": 3
+        },
+        "status": "ACTIVE_LEARNING"
+    }
