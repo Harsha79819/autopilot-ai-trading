@@ -792,9 +792,10 @@ class AutoPilotRunner:
                 held_symbols = {p.symbol for p in positions} | closed_symbols_this_cycle
                 min_price_cutoff = getattr(settings, "MIN_STOCK_PRICE_INR", 100.0)
                 MAX_CONCURRENT_POSITIONS = 8
+                max_pos_pct = getattr(settings, "MAX_POSITION_SIZE_PCT", 20.0)
                 per_stock_budget_cap = max(
-                    metrics.total_portfolio_value * 0.25,
-                    min_price_cutoff * 1.5
+                    metrics.total_portfolio_value * (max_pos_pct / 100.0),
+                    min_price_cutoff
                 )
 
                 # Filter and score eligible candidates
@@ -803,6 +804,9 @@ class AutoPilotRunner:
                     if sym in held_symbols:
                         continue
                     if q.current_price < min_price_cutoff:
+                        continue
+                    # Only consider stocks whose single share fits within our per-stock risk allocation cap
+                    if (q.current_price * 1.005) > per_stock_budget_cap:
                         continue
                     fund_ok, _, _ = fundamental_gate.evaluate(sym, q.current_price)
                     if not fund_ok:
@@ -835,11 +839,7 @@ class AutoPilotRunner:
                     unit_cost_est = best_quote.current_price * 1.005
                     trade_budget = min(portfolio.cash_balance, per_stock_budget_cap)
                     if unit_cost_est > trade_budget:
-                        # If a single whole share exceeds the 25% cap but fits in cash, allow 1 share
-                        if unit_cost_est <= portfolio.cash_balance:
-                            trade_budget = unit_cost_est
-                        else:
-                            continue
+                        continue
 
                     capital_at_risk = metrics.total_portfolio_value * (max_risk_pct / 100.0)
                     risk_per_share = best_quote.current_price * (sl_pct / 100.0)
@@ -1048,15 +1048,19 @@ class AutoPilotRunner:
                 portfolio,
                 latest_prices={sym: q.current_price for sym, q in latest_quotes.items()}
             )
+            max_pos_pct = getattr(settings, "MAX_POSITION_SIZE_PCT", 20.0)
             per_stock_budget_cap = max(
-                metrics.total_portfolio_value * 0.25,
-                min_price_cutoff * 1.5
+                metrics.total_portfolio_value * (max_pos_pct / 100.0),
+                min_price_cutoff
             )
 
             # Score candidates
             scored: List[Tuple[str, Quote, float]] = []
             for sym, q in latest_quotes.items():
                 if sym in held_symbols or q.current_price < min_price_cutoff:
+                    continue
+                # Skip stocks that exceed per-stock budget cap
+                if (q.current_price * 1.005) > per_stock_budget_cap:
                     continue
                 fund_ok, _, _ = fundamental_gate.evaluate(sym, q.current_price)
                 if not fund_ok:
@@ -1081,10 +1085,7 @@ class AutoPilotRunner:
                 unit_cost = quote.current_price * 1.005
                 budget = min(portfolio.cash_balance, per_stock_budget_cap)
                 if unit_cost > budget:
-                    if unit_cost <= portfolio.cash_balance:
-                        budget = unit_cost
-                    else:
-                        continue
+                    continue
 
                 max_risk_pct = getattr(settings, "MAX_RISK_PER_TRADE_PCT", 1.5)
                 capital_at_risk = metrics.total_portfolio_value * (max_risk_pct / 100.0)
