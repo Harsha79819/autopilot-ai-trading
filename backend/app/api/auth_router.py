@@ -78,6 +78,37 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     return Token(access_token=access_token, token_type="bearer", user=UserResponse.model_validate(user))
 
 
+@router.post("/demo-login", response_model=Token)
+def demo_login(db: Session = Depends(get_db)):
+    """Instant one-click demo login for paper trading exploration."""
+    user = db.query(User).filter(User.email == "demo@autopilot.ai").first()
+    if not user:
+        user = User(
+            email="demo@autopilot.ai",
+            hashed_password=get_password_hash("demo1234"),
+            full_name="Paper Trader Demo",
+            is_active=True
+        )
+        db.add(user)
+        db.flush()
+    if not user.portfolio:
+        portfolio = Portfolio(
+            user_id=user.id,
+            initial_cash=settings.INITIAL_VIRTUAL_CAPITAL_INR,
+            cash_balance=settings.INITIAL_VIRTUAL_CAPITAL_INR,
+            realized_pnl=0.0,
+            total_fees_paid=0.0,
+            peak_portfolio_value=settings.INITIAL_VIRTUAL_CAPITAL_INR,
+            is_kill_switched=False
+        )
+        db.add(portfolio)
+        db.commit()
+        db.refresh(user)
+
+    access_token = create_access_token(user.id)
+    return Token(access_token=access_token, token_type="bearer", user=UserResponse.model_validate(user))
+
+
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     return UserResponse.model_validate(current_user)

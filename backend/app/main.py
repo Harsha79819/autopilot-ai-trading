@@ -49,9 +49,8 @@ async def lifespan(app: FastAPI):
     # Initialize DB tables
     init_db()
 
-    # Seed default demo user for local testing (disabled in production)
-    is_prod = str(settings.APP_ENV).lower() in ("production", "prod") or bool(os.getenv("RENDER"))
-    if not is_prod:
+    # Seed default demo user for paper trading mode
+    if settings.STRICT_PAPER_TRADING_ONLY:
         db = SessionLocal()
         try:
             demo_user = db.query(User).filter(User.email == "demo@autopilot.ai").first()
