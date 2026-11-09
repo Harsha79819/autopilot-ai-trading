@@ -792,11 +792,7 @@ class AutoPilotRunner:
                 held_symbols = {p.symbol for p in positions} | closed_symbols_this_cycle
                 min_price_cutoff = getattr(settings, "MIN_STOCK_PRICE_INR", 100.0)
                 MAX_CONCURRENT_POSITIONS = 8
-                max_pos_pct = getattr(settings, "MAX_POSITION_SIZE_PCT", 20.0)
-                per_stock_budget_cap = max(
-                    metrics.total_portfolio_value * (max_pos_pct / 100.0),
-                    min_price_cutoff
-                )
+                max_pos_pct = getattr(settings, "MAX_POSITION_SIZE_PCT", 95.0)
 
                 # Filter and score eligible candidates
                 scored_candidates: List[Tuple[str, Quote, float]] = []
@@ -805,13 +801,11 @@ class AutoPilotRunner:
                         continue
                     if q.current_price < min_price_cutoff:
                         continue
-                    # Only consider stocks whose single share fits within our per-stock risk allocation cap
-                    if (q.current_price * 1.005) > per_stock_budget_cap:
-                        continue
                     fund_ok, _, _ = fundamental_gate.evaluate(sym, q.current_price)
                     if not fund_ok:
                         continue
                     unit_cost = q.current_price * 1.005
+                    # Can we afford at least 1 whole share with our available liquid cash?
                     if unit_cost > portfolio.cash_balance:
                         continue
 
@@ -826,9 +820,9 @@ class AutoPilotRunner:
                 # Sort candidates by AI Opportunity Score descending
                 scored_candidates.sort(key=lambda x: x[2], reverse=True)
 
-                # Multi-Stock Capital Allocation Loop: Deploy idle capital across top-conviction opportunities
+                # High-Conviction Capital Allocation Loop: Deploy available cash into top opportunity
                 executed_buys: List[str] = []
-                max_risk_pct = getattr(settings, "MAX_RISK_PER_TRADE_PCT", 1.5)
+                max_allowed_daily_loss = getattr(settings, "MAX_DAILY_LOSS_INR", 100.0)
 
                 for best_sym, best_quote, score in scored_candidates:
                     if len(positions) >= MAX_CONCURRENT_POSITIONS:
@@ -837,15 +831,23 @@ class AutoPilotRunner:
                         break
 
                     unit_cost_est = best_quote.current_price * 1.005
-                    trade_budget = min(portfolio.cash_balance, per_stock_budget_cap)
-                    if unit_cost_est > trade_budget:
+                    if unit_cost_est > portfolio.cash_balance:
                         continue
 
-                    capital_at_risk = metrics.total_portfolio_value * (max_risk_pct / 100.0)
-                    risk_per_share = best_quote.current_price * (sl_pct / 100.0)
-                    risk_qty = int(capital_at_risk // risk_per_share) if risk_per_share > 0 else 1
+                    # Deploy up to 95% of available cash into top conviction trade
+                    trade_budget = min(portfolio.cash_balance * (max_pos_pct / 100.0), portfolio.cash_balance)
+                    if unit_cost_est <= portfolio.cash_balance:
+                        trade_budget = max(trade_budget, unit_cost_est)
+
                     budget_qty = int(trade_budget // unit_cost_est)
-                    qty = max(1, min(risk_qty, budget_qty)) if unit_cost_est <= trade_budget else 0
+
+                    # Ensure risk-per-share at Stop Loss fits within daily loss limit
+                    risk_per_share = best_quote.current_price * (sl_pct / 100.0)
+                    max_loss_qty = int(max_allowed_daily_loss // risk_per_share) if risk_per_share > 0 else 1
+
+                    qty = max(1, min(budget_qty, max_loss_qty))
+                    if (qty * unit_cost_est) > portfolio.cash_balance:
+                        qty = max(1, int(portfolio.cash_balance // unit_cost_est)) if unit_cost_est <= portfolio.cash_balance else 0
 
                     interval = max(int(getattr(settings, "AUTOPILOT_INTERVAL_SECONDS", 10.0)), 1)
                     cycle_slot = int(now.timestamp() // interval)
@@ -1048,19 +1050,12 @@ class AutoPilotRunner:
                 portfolio,
                 latest_prices={sym: q.current_price for sym, q in latest_quotes.items()}
             )
-            max_pos_pct = getattr(settings, "MAX_POSITION_SIZE_PCT", 20.0)
-            per_stock_budget_cap = max(
-                metrics.total_portfolio_value * (max_pos_pct / 100.0),
-                min_price_cutoff
-            )
+            max_pos_pct = getattr(settings, "MAX_POSITION_SIZE_PCT", 95.0)
 
             # Score candidates
             scored: List[Tuple[str, Quote, float]] = []
             for sym, q in latest_quotes.items():
                 if sym in held_symbols or q.current_price < min_price_cutoff:
-                    continue
-                # Skip stocks that exceed per-stock budget cap
-                if (q.current_price * 1.005) > per_stock_budget_cap:
                     continue
                 fund_ok, _, _ = fundamental_gate.evaluate(sym, q.current_price)
                 if not fund_ok:
@@ -1075,6 +1070,7 @@ class AutoPilotRunner:
                     scored.append((sym, q, score))
 
             scored.sort(key=lambda x: x[2], reverse=True)
+            max_allowed_daily_loss = getattr(settings, "MAX_DAILY_LOSS_INR", 100.0)
 
             for sym, quote, score in scored:
                 if len(positions) >= max_positions:
@@ -1083,16 +1079,20 @@ class AutoPilotRunner:
                     break
 
                 unit_cost = quote.current_price * 1.005
-                budget = min(portfolio.cash_balance, per_stock_budget_cap)
-                if unit_cost > budget:
+                if unit_cost > portfolio.cash_balance:
                     continue
 
-                max_risk_pct = getattr(settings, "MAX_RISK_PER_TRADE_PCT", 1.5)
-                capital_at_risk = metrics.total_portfolio_value * (max_risk_pct / 100.0)
+                trade_budget = min(portfolio.cash_balance * (max_pos_pct / 100.0), portfolio.cash_balance)
+                if unit_cost <= portfolio.cash_balance:
+                    trade_budget = max(trade_budget, unit_cost)
+
+                budget_qty = int(trade_budget // unit_cost)
                 risk_per_share = quote.current_price * (sl_pct / 100.0)
-                risk_qty = int(capital_at_risk // risk_per_share) if risk_per_share > 0 else 1
-                budget_qty = int(budget // unit_cost)
-                qty = max(1, min(risk_qty, budget_qty)) if unit_cost <= budget else 0
+                max_loss_qty = int(max_allowed_daily_loss // risk_per_share) if risk_per_share > 0 else 1
+
+                qty = max(1, min(budget_qty, max_loss_qty))
+                if (qty * unit_cost) > portfolio.cash_balance:
+                    qty = max(1, int(portfolio.cash_balance // unit_cost)) if unit_cost <= portfolio.cash_balance else 0
 
                 if qty >= 1:
                     order_in = OrderCreate(

@@ -76,13 +76,25 @@ class RiskManager:
                 f"(limit: ₹{max_allowed_daily_loss:.2f} / ₹{settings.MAX_DAILY_LOSS_INR:.2f}). Trading halted for today."
             )
 
-        # 5. Position Sizing Cap (Never allocate 100% into a single instrument; capped at MAX_POSITION_SIZE_PCT)
+        # 5. Position Sizing Cap & Stop Loss Rupee Risk Verification
         proposed_value = quantity * price
         max_pos_value = metrics.total_portfolio_value * (settings.MAX_POSITION_SIZE_PCT / 100.0)
-        if proposed_value > max_pos_value:
+
+        # Allow 1 whole share if it fits in available cash, or position within MAX_POSITION_SIZE_PCT (95%)
+        is_single_share_fit = (quantity == 1 and proposed_value <= portfolio.cash_balance)
+        if proposed_value > max_pos_value and not is_single_share_fit:
             return False, (
                 f"Proposed position size ₹{proposed_value:.2f} exceeds max allowed "
                 f"allocation of ₹{max_pos_value:.2f} ({settings.MAX_POSITION_SIZE_PCT}% of portfolio value)."
+            )
+
+        # Downside Risk Verification: Ensure Stop Loss risk in INR does not exceed remaining daily loss limit
+        trade_risk_inr = proposed_value * (settings.STOP_LOSS_PCT / 100.0)
+        remaining_daily_risk = max_allowed_daily_loss - abs(today_realized_loss)
+        if trade_risk_inr > remaining_daily_risk:
+            return False, (
+                f"Trade downside risk at Stop Loss (₹{trade_risk_inr:.2f}) exceeds remaining daily loss allowance "
+                f"(₹{remaining_daily_risk:.2f}). Trade blocked for capital protection."
             )
 
         return True, "Pre-trade risk verification passed."

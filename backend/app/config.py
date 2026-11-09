@@ -60,7 +60,8 @@ class Settings(BaseSettings):
     ANGEL_ONE_TOTP_TOKEN: str = ""
 
     # Risk Management Defaults & Position Sizing
-    MAX_POSITION_SIZE_PCT: float = 20.0    # Capped at 20% of total portfolio value per trade
+    CAPITAL_DEPLOYMENT_MODE: str = "FULL_UTILIZATION"  # "FULL_UTILIZATION" | "CONSERVATIVE_SPLIT"
+    MAX_POSITION_SIZE_PCT: float = 95.0    # Deploys up to 95% of available cash into highest-conviction setup (5% cash buffer)
     MAX_RISK_PER_TRADE_PCT: float = 1.5    # Strict 1% - 2% rule: max 1.5% portfolio risk per trade
     RISK_REWARD_RATIO: float = 2.0         # 1:2 Golden Rule: Take Profit = Stop Loss * 2.0
     MIN_STOCK_PRICE_INR: float = 100.00    # Rejects penny & speculative stocks under ₹100
