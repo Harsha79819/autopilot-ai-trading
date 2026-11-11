@@ -1,0 +1,17 @@
+name: Render Keep-Alive Heartbeat
+
+on:
+  schedule:
+    # Run every 10 minutes during Indian market hours (03:30 to 10:30 UTC = 09:00 AM to 04:00 PM IST) Mon-Fri
+    - cron: '*/10 3-10 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Cloud Server
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -m 45 "https://autopilot-ai-trading.onrender.com/api/autopilot/status")
+          echo "Render Heartbeat Response:"
+          echo "$RESPONSE"
