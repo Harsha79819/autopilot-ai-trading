@@ -24,27 +24,27 @@ async def websocket_stream(
     if not token:
         token = websocket.query_params.get("token")
 
-    if not token:
-        logger.warning("WebSocket handshake rejected: No authentication token provided.")
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Authentication token required")
-        return
+    user = None
+    user_id = None
+    if token:
+        payload = decode_access_token(token)
+        if payload and payload.get("sub"):
+            try:
+                user_id = int(payload.get("sub"))
+                user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+            except (ValueError, TypeError):
+                pass
 
-    payload = decode_access_token(token)
-    if not payload or not payload.get("sub"):
-        logger.warning("WebSocket handshake rejected: Invalid or expired token.")
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token")
-        return
-
-    try:
-        user_id = int(payload.get("sub"))
-    except (ValueError, TypeError):
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Malformed token subject")
-        return
-
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
     if not user:
-        logger.warning(f"WebSocket handshake rejected: User {user_id} not found or inactive.")
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="User inactive")
+        from backend.app.config import settings
+        if settings.STRICT_PAPER_TRADING_ONLY:
+            user = db.query(User).filter(User.email == "demo@autopilot.ai", User.is_active == True).first()
+            if user:
+                user_id = user.id
+
+    if not user:
+        logger.warning("WebSocket handshake rejected: User authentication required.")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Authentication required")
         return
 
     await websocket.accept()

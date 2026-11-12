@@ -21,7 +21,7 @@ export class AutoPilotWebSocket {
   public connect() {
     this.isExplicitlyClosed = false;
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('autopilot_token') || localStorage.getItem('token');
       const wsUrl = token ? `${this.url}?token=${encodeURIComponent(token)}` : this.url;
       this.socket = new WebSocket(wsUrl);
 
