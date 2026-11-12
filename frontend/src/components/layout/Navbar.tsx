@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
           </div>
 
           {/* Desktop Navigation Tabs - Consolidated 5 Core Hubs */}
-          <nav className="hidden lg:flex items-center gap-1.5 bg-white/[0.02] p-1.5 rounded-xl border border-white/[0.06]">
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 bg-white/[0.02] p-1 xl:p-1.5 rounded-xl border border-white/[0.06] overflow-x-auto no-scrollbar max-w-[55vw]">
             {CORE_HUBS.map(({ id, labelTe, labelEn, icon: Icon, subIds }) => {
               const isActive = activeTab === id || subIds.includes(activeTab);
               return (
@@ -124,7 +124,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
                     setActiveTab(id);
                     setShowMoreMenu(false);
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                  className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                     isActive
                       ? 'bg-cyan-500/15 text-cyan-300 shadow-sm border border-cyan-500/30'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
@@ -138,7 +138,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
           </nav>
 
           {/* Right Controls: Account, Capital & Emergency Control */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Language Switcher: Telugu ⇄ English */}
             <button
               onClick={toggleLanguage}
@@ -168,7 +168,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTour }) => {
             >
               <User className="w-3.5 h-3.5" />
               <span className="hidden sm:inline font-bold">
-                {formatINR(portfolio?.cash_balance ?? 1604)}
+                {formatINR(portfolio?.cash_balance ?? 0)}
               </span>
             </button>
 

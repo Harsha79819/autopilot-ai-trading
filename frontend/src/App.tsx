@@ -61,12 +61,13 @@ const MainContent: React.FC = () => {
   // Pro Terminal Sub-Tabs: Instant tab switching & multi-tab split view
   type DashboardSubTab = 'ledger' | 'trading' | 'charts' | 'brain' | 'split' | 'all';
   const [dashboardTab, setDashboardTab] = useState<DashboardSubTab>(() => {
-    return (localStorage.getItem('autopilot_dashboard_pro_tab') as DashboardSubTab) || 'ledger';
+    return (localStorage.getItem('autopilot_dashboard_pro_tab') as DashboardSubTab) || 'all';
   });
   const [splitLeftTab, setSplitLeftTab] = useState<'ledger' | 'trading' | 'charts' | 'brain'>('ledger');
   const [splitRightTab, setSplitRightTab] = useState<'ledger' | 'trading' | 'charts' | 'brain'>('trading');
   const [isExpandedHero, setIsExpandedHero] = useState<boolean>(() => {
-    return localStorage.getItem('autopilot_expanded_hero') === 'true';
+    const cached = localStorage.getItem('autopilot_expanded_hero');
+    return cached !== null ? cached === 'true' : true;
   });
 
   const handleSetDashboardTab = (tab: DashboardSubTab) => {
@@ -121,12 +122,6 @@ const MainContent: React.FC = () => {
     // Event listener for opening the guided tour from anywhere in the app
     const handleOpenTour = () => setShowTourModal(true);
     window.addEventListener('open-product-tour', handleOpenTour);
-
-    // Auto-launch guided tour on first visit
-    const hasCompletedTour = localStorage.getItem('autopilot_tour_completed');
-    if (!hasCompletedTour) {
-      setShowTourModal(true);
-    }
 
     return () => window.removeEventListener('open-product-tour', handleOpenTour);
   }, []);
@@ -445,10 +440,10 @@ const MainContent: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                <div className="space-y-4 overflow-hidden">
+                <div className="space-y-4 min-w-0 overflow-x-auto">
                   {renderTabContent(splitLeftTab)}
                 </div>
-                <div className="space-y-4 overflow-hidden">
+                <div className="space-y-4 min-w-0 overflow-x-auto">
                   {renderTabContent(splitRightTab)}
                 </div>
               </div>
