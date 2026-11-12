@@ -823,6 +823,8 @@ class AutoPilotRunner:
                 # High-Conviction Capital Allocation Loop: Deploy available cash into top opportunity
                 executed_buys: List[str] = []
                 max_allowed_daily_loss = getattr(settings, "MAX_DAILY_LOSS_INR", 100.0)
+                max_risk_pct = getattr(settings, "MAX_RISK_PER_TRADE_PCT", 1.5)
+                capital_at_risk = metrics.total_portfolio_value * (max_risk_pct / 100.0)
 
                 for best_sym, best_quote, score in scored_candidates:
                     if len(positions) >= MAX_CONCURRENT_POSITIONS:
