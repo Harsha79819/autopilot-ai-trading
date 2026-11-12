@@ -93,8 +93,17 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_security(self):
-        is_prod = str(self.APP_ENV).lower() in ("production", "prod") or bool(os.getenv("RENDER"))
+        is_render = bool(os.getenv("RENDER"))
+        is_prod = str(self.APP_ENV).lower() in ("production", "prod")
         insecure_default = "autopilot-super-secret-jwt-key-minimum-32-chars-long"
+
+        # On cloud hosting platforms (like Render), automatically generate a cryptographically
+        # secure ephemeral key if none was explicitly configured in dashboard environment variables.
+        if is_render and (self.JWT_SECRET_KEY == insecure_default or len(self.JWT_SECRET_KEY) < 32):
+            import secrets
+            self.JWT_SECRET_KEY = secrets.token_urlsafe(48)
+            return self
+
         if is_prod:
             if self.JWT_SECRET_KEY == insecure_default or len(self.JWT_SECRET_KEY) < 32:
                 raise ValueError(
