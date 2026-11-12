@@ -1,5 +1,6 @@
 """AutoPilot AI Trading Platform - Main FastAPI Application."""
 import logging
+from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,6 +8,7 @@ from backend.app.config import settings
 from backend.app.database import init_db, SessionLocal
 from backend.app.models.user import User
 from backend.app.models.portfolio import Portfolio
+from backend.app.models.audit_log import AuditLog
 from backend.app.auth.security import get_password_hash
 from backend.app.services.auto_trader import autopilot_runner
 from backend.app.api import (
@@ -145,7 +147,7 @@ import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health_check():
     from backend.app.market_data import market_provider
     return {

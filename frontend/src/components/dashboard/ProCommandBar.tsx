@@ -51,11 +51,11 @@ export const ProCommandBar: React.FC<ProCommandBarProps> = ({
   const [deployFeedback, setDeployFeedback] = useState<string | null>(null);
 
   const metrics = portfolio?.metrics;
-  const totalVal = metrics?.total_portfolio_value ?? 5000;
-  const cashVal = metrics?.current_cash ?? 4416.49;
-  const investedVal = Math.max(0, totalVal - cashVal);
-  const netPnL = metrics?.net_pnl ?? 0;
-  const netReturnPct = metrics?.net_return_pct ?? 0;
+  const totalVal = metrics?.total_portfolio_value ?? portfolio?.total_portfolio_value ?? 0;
+  const cashVal = metrics?.current_cash ?? portfolio?.cash_balance ?? 0;
+  const investedVal = metrics?.holdings_value ?? portfolio?.holdings_value ?? Math.max(0, totalVal - cashVal);
+  const netPnL = metrics?.net_pnl ?? portfolio?.net_pnl ?? 0;
+  const netReturnPct = metrics?.net_return_pct ?? portfolio?.net_return_pct ?? 0;
   const isPositive = netPnL >= 0;
   const isRunning = aiStatus?.status !== 'PAUSED' && aiStatus?.status !== 'HALTED';
 
