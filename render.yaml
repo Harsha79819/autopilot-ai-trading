@@ -19,3 +19,5 @@ services:
         value: 5000.00
       - key: JWT_SECRET_KEY
         generateValue: true
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b

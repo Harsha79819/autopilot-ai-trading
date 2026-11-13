@@ -459,46 +459,46 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
           {mode === 'all' && (
             <>
               <button
+                onClick={() => sendMessage("3 stocks price entha? (TCS, INFY, ONGC live prices)")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-cyan-500/20"
+              >
+                📊 3 స్టాక్స్ ధరలు ఎంత?
+              </button>
+              <button
+                onClick={() => sendMessage("babu future lo capital 50000 or 1 lakh aithe em chesthav?")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-emerald-500/20"
+              >
+                💡 క్యాపిటల్ ₹50k అయితే?
+              </button>
+              <button
+                onClick={() => sendMessage("total loss lo undi ga sudden ga profit ela vachindi?")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-violet-500/20"
+              >
+                🎯 లాస్ నుండి ప్రాఫిట్ ఎలా వచ్చింది?
+              </button>
+              <button
+                onClick={() => sendMessage("today profit raledaa? eroju market lo em jarigindi?")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-amber-500/20"
+              >
+                ⚖️ ఈరోజు ప్రాఫిట్ రాలేదా?
+              </button>
+              <button
                 onClick={() => sendMessage("overal ga total lo profit entha loss entha (Overall Profit & Loss Breakup)")}
                 disabled={isLoading}
                 className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm"
               >
-                💰 ఓవరాల్ లాభం & నష్టం (Overall PnL)
-              </button>
-              <button
-                onClick={() => sendMessage("/trader-analyst ITC")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-semibold"
-              >
-                🔬 /trader-analyst ITC
-              </button>
-              <button
-                onClick={() => sendMessage("/trader-risk")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-semibold"
-              >
-                🛡️ /trader-risk ఆడిట్
-              </button>
-              <button
-                onClick={() => sendMessage("AI ప్రస్తుతం ఏం చేస్తోంది, నియంత్రణ వివరాలు చెప్పు (AI control & live thoughts)")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold"
-              >
-                🎮 AI కంట్రోల్ & లైవ్ బ్రెయిన్
-              </button>
-              <button
-                onClick={() => sendMessage("మొత్తం 38 స్టాక్స్‌ను ఇప్పుడే స్కాన్ చేయి (Scan all 38 stocks now)")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-semibold"
-              >
-                🔄 38 స్టాక్స్ స్కాన్
+                💰 ఓవరాల్ లాభం & నష్టం
               </button>
               <button
                 onClick={() => sendMessage("డైలీ కాంపౌండింగ్ ఫార్ములా (+1% Daily Compound) ప్రోగ్రెస్ మరియు టార్గెట్స్ చూపించు")}
                 disabled={isLoading}
                 className="px-2.5 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold"
               >
-                📈 కాంపౌండింగ్ ఫార్ములా (+1%)
+                📈 కాంపౌండింగ్ ఫార్ములా
               </button>
               <button
                 onClick={() => sendMessage("Day 1 నుండి నేటి వరకు రోజువారీ ఎక్సెల్ డేటా చూపించు (Show daily Excel ledger data)")}

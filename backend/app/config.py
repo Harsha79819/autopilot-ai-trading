@@ -1,6 +1,7 @@
 """AutoPilot AI Trading Platform - Application Configuration."""
 from typing import List, Union
 import os
+import base64
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -48,7 +49,9 @@ class Settings(BaseSettings):
     MARKET_HOURS_GATE_ENABLED: bool = True  # True enforces 09:15-15:30 IST Mon-Fri session gate
     STALE_DATA_THRESHOLD_SECONDS: int = 30
 
-    # AI Model Credentials (Optional Gemini 1.5/2.0 API key for conversational copilot)
+    # AI Model Credentials (Groq LPU ultra-fast inference & optional Gemini API key)
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     GEMINI_API_KEY: str = ""
 
     # Broker API Credentials (Optional, read-only for market data, strictly disabled for orders)
