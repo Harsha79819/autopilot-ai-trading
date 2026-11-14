@@ -19,10 +19,12 @@ import {
   PauseCircle,
   PlayCircle,
   Search,
-  BrainCircuit
+  BrainCircuit,
+  Crown
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useTrading } from '../../context/TradingContext';
+import { UpgradeToProModal } from '../modals/UpgradeToProModal';
 
 interface Message {
   id: string;
@@ -30,6 +32,7 @@ interface Message {
   content: string;
   timestamp: string;
   warnings?: { level: string; code: string; message: string }[];
+  follow_up_suggestions?: string[];
 }
 
 interface AiChatModalProps {
@@ -45,6 +48,8 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
   const { refreshPortfolio, refreshAutoPilot, setActiveTab } = useTrading();
   const [mode, setMode] = useState<CopilotMode>('all');
   const [isTelugu, setIsTelugu] = useState(true);
+  const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const [proFeatureTrigger, setProFeatureTrigger] = useState<string | undefined>(undefined);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -54,13 +59,18 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
 
 నేను **లైవ్ మార్కెట్ ట్రేడింగ్** (ఎగ్జిక్యూషన్, 1:2 RR, స్టాప్-లాస్, ఆటో-ఆర్డర్లు) మరియు **సంపూర్ణ వెల్త్ ప్లానింగ్** (SIP, EMI, రిటైర్మెంట్, స్ట్రెస్ టెస్టింగ్) రెండింటినీ ఏకీకృతంగా నిర్వహించగలను.
 
-మీరు నన్ను తెలుగులో లేదా English లో ఏమైనా అడగవచ్చు:
-- 📊 **ఈరోజు ఏం జరిగింది?** (Today's Trades & Profit Targets)
-- 💡 **₹5,000 SIP వెల్త్ ప్లాన్** (SIP compounding with inflation)
-- 📉 **మార్కెట్ -10% పడిపోతే?** (What-if Crash Stress Test)
-- ⚠️ **సిస్టమ్ డయాగ్నోస్టిక్స్** (Error & Safety Status)
-- 🏢 **INFY vs TCS పోలిక** (Fundamentals & Valuation)`,
-      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+మీరు నన్ను నేరుగా అడగవచ్చు:
+- 📊 **3 స్టాక్స్ పెరిగే/తగ్గే ఛాన్స్ ఎంత %?**
+- 💰 **ఈరోజు ఏయే స్టాక్స్ లాభం తెచ్చాయి?**
+- 💡 **క్యాపిటల్ ₹50k అయితే ఏం చేస్తావ్?**
+- 🎯 **లాస్ నుండి ప్రాఫిట్ ఎలా వచ్చింది?**`,
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      follow_up_suggestions: [
+        "📊 3 స్టాక్స్ పెరిగే/తగ్గే ఛాన్స్ ఎంత %?",
+        "💰 ఈరోజు ఏయే స్టాక్స్ లాభం తెచ్చాయి?",
+        "💡 క్యాపిటల్ ₹50k అయితే?",
+        "⭐ Pro: లైవ్ ప్రిడిక్షన్ సిగ్నల్స్"
+      ]
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -91,6 +101,15 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
 
   if (!isOpen) return null;
 
+  const handleChipClick = (chipText: string) => {
+    if (chipText.includes('Pro') || chipText.includes('⭐')) {
+      setProFeatureTrigger(chipText);
+      setIsProModalOpen(true);
+      return;
+    }
+    sendMessage(chipText);
+  };
+
   const sendMessage = async (textToSend?: string) => {
     const text = textToSend || inputText;
     if (!text.trim() || isLoading) return;
@@ -119,7 +138,8 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
         role: 'assistant',
         content: res.reply,
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        warnings: res.warnings
+        warnings: res.warnings,
+        follow_up_suggestions: res.follow_up_suggestions || []
       };
 
       setMessages((prev) => [...prev, aiMsg]);
@@ -190,6 +210,19 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Upgrade to Pro VIP Button */}
+            <button
+              onClick={() => {
+                setProFeatureTrigger(undefined);
+                setIsProModalOpen(true);
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-amber-200 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 border border-amber-500/40 shadow-sm shadow-amber-500/20 transition-all cursor-pointer"
+              title="Upgrade to Pro VIP (₹499/mo)"
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span className="hidden sm:inline">Pro VIP</span>
+            </button>
+
             {/* Voice Mode Button */}
             {onOpenVoice && (
               <button
@@ -430,6 +463,34 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
                         </button>
                       </div>
                     )}
+
+                    {/* Dynamic Context-Aware Follow-up Chips under AI message */}
+                    {isAi && m.follow_up_suggestions && m.follow_up_suggestions.length > 0 && (
+                      <div className="pt-3 mt-3 border-t border-white/10 space-y-1.5">
+                        <span className="text-[10px] text-amber-300/80 font-bold uppercase tracking-wider block">
+                          ⚡ సూచించిన తదుపరి ఆప్షన్లు (Suggestions):
+                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {m.follow_up_suggestions.map((chip, idx) => {
+                            const isPro = chip.includes('Pro') || chip.includes('⭐');
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => handleChipClick(chip)}
+                                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shadow-sm ${
+                                  isPro
+                                    ? 'bg-gradient-to-r from-amber-500/25 to-yellow-500/25 text-amber-300 border border-amber-500/40 hover:from-amber-500/40 hover:to-yellow-500/40 shadow-amber-500/10'
+                                    : 'bg-white/5 hover:bg-white/10 text-cyan-300 border border-cyan-500/30 hover:border-cyan-500/60'
+                                }`}
+                              >
+                                {chip}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <span className="text-[10px] text-muted-labels block px-1">
                     {m.timestamp}
@@ -459,11 +520,18 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
           {mode === 'all' && (
             <>
               <button
-                onClick={() => sendMessage("3 stocks price entha? (TCS, INFY, ONGC live prices)")}
+                onClick={() => sendMessage("market perigey chance entha undi and taggey chance entha undi aa 3 stocks ki? (Bullish vs Bearish Odds %)")}
                 disabled={isLoading}
                 className="px-2.5 py-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-cyan-500/20"
               >
-                📊 3 స్టాక్స్ ధరలు ఎంత?
+                📊 3 స్టాక్స్ పెరిగే/తగ్గే ఛాన్స్ ఎంత %?
+              </button>
+              <button
+                onClick={() => sendMessage("today em em stocks profit techhai and loss lo em unnai? (Stock-by-stock P&L breakdown)")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-emerald-500/20"
+              >
+                💰 ఏయే స్టాక్స్ ఎంత లాభం తెచ్చాయి?
               </button>
               <button
                 onClick={() => sendMessage("babu future lo capital 50000 or 1 lakh aithe em chesthav?")}
@@ -478,6 +546,13 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
                 className="px-2.5 py-1 rounded-full bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-violet-500/20"
               >
                 🎯 లాస్ నుండి ప్రాఫిట్ ఎలా వచ్చింది?
+              </button>
+              <button
+                onClick={() => handleChipClick("⭐ Pro: లైవ్ ప్రిడిక్షన్ సిగ్నల్స్")}
+                disabled={isLoading}
+                className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/25 to-yellow-500/25 hover:from-amber-500/35 hover:to-yellow-500/35 text-amber-300 border border-amber-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-extrabold shadow-sm shadow-amber-500/20"
+              >
+                ⭐ Pro: లైవ్ ప్రిడిక్షన్ సిగ్నల్స్
               </button>
               <button
                 onClick={() => sendMessage("today profit raledaa? eroju market lo em jarigindi?")}
@@ -684,6 +759,13 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
           </button>
         </div>
       </div>
+
+      {/* Upgrade to Pro VIP Modal */}
+      <UpgradeToProModal
+        isOpen={isProModalOpen}
+        onClose={() => setIsProModalOpen(false)}
+        featureName={proFeatureTrigger}
+      />
     </div>
   );
 };

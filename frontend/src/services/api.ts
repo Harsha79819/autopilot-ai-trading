@@ -283,6 +283,8 @@ export const api = {
     portfolio_snapshot: { cash_balance: number; total_portfolio_value: number; open_positions_count: number; status: string };
     is_market_open: boolean;
     timestamp: string;
+    follow_up_suggestions?: string[];
+    is_pro_required?: boolean;
   }> {
     const geminiKey = localStorage.getItem('gemini_api_key') || undefined;
     const res = await authFetch(`${BASE_URL}/ai/chat`, {
