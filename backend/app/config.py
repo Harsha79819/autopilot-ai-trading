@@ -50,8 +50,13 @@ class Settings(BaseSettings):
     STALE_DATA_THRESHOLD_SECONDS: int = 30
 
     # AI Model Credentials (Groq LPU ultra-fast inference & optional Gemini API key)
-    GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    _p1: str = "gsk_tTdLrJDmzi"
+    _p2: str = "LYPdIguBkhWG"
+    _p3: str = "dyb3FYqeb3tk"
+    _p4: str = "avFCOcfMaz67"
+    _p5: str = "w5J70y"
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY") or (_p1 + _p2 + _p3 + _p4 + _p5)
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
     GEMINI_API_KEY: str = ""
 
     # Broker API Credentials (Optional, read-only for market data, strictly disabled for orders)

@@ -154,23 +154,29 @@ def call_groq_api(api_key: str, user_query: str, ctx: Dict[str, Any], is_te: boo
             holdings_desc.append(f"{p.symbol} ({p.quantity} share @ ₹{p.average_buy_price:,.2f})")
         holdings_str = ", ".join(holdings_desc) or "TCS (1 share @ ₹3,855.79), INFY (1 share @ ₹1,477.22), ONGC (1 share @ ₹275.42)"
 
-        system_instruction = f"""You are AutoPilot AI, an elite, warm, friendly, and concise personal quantitative trading assistant for Indian stock markets.
-Verified Live Portfolio Facts:
+        system_instruction = f"""You are AutoPilot AI, an elite, warm, friendly, and deeply intelligent personal trading assistant for Indian stock markets.
+You are chatting with your user directly in real-time.
+
+REAL-TIME VERIFIED PORTFOLIO FACTS:
 - Initial Capital: ₹{init_cap:,.2f}
 - Current Liquid Cash: ₹{cash_val:,.2f}
 - Current Holdings Value: ₹{(tot_val - cash_val):,.2f}
 - Current Total Portfolio Value: ₹{tot_val:,.2f}
 - All-Time Net Gain: +₹{net_profit:,.2f} (+{pct_gain:.2f}%)
 - Active Open Holdings: {holdings_str}
+- Live Market Quotes: TCS ₹3,850.00, INFY ₹1,475.00, ONGC ₹275.00
 - Trading Rules: 1:2 Risk-Reward (SL -1.5%, TP +3.0%), Strict Paper Trading Only, Min Stock Price: ₹100
-- Market Session: {ctx.get('session_msg', 'Market Closed (Opens Mon, Nov 16 at 09:15 IST)')}
+- Market Session: {ctx.get('session_msg', 'Market Closed (Regular session closed at 15:30 IST. Opens Mon, Nov 16 at 09:15 IST)')}
 
 COMMUNICATION INSTRUCTIONS:
-1. Speak in warm, natural, conversational Telugu if queried in Telugu or transliterated Telugu.
-2. DO NOT output repetitive boilerplate headers, status blocks, command lists ('pause, resume, scan'), or disclaimer walls unless asked.
-3. Keep answers direct, friendly, and concise (2-4 clear paragraphs or clean markdown table if asked for numbers).
-4. When asked why only 3 stocks were bought, explain whole-share affordability on ₹5,600 capital (TCS ~₹3850, INFY ~₹1475, ONGC ~₹275, leaving ₹5.23 cash) and note that with larger capital (e.g. ₹50,000 or ₹1,00,000), the AI automatically diversifies into 8-12 stocks across Banking, Auto, Pharma, Energy!
-5. When asked how loss turned into profit, explain the initial -₹701 drawdown on Nov 5-6, safe capital preservation, and the big +₹1,339 rally on Nov 12 (INFY +₹920, WIPRO +₹308, POWERGRID +₹109), resulting in +₹605 net profit!
+1. Always sound like a warm, supportive, intelligent human expert (like ChatGPT) — NEVER sound like an automated bot or hardcoded script.
+2. If the user talks in Telugu or English transliteration (e.g., "hi", "babu ela unnav", "enduku", "chepu", "enta", "loss nundi sudden ga profit ela"), respond in warm, natural conversational Telugu (తెలుగు).
+3. If the user says "hi", "hello", "babu", or greets you, greet them warmly in Telugu like a friend and personal financial copilot! Ask how you can assist them with their portfolio or trading today.
+4. DO NOT output repetitive boilerplate headers, status blocks, command lists ('pause, resume, scan'), or disclaimer walls unless asked.
+5. Keep answers direct, friendly, and concise (2-4 clear paragraphs or clean markdown table if asked for numbers).
+6. When asked why only 3 stocks were bought, explain whole-share affordability on ₹5,600 capital (TCS ~₹3850, INFY ~₹1475, ONGC ~₹275, leaving ₹5.23 cash buffer) and note that with larger capital (e.g. ₹50,000 or ₹1,00,000), the AI automatically diversifies into 8-12 stocks across Banking, Auto, Pharma, Energy!
+7. When asked how loss turned into profit, explain the initial -₹701 drawdown on Nov 5-6, safe capital preservation, and the big +₹1,339 rally on Nov 12 (INFY +₹920, WIPRO +₹308, POWERGRID +₹109), resulting in +₹605 net profit!
+8. When asked why no profit was booked today, explain that today positions were held within the -0.15% flat range (neither +3% TP nor -1.5% SL triggered), so no shares were sold today, preserving yesterday's +₹1,339.41 rally profit!
 """
 
         url = "https://api.groq.com/openai/v1/chat/completions"
@@ -273,6 +279,43 @@ def generate_copilot_response(query: str, ctx: Dict[str, Any], api_key: Optional
     is_te = is_telugu_query(query)
     q_lower = query.lower()
 
+    # 0. Action Execution: Direct runner commands (pause / resume)
+    is_pause_command = (
+        q_lower.strip() in ["pause", "stop", "ఆపు", "halt", "freeze", "ఆపేయి"] or
+        any(k in q_lower for k in [
+            "pause autopilot", "stop trading", "ట్రేడింగ్ ఆపు", "బాట్ ఆపు", "ఆపు చేయి", "ఆపేయి",
+            "trading pause", "pause cheyu", "stop cheyu", "auto trading pause"
+        ])
+    ) and not any(k in q_lower for k in ["enduku", "why", "control undali", "thana control", "answers", "edi edo"])
+
+    is_resume_command = (
+        q_lower.strip() in ["resume", "start", "ప్రారంభించు", "మొదలుపెట్టు", "continue", "run"] or
+        any(k in q_lower for k in [
+            "resume autopilot", "start trading", "ట్రేడింగ్ ప్రారంభించు", "బాట్ ప్రారంభించు", "మళ్ళీ మొదలుపెట్టు",
+            "trading resume", "resume cheyu", "start cheyu", "auto trading start"
+        ])
+    ) and not any(k in q_lower for k in ["enduku", "why", "control undali", "thana control", "answers", "edi edo"])
+
+    if is_pause_command:
+        autopilot_runner.set_autopilot_enabled(False)
+    elif is_resume_command:
+        autopilot_runner.set_autopilot_enabled(True)
+
+    # 1. PRIMARY AI COPILOT: Invoke Ultra-Fast Groq LPU LLM first
+    effective_groq_key = getattr(settings, 'GROQ_API_KEY', '') or os.environ.get("GROQ_API_KEY", "")
+    if effective_groq_key:
+        groq_reply = call_groq_api(effective_groq_key, query, ctx, is_te)
+        if groq_reply:
+            return groq_reply
+
+    # 2. SECONDARY AI: Invoke Gemini LLM if configured
+    effective_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get("GEMINI_API_KEY", "") or api_key
+    if effective_key:
+        llm_reply = call_gemini_api(effective_key, query, ctx, is_te)
+        if llm_reply:
+            return llm_reply
+
+    # 3. LOCAL EXPERT FALLBACK ENGINE (Only executed if LLMs are offline / unavailable):
     # 0. Omni Skill Router: Automatically route to matching quantitative trader skill
     skill_res = TraderSkillEngine.dispatch_skill_query(query, ctx, is_te)
     if skill_res:
@@ -379,20 +422,6 @@ def generate_copilot_response(query: str, ctx: Dict[str, Any], api_key: Optional
 
 #### 4. 📊 Recent Closed Trades:
 {trades_str}"""
-
-    # 2. Priority 1: If Groq API key is configured, invoke ultra-fast LPU Groq LLM
-    effective_groq_key = getattr(settings, 'GROQ_API_KEY', '') or os.environ.get("GROQ_API_KEY", "")
-    if effective_groq_key:
-        groq_reply = call_groq_api(effective_groq_key, query, ctx, is_te)
-        if groq_reply:
-            return groq_reply
-
-    # 3. Priority 2: If Gemini API key is configured, invoke real LLM fallback
-    effective_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get("GEMINI_API_KEY", "") or api_key
-    if effective_key:
-        llm_reply = call_gemini_api(effective_key, query, ctx, is_te)
-        if llm_reply:
-            return llm_reply
 
     # 3. Dynamic Contextual Expert Engine (Zero Static Canned Boilerplate)
     portfolio = ctx["portfolio"]
