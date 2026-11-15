@@ -47,7 +47,7 @@ type CopilotMode = 'all' | 'market' | 'wealth';
 export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpenVoice, onOpenTour }) => {
   const { refreshPortfolio, refreshAutoPilot, setActiveTab } = useTrading();
   const [mode, setMode] = useState<CopilotMode>('all');
-  const [isTelugu, setIsTelugu] = useState(true);
+  const [isTelugu, setIsTelugu] = useState(false);
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [proFeatureTrigger, setProFeatureTrigger] = useState<string | undefined>(undefined);
 
@@ -55,21 +55,21 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
     {
       id: 'welcome',
       role: 'assistant',
-      content: `నమస్కారం! నేను మీ **AutoPilot Unified AI Financial & Market Copilot** ని. 
+      content: `Hello! I am your **AutoPilot Quantitative Market Copilot & Financial AI**.
 
-నేను **లైవ్ మార్కెట్ ట్రేడింగ్** (ఎగ్జిక్యూషన్, 1:2 RR, స్టాప్-లాస్, ఆటో-ఆర్డర్లు) మరియు **సంపూర్ణ వెల్త్ ప్లానింగ్** (SIP, EMI, రిటైర్మెంట్, స్ట్రెస్ టెస్టింగ్) రెండింటినీ ఏకీకృతంగా నిర్వహించగలను.
+I manage **real-time algorithmic trading** (1:2 Risk-Reward, stop-loss guards, auto-execution) and **wealth planning** (SIP, risk models, portfolio stress testing).
 
-మీరు నన్ను నేరుగా అడగవచ్చు:
-- 📊 **3 స్టాక్స్ పెరిగే/తగ్గే ఛాన్స్ ఎంత %?**
-- 💰 **ఈరోజు ఏయే స్టాక్స్ లాభం తెచ్చాయి?**
-- 💡 **క్యాపిటల్ ₹50k అయితే ఏం చేస్తావ్?**
-- 🎯 **లాస్ నుండి ప్రాఫిట్ ఎలా వచ్చింది?**`,
+How may I assist your trading decisions today?
+- 📊 **What are the Bullish vs. Bearish odds for our active holdings?**
+- 💰 **What is our stock-by-stock P&L breakdown?**
+- 💡 **How will the strategy scale with ₹50,000 capital?**
+- 🎯 **How was the initial drawdown recovered into net profit?**`,
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
       follow_up_suggestions: [
-        "📊 3 స్టాక్స్ పెరిగే/తగ్గే ఛాన్స్ ఎంత %?",
-        "💰 ఈరోజు ఏయే స్టాక్స్ లాభం తెచ్చాయి?",
-        "💡 క్యాపిటల్ ₹50k అయితే?",
-        "⭐ Pro: లైవ్ ప్రిడిక్షన్ సిగ్నల్స్"
+        "📊 3 Stocks Bullish/Bearish Odds %",
+        "💰 Stock-by-Stock P&L Breakdown",
+        "💡 Scale to ₹50k Capital Plan",
+        "⭐ Pro: Live Prediction Signals"
       ]
     }
   ]);
@@ -131,7 +131,7 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
         content: m.content
       }));
 
-      const res = await api.chatWithAi(chatHistory);
+      const res = await api.chatWithAi(chatHistory, isTelugu ? 'te' : 'en');
 
       const aiMsg: Message = {
         id: `ai-${Date.now()}`,
@@ -519,55 +519,111 @@ export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpe
         <div className="px-4 py-2 border-t border-white/5 flex items-center gap-1.5 overflow-x-auto text-[11px] bg-slate-950/40 scrollbar-none">
           {mode === 'all' && (
             <>
-              <button
-                onClick={() => sendMessage("market perigey chance entha undi and taggey chance entha undi aa 3 stocks ki? (Bullish vs Bearish Odds %)")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-cyan-500/20"
-              >
-                📊 3 స్టాక్స్ పెరిగే/తగ్గే ఛాన్స్ ఎంత %?
-              </button>
-              <button
-                onClick={() => sendMessage("today em em stocks profit techhai and loss lo em unnai? (Stock-by-stock P&L breakdown)")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-emerald-500/20"
-              >
-                💰 ఏయే స్టాక్స్ ఎంత లాభం తెచ్చాయి?
-              </button>
-              <button
-                onClick={() => sendMessage("babu future lo capital 50000 or 1 lakh aithe em chesthav?")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-emerald-500/20"
-              >
-                💡 క్యాపిటల్ ₹50k అయితే?
-              </button>
-              <button
-                onClick={() => sendMessage("total loss lo undi ga sudden ga profit ela vachindi?")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-violet-500/20"
-              >
-                🎯 లాస్ నుండి ప్రాఫిట్ ఎలా వచ్చింది?
-              </button>
-              <button
-                onClick={() => handleChipClick("⭐ Pro: లైవ్ ప్రిడిక్షన్ సిగ్నల్స్")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/25 to-yellow-500/25 hover:from-amber-500/35 hover:to-yellow-500/35 text-amber-300 border border-amber-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-extrabold shadow-sm shadow-amber-500/20"
-              >
-                ⭐ Pro: లైవ్ ప్రిడిక్షన్ సిగ్నల్స్
-              </button>
-              <button
-                onClick={() => sendMessage("today profit raledaa? eroju market lo em jarigindi?")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-amber-500/20"
-              >
-                ⚖️ ఈరోజు ప్రాఫిట్ రాలేదా?
-              </button>
-              <button
-                onClick={() => sendMessage("overal ga total lo profit entha loss entha (Overall Profit & Loss Breakup)")}
-                disabled={isLoading}
-                className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm"
-              >
-                💰 ఓవరాల్ లాభం & నష్టం
-              </button>
+              {isTelugu ? (
+                <>
+                  <button
+                    onClick={() => sendMessage("market perigey chance entha undi and taggey chance entha undi aa 3 stocks ki? (Bullish vs Bearish Odds %)")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-cyan-500/20"
+                  >
+                    📊 3 స్టాక్స్ పెరిగే/తగ్గే ఛాన్స్ ఎంత %?
+                  </button>
+                  <button
+                    onClick={() => sendMessage("today em em stocks profit techhai and loss lo em unnai? (Stock-by-stock P&L breakdown)")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-emerald-500/20"
+                  >
+                    💰 ఏయే స్టాక్స్ ఎంత లాభం తెచ్చాయి?
+                  </button>
+                  <button
+                    onClick={() => sendMessage("babu future lo capital 50000 or 1 lakh aithe em chesthav?")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-emerald-500/20"
+                  >
+                    💡 క్యాపిటల్ ₹50k అయితే?
+                  </button>
+                  <button
+                    onClick={() => sendMessage("total loss lo undi ga sudden ga profit ela vachindi?")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-violet-500/20"
+                  >
+                    🎯 లాస్ నుండి ప్రాఫిట్ ఎలా వచ్చింది?
+                  </button>
+                  <button
+                    onClick={() => handleChipClick("⭐ Pro: లైవ్ ప్రిడిక్షన్ సిగ్నల్స్")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/25 to-yellow-500/25 hover:from-amber-500/35 hover:to-yellow-500/35 text-amber-300 border border-amber-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-extrabold shadow-sm shadow-amber-500/20"
+                  >
+                    ⭐ Pro: లైవ్ ప్రిడిక్షన్ సిగ్నల్స్
+                  </button>
+                  <button
+                    onClick={() => sendMessage("today profit raledaa? eroju market lo em jarigindi?")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-amber-500/20"
+                  >
+                    ⚖️ ఈరోజు ప్రాఫిట్ రాలేదా?
+                  </button>
+                  <button
+                    onClick={() => sendMessage("overal ga total lo profit entha loss entha (Overall Profit & Loss Breakup)")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm"
+                  >
+                    💰 ఓవరాల్ లాభం & నష్టం
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => sendMessage("What are the Bullish vs Bearish odds and probability % for our 3 stocks?")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-cyan-500/20"
+                  >
+                    📊 3 Stocks Bullish/Bearish Odds %
+                  </button>
+                  <button
+                    onClick={() => sendMessage("What is our stock-by-stock profit and loss breakdown?")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-emerald-500/20"
+                  >
+                    💰 Stock-by-Stock P&L Breakdown
+                  </button>
+                  <button
+                    onClick={() => sendMessage("How will the portfolio diversify if capital increases to ₹50,000 or ₹1,00,000?")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-emerald-500/20"
+                  >
+                    💡 Scale to ₹50k Capital Plan
+                  </button>
+                  <button
+                    onClick={() => sendMessage("How did the initial drawdown turn into +₹605 net profit?")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-violet-500/20"
+                  >
+                    🎯 Loss to Profit Recovery Story
+                  </button>
+                  <button
+                    onClick={() => handleChipClick("⭐ Pro: Live Trading Signals")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/25 to-yellow-500/25 hover:from-amber-500/35 hover:to-yellow-500/35 text-amber-300 border border-amber-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-extrabold shadow-sm shadow-amber-500/20"
+                  >
+                    ⭐ Pro: Live Trading Signals
+                  </button>
+                  <button
+                    onClick={() => sendMessage("Why was no profit booked today and what was today's market action?")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm shadow-amber-500/20"
+                  >
+                    ⚖️ Why was no profit booked today?
+                  </button>
+                  <button
+                    onClick={() => sendMessage("Show overall portfolio profit, liquid cash, and verified metrics.")}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex-shrink-0 transition-all cursor-pointer whitespace-nowrap font-bold shadow-sm"
+                  >
+                    💰 Overall Portfolio Reconciliation
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => sendMessage("డైలీ కాంపౌండింగ్ ఫార్ములా (+1% Daily Compound) ప్రోగ్రెస్ మరియు టార్గెట్స్ చూపించు")}
                 disabled={isLoading}

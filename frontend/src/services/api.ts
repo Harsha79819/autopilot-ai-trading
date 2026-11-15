@@ -277,7 +277,7 @@ export const api = {
   },
 
   // AI Market Copilot Chat
-  async chatWithAi(messages: { role: string; content: string }[]): Promise<{
+  async chatWithAi(messages: { role: string; content: string }[], language = 'en'): Promise<{
     reply: string;
     warnings: { level: string; code: string; message: string }[];
     portfolio_snapshot: { cash_balance: number; total_portfolio_value: number; open_positions_count: number; status: string };
@@ -289,7 +289,7 @@ export const api = {
     const geminiKey = localStorage.getItem('gemini_api_key') || undefined;
     const res = await authFetch(`${BASE_URL}/ai/chat`, {
       method: 'POST',
-      body: JSON.stringify({ messages, include_context: true, gemini_api_key: geminiKey }),
+      body: JSON.stringify({ messages, include_context: true, gemini_api_key: geminiKey, language }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

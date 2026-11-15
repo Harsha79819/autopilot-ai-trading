@@ -48,6 +48,7 @@ class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     include_context: bool = True
     gemini_api_key: Optional[str] = None
+    language: Optional[str] = "en"
 
 
 class ChatResponse(BaseModel):
@@ -66,16 +67,16 @@ def is_telugu_query(text: str) -> bool:
         return True
     
     telugu_tokens = [
-        "ela", "undi", "chepu", "chey", "jarigindi", "chesindo", "chesindi", "em", "naku", 
-        "unna", "unnaya", "ivvu", "baga", "anna", "bro", "kavali", "telusukodaniki",
-        "pettu", "konali", "amali", "ippudu", "eroju", "today", "margin", "entha", "enta",
+        "ela", "undi", "chepu", "chey", "jarigindi", "chesindo", "chesindi", "naku", 
+        "unna", "unnaya", "ivvu", "baga", "kavali", "telusukodaniki",
+        "pettu", "konali", "amali", "ippudu", "eroju", "entha", "enta",
         "enduku", "vachhindi", "vachindi", "tappu", "okasari", "cheppu", "ardam",
         "babu", "arey", "mana", "chudu", "chupinchu", "kada", "kadha", "adigithey", "adigina",
-        "manesindi", "ledu", "lo", "aa", "ga", "sudden", "raledu", "raledaa"
+        "manesindi", "ledu", "raledu", "raledaa", "perigey", "taggey"
     ]
     words = re.findall(r'\b[a-z]+\b', text.lower())
     match_count = sum(1 for w in words if w in telugu_tokens)
-    return match_count >= 1
+    return match_count >= 2
 
 
 def build_system_context(db: Session, current_user: User) -> Dict[str, Any]:
@@ -139,7 +140,13 @@ def build_system_context(db: Session, current_user: User) -> Dict[str, Any]:
     }
 
 
-def call_groq_api(api_key: str, user_query: str, ctx: Dict[str, Any], is_te: bool) -> Optional[str]:
+def call_groq_api(
+    api_key: str, 
+    user_query: str, 
+    ctx: Dict[str, Any], 
+    is_te: bool, 
+    messages: Optional[List[Any]] = None
+) -> Optional[str]:
     """Call Groq LPU API for ultra-fast (sub-second) conversational response with live portfolio context."""
     try:
         portfolio = ctx.get("portfolio")
@@ -156,8 +163,24 @@ def call_groq_api(api_key: str, user_query: str, ctx: Dict[str, Any], is_te: boo
             holdings_desc.append(f"{p.symbol} ({p.quantity} share @ ₹{p.average_buy_price:,.2f})")
         holdings_str = ", ".join(holdings_desc) or "TCS (1 share @ ₹3,855.79), INFY (1 share @ ₹1,477.22), ONGC (1 share @ ₹275.42)"
 
-        system_instruction = f"""You are AutoPilot AI, an elite, warm, friendly, and deeply intelligent personal trading assistant for Indian stock markets.
-You are chatting with your user directly in real-time.
+        if is_te:
+            lang_instruction = """
+LANGUAGE & TONE:
+- Respond in warm, natural, intelligent, and fluent conversational Telugu (తెలుగు).
+- Sound like an expert personal financial adviser and friend (like ChatGPT).
+- Answer the user's specific prompt directly. Do NOT repeat boilerplate or greetings if already in an ongoing conversation.
+"""
+        else:
+            lang_instruction = """
+LANGUAGE & TONE:
+- Default strictly to Crisp, Sophisticated, and Professional English (Wall Street / Quantitative Institutional Trading standard).
+- Speak with confidence, precision, clarity, and institutional authority.
+- Answer the user's specific prompt directly.
+- For general questions (market concepts, macroeconomic trends, general greetings, trading philosophy, platform questions): Answer conversationally and intellectually! DO NOT mechanically dump the portfolio status or SL/TP table unless the user specifically asks for it.
+- NEVER repeat identical answers across turns. Pay close attention to recent messages in the conversation and build upon the discussion naturally.
+"""
+
+        system_instruction = f"""You are AutoPilot AI, an elite institutional-grade quantitative trading copilot and market intelligence engine.
 
 REAL-TIME VERIFIED PORTFOLIO FACTS:
 - Initial Capital: ₹{init_cap:,.2f}
@@ -184,34 +207,29 @@ HISTORICAL REALIZED PROFITS LEDGER:
   * Today's Action: No stocks sold today because prices stayed in safe holding zone (-0.15%), holding securely to hit +3% TP without triggering -1.5% SL!
 
 MARKET DIRECTION & PROBABILITY ODDS (BULLISH VS BEARISH CHANCE %):
-When the user asks whether the market/stocks will rise or drop (e.g., "perigey chance entha undi", "taggey chance entha undi", "market perugutunda", "prediction"):
-DO NOT give generic textbook definitions! Provide explicit, quantified Bullish vs Bearish probability percentages (%) and reasons:
-1. **INFY (CMP ₹1,475.00)**: **65% Bullish (పెరిగే అవకాశం) vs 35% Bearish (డ్రాప్ రిస్క్)**
-   - Reason: Strong IT demand, RSI ~56 above neutral, pre-Q3 deal pipeline.
-   - Upside Target (+3% TP): ₹1,519.25 | Downside Guard (-1.5% SL): ₹1,452.88.
-2. **TCS (CMP ₹3,850.00)**: **60% Bullish vs 40% Bearish / Rangebound**
-   - Reason: Blue-chip IT heavyweight resilience, institutional buying support above ₹3,800.
-   - Upside Target (+3% TP): ₹3,965.50 | Downside Guard (-1.5% SL): ₹3,792.75.
-3. **ONGC (CMP ₹275.00)**: **48% Neutral / Bullish vs 52% Bearish / Consolidation**
-   - Reason: International Brent crude fluctuations keeping energy stocks in a narrow consolidation band.
-   - Upside Target (+3% TP): ₹283.25 | Downside Guard (-1.5% SL): ₹270.88.
+When the user asks whether the market/stocks will rise or drop:
+Provide explicit, quantified Bullish vs Bearish probability percentages (%) and reasons:
+1. **INFY (CMP ₹1,475.00)**: **65% Bullish vs 35% Bearish** (IT sector momentum, RSI ~56 above neutral, pre-Q3 deal pipeline; TP: ₹1,519.25, SL: ₹1,452.88).
+2. **TCS (CMP ₹3,850.00)**: **60% Bullish vs 40% Bearish / Rangebound** (Blue-chip IT resilience, institutional buying support above ₹3,800; TP: ₹3,965.50, SL: ₹3,792.75).
+3. **ONGC (CMP ₹275.00)**: **48% Neutral / Bullish vs 52% Bearish / Consolidation** (Brent crude fluctuations; TP: ₹283.25, SL: ₹270.88).
 4. **Overall Portfolio Sentiment**: **62% Bullish Momentum for Monday opening**, insulated by cash buffer (₹5.23) and hard stop-losses.
 
 STOCK PROFIT / LOSS QUESTIONS:
-When asked "today em em stocks profit techhai" or about profits and losses:
+When asked about profit and loss details or today's stocks:
 - Clearly list the Realized Profits booked (+₹1,339.41 from INFY +₹920, WIPRO +₹308, POWERGRID +₹109).
 - State clearly that today the 3 open stocks (TCS, INFY, ONGC) moved within -0.15% (holding state) so past gains are protected.
 - Emphasize total net portfolio gain stands strong at +₹605.23 (+12.10%).
 
-COMMUNICATION INSTRUCTIONS:
-1. Always sound like a warm, supportive, intelligent human expert (like ChatGPT) — NEVER sound like an automated bot or hardcoded script.
-2. If the user talks in Telugu or English transliteration (e.g., "hi", "babu ela unnav", "enduku", "chepu", "enta", "loss nundi sudden ga profit ela"), respond in warm, natural conversational Telugu (తెలుగు).
-3. If the user says "hi", "hello", "babu", or greets you, greet them warmly in Telugu like a friend and personal financial copilot! Ask how you can assist them with their portfolio or trading today.
-4. DO NOT output repetitive boilerplate headers, status blocks, command lists ('pause, resume, scan'), or disclaimer walls unless asked.
-5. Keep answers direct, friendly, and structured (clear paragraphs or markdown tables).
-6. When asked why only 3 stocks were bought, explain whole-share affordability on ₹5,600 capital (TCS ~₹3850, INFY ~₹1475, ONGC ~₹275, leaving ₹5.23 cash buffer) and note that with larger capital (e.g. ₹50,000 or ₹1,00,000), the AI automatically diversifies into 8-12 stocks across Banking, Auto, Pharma, Energy!
-7. When asked how loss turned into profit, explain the initial -₹701 drawdown on Nov 5-6, safe capital preservation, and the big +₹1,339 rally on Nov 12 (INFY +₹920, WIPRO +₹308, POWERGRID +₹109), resulting in +₹605 net profit!
-8. When asked why no profit was booked today, explain that today positions were held within the -0.15% flat range (neither +3% TP nor -1.5% SL triggered), so no shares were sold today, preserving yesterday's +₹1,339.41 rally profit!
+{lang_instruction}
+
+CONVERSATION INSTRUCTIONS:
+1. Always sound like an elite, highly intelligent human expert (like ChatGPT) — NEVER sound like an automated bot or hardcoded script.
+2. DO NOT output repetitive boilerplate headers, status blocks, command lists ('pause, resume, scan'), or disclaimer walls unless asked.
+3. Keep answers direct, friendly, and structured (clear paragraphs or markdown tables).
+4. For general or open-ended questions (greetings, general concepts, opinions): Answer fluidly, conversationally, and uniquely. DO NOT force the 3-stock status unless asked!
+5. When asked why only 3 stocks were bought, explain whole-share affordability on ₹5,600 capital (TCS ~₹3850, INFY ~₹1475, ONGC ~₹275, leaving ₹5.23 cash buffer) and note that with larger capital (e.g. ₹50,000 or ₹1,00,000), the AI automatically diversifies into 8-12 stocks across Banking, Auto, Pharma, Energy!
+6. When asked how loss turned into profit, explain the initial -₹701 drawdown on Nov 5-6, safe capital preservation, and the big +₹1,339 rally on Nov 12 (INFY +₹920, WIPRO +₹308, POWERGRID +₹109), resulting in +₹605 net profit!
+7. When asked why no profit was booked today, explain that today positions were held within the -0.15% flat range (neither +3% TP nor -1.5% SL triggered), so no shares were sold today, preserving yesterday's +₹1,339.41 rally profit!
 """
 
         url = "https://api.groq.com/openai/v1/chat/completions"
@@ -221,13 +239,26 @@ COMMUNICATION INSTRUCTIONS:
             "User-Agent": "AutoPilot-Trading/2.0"
         }
         model = getattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b')
+
+        conversation_payload = [
+            {"role": "system", "content": system_instruction.strip()}
+        ]
+        
+        # Pass conversation history so Groq has full conversational context
+        if messages:
+            for m in messages[-8:-1]:
+                m_role = getattr(m, 'role', None) or (m.get('role') if isinstance(m, dict) else 'user')
+                m_content = getattr(m, 'content', None) or (m.get('content') if isinstance(m, dict) else '')
+                if m_content:
+                    role_str = "assistant" if m_role == "assistant" else "user"
+                    conversation_payload.append({"role": role_str, "content": m_content})
+        
+        conversation_payload.append({"role": "user", "content": user_query})
+
         payload = {
             "model": model,
-            "messages": [
-                {"role": "system", "content": system_instruction.strip()},
-                {"role": "user", "content": user_query}
-            ],
-            "temperature": 0.3,
+            "messages": conversation_payload,
+            "temperature": 0.65,
             "max_tokens": 1800
         }
 
@@ -309,9 +340,16 @@ Instructions:
     return None
 
 
-def generate_copilot_response(query: str, ctx: Dict[str, Any], api_key: Optional[str] = None) -> str:
+def generate_copilot_response(
+    query: str, 
+    ctx: Dict[str, Any], 
+    api_key: Optional[str] = None, 
+    is_te: Optional[bool] = None, 
+    messages: Optional[List[Any]] = None
+) -> str:
     """Generate high-precision financial quantitative response in Telugu or English."""
-    is_te = is_telugu_query(query)
+    if is_te is None:
+        is_te = is_telugu_query(query)
     q_lower = query.lower()
 
     # 0. Action Execution: Direct runner commands (pause / resume)
@@ -339,7 +377,7 @@ def generate_copilot_response(query: str, ctx: Dict[str, Any], api_key: Optional
     # 1. PRIMARY AI COPILOT: Invoke Ultra-Fast Groq LPU LLM first
     effective_groq_key = getattr(settings, 'GROQ_API_KEY', '') or os.environ.get("GROQ_API_KEY", "")
     if effective_groq_key:
-        groq_reply = call_groq_api(effective_groq_key, query, ctx, is_te)
+        groq_reply = call_groq_api(effective_groq_key, query, ctx, is_te, messages=messages)
         if groq_reply:
             return groq_reply
 
@@ -1335,7 +1373,24 @@ def copilot_chat(
 
     latest_msg = req.messages[-1].content
     ctx = build_system_context(db, current_user)
-    reply_text = generate_copilot_response(latest_msg, ctx, req.gemini_api_key)
+
+    # Language determination:
+    # Default is Professional English ('en') unless explicitly requested as 'te' or actual Telugu Unicode script is present.
+    is_te = False
+    if req.language == "te" or bool(re.search(r'[\u0C00-\u0C7F]', latest_msg)):
+        is_te = True
+    elif req.language == "en":
+        is_te = False
+    else:
+        is_te = is_telugu_query(latest_msg)
+
+    reply_text = generate_copilot_response(
+        latest_msg, 
+        ctx, 
+        req.gemini_api_key, 
+        is_te=is_te, 
+        messages=req.messages
+    )
 
     portfolio = ctx["portfolio"]
     metrics = ctx["metrics"]
@@ -1347,7 +1402,6 @@ def copilot_chat(
         "status": ctx["autopilot_status"].get("status", "SCANNING")
     }
 
-    is_te = is_telugu_query(latest_msg)
     follow_ups = generate_follow_up_suggestions(latest_msg, is_te)
 
     return ChatResponse(
