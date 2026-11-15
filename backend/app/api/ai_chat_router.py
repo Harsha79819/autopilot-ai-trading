@@ -259,7 +259,7 @@ CONVERSATION INSTRUCTIONS:
             "model": model,
             "messages": conversation_payload,
             "temperature": 0.65,
-            "max_tokens": 1800
+            "max_tokens": 650
         }
 
         with httpx.Client(timeout=8.0) as client:
@@ -763,28 +763,9 @@ def generate_copilot_response(
     # --- HANDLER -0.1: Conversational / Unresponsive Query ---
     if is_conversational_or_unresponsive_query:
         if is_te:
-            parts.append("### 🤖 నమస్కారం! నేను మీ AutoPilot AI ట్రేడింగ్ అసిస్టెంట్‌ని")
-            parts.append("నన్ను ఏదైనా నేరుగా అడగండి! మీ పోర్ట్‌ఫోలియో మరియు మార్కెట్ డేటాతో నేను సిద్ధంగా ఉన్నాను.")
-            parts.append("")
-            parts.append("మీరు నన్ను సాధారణంగా అడిగే ప్రశ్నలు:")
-            parts.append("1. 📊 **\"3 స్టాక్స్ ధరలు ఎంత?\"** (TCS, INFY, ONGC ప్రస్తుత మార్కెట్ రేట్లు చూడటానికి)")
-            parts.append("2. 🎯 **\"సడన్‌గా ప్రాఫిట్ ఎలా వచ్చింది?\"** (లాస్ నుండి +₹605 ప్రాఫిట్‌గా ఎలా మారిందో చూడటానికి)")
-            parts.append("3. ⚖️ **\"ఈరోజు ప్రాఫిట్ రాలేదా?\"** (నేటి ట్రేడింగ్ హోల్డింగ్ స్థితి తెలుసుకోవడానికి)")
-            parts.append("4. 💰 **\"ఓవరాల్ లాభం ఎంత?\"** (మొత్తం ఇన్వెస్ట్‌మెంట్ & నికర లాభాలు)")
-            parts.append("5. ⏸️ **\"ఆపు\"** లేదా ▶️ **\"ప్రారంభించు\"** (ఆటోపైలట్ బాట్‌ను కంట్రోల్ చేయడానికి)")
-            parts.append("")
-            parts.append(f"ప్రస్తుత పోర్ట్‌ఫోలియో స్థితి: **మొత్తం ఈక్విటీ: ₹{tot_val:,.2f}** | **క్యాష్: ₹{cash_val:,.2f}** | **హోల్డింగ్స్: 3 స్టాక్స్ (TCS, INFY, ONGC)**.")
+            parts.append("నమస్కారం! నేను మీ AutoPilot AI కాపిలట్‌ని. మీ ప్రశ్నలను లైవ్ మార్కెట్ డేటా మరియు క్వాంట్ మోడల్స్‌తో విశ్లేషించి సహాయం చేయడానికి నేను సిద్ధంగా ఉన్నాను. నన్ను ఏదైనా అడగవచ్చు!")
         else:
-            parts.append("### 🤖 AutoPilot AI Copilot at your service!")
-            parts.append("I am actively listening and ready to assist you with live portfolio data.")
-            parts.append("")
-            parts.append("Popular queries you can ask:")
-            parts.append("1. 📊 *\"What are the current prices of the 3 stocks?\"*")
-            parts.append("2. 🎯 *\"How did loss turn into profit?\"*")
-            parts.append("3. ⚖️ *\"Why was there no profit booked today?\"*")
-            parts.append("4. 💰 *\"What is my overall total profit?\"*")
-            parts.append("5. ⏸️ *\"pause\"* or ▶️ *\"resume\"* to control automated trading")
-            parts.append(f"\nCurrent Status: Total Equity ₹{tot_val:,.2f} | Liquid Cash ₹{cash_val:,.2f} | 3 Holdings (TCS, INFY, ONGC).")
+            parts.append("Hello! I am your AutoPilot Quantitative Market Copilot. I am actively monitoring live NSE price feeds, portfolio risk guardrails (1:2 Risk-Reward), and execution engines. How can I assist your investment strategy today?")
         return "\n".join(parts)
 
     # --- HANDLER 0.1: Action Execution - Pause Command ---
