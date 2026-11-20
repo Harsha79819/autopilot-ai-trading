@@ -24,6 +24,7 @@ from backend.app.api import (
     autopilot_router,
     ai_chat_router
 )
+from backend.app.models.options_models import OptionsPortfolio
 from backend.app.api.journal_router import router as journal_router
 from backend.app.api.planner_router import router as planner_router
 from backend.app.api.watchlist_router import router as watchlist_router
@@ -32,6 +33,7 @@ from backend.app.api.scenario_router import router as scenario_router
 from backend.app.api.document_router import router as document_router
 from backend.app.api.reports_router import router as reports_router
 from backend.app.api.orderblock_router import router as orderblock_router
+from backend.app.api.options_router import router as options_router
 
 # Configure logging
 logging.basicConfig(
@@ -87,6 +89,20 @@ async def lifespan(app: FastAPI):
                 ))
                 db.commit()
                 logger.info(f"Default demo user initialized with virtual cash: INR {settings.INITIAL_VIRTUAL_CAPITAL_INR:.2f}")
+
+            # Initialize Options Desk Portfolio with ₹5,000 virtual capital
+            if not demo_user.options_portfolio:
+                options_portfolio = OptionsPortfolio(
+                    user_id=demo_user.id,
+                    initial_capital=5000.00,
+                    cash_balance=5000.00,
+                    realized_pnl=0.00,
+                    total_fees=0.00,
+                    peak_equity=5000.00
+                )
+                db.add(options_portfolio)
+                db.commit()
+                logger.info("Default demo user Options Portfolio initialized with ₹5,000.00 virtual capital.")
         finally:
             db.close()
 
@@ -141,6 +157,7 @@ app.include_router(scenario_router)
 app.include_router(document_router)
 app.include_router(reports_router)
 app.include_router(orderblock_router, prefix="/api/v1")
+app.include_router(options_router)
 
 
 import os

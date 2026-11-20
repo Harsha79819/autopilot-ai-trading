@@ -58,23 +58,36 @@ export const OrderForm: React.FC = () => {
 
   return (
     <GlassCard glow="cyan">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-accent-cyan/10 border border-accent-cyan/20 flex items-center justify-center text-accent-cyan">
-          <ShoppingCart className="w-4 h-4" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 border-b border-white/5 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-accent-cyan/10 border border-accent-cyan/20 flex items-center justify-center text-accent-cyan">
+            <ShoppingCart className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white">
+                {t('పేపర్ ఆర్డర్ ఎగ్జిక్యూషన్', 'Manual Paper Order Execution')}
+              </h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                {t('సిమ్యులేటర్', 'Virtual Simulator')}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              {t('వర్చువల్ సిమ్యులేటర్ (మొత్తం షేర్ల నిబంధన)', 'Virtual execution simulator with whole-share enforcement')}
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-sm font-bold text-white">
-            {t('పేపర్ ఆర్డర్ ఎగ్జిక్యూషన్', 'Manual Paper Order Execution')}
-          </h3>
-          <p className="text-xs text-slate-400">
-            {t('వర్చువల్ సిమ్యులేటర్ (మొత్తం షేర్ల నిబంధన)', 'Virtual execution simulator with whole-share enforcement')}
-          </p>
+
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+          <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+          <span>{t('స్ట్రిక్ట్ పేపర్ ట్రేడింగ్ (రిస్క్ ఫ్రీ)', 'Strict Paper Trading (100% Risk-Free)')}</span>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3 text-xs">
-        {/* Symbol & Side */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+        {/* Responsive Grid for all Inputs */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-end">
+          {/* Symbol */}
           <div>
             <label className="block text-slate-300 font-medium mb-1">
               {t('స్టాక్ ఎంచుకోండి', 'Select Instrument')}
@@ -96,6 +109,7 @@ export const OrderForm: React.FC = () => {
             </select>
           </div>
 
+          {/* Side */}
           <div>
             <label className="block text-slate-300 font-medium mb-1">
               {t('ట్రేడ్ రకం', 'Side')}
@@ -104,7 +118,7 @@ export const OrderForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSide('BUY')}
-                className={`py-1.5 rounded-lg font-bold transition-all ${
+                className={`py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                   side === 'BUY'
                     ? 'bg-emerald-500 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -115,7 +129,7 @@ export const OrderForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSide('SELL')}
-                className={`py-1.5 rounded-lg font-bold transition-all ${
+                className={`py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                   side === 'SELL'
                     ? 'bg-rose-500 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -125,33 +139,56 @@ export const OrderForm: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Quantity */}
+          <div>
+            <div className="flex justify-between mb-1">
+              <label className="text-slate-300 font-medium">{t('మొత్తం షేర్ల సంఖ్య', 'Quantity (Whole Shares)')}</label>
+              <span className="text-slate-400 font-mono">{t('గరిష్టంగా', 'Max')}: {maxAffordable} sh</span>
+            </div>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 shadow-md"
+            />
+          </div>
+
+          {/* Submit */}
+          <div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-full py-2.5 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 ${
+                side === 'BUY'
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-950/40'
+                  : 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-950/40'
+              }`}
+            >
+              {isSubmitting 
+                ? t('సిమ్యులేట్ అవుతోంది...', 'Simulating Execution...') 
+                : t(`సిమ్యులేటెడ్ ${side === 'BUY' ? 'కొనుగోలు' : 'అమ్మకం'} ఆర్డర్ సమర్పించు`, `Submit Simulated ${side} Order`)
+              }
+            </button>
+          </div>
         </div>
 
-        {/* Quantity (Whole Shares) */}
-        <div>
-          <div className="flex justify-between mb-1">
-            <label className="text-slate-300 font-medium">{t('మొత్తం షేర్ల సంఖ్య (పూర్ణాంకం ≥ 1)', 'Whole Share Quantity (integer ≥ 1)')}</label>
-            <span className="text-slate-400">{t('గరిష్టంగా', 'Max')}: {maxAffordable} sh</span>
-          </div>
-          <input
-            type="number"
-            min="1"
-            step="1"
-            value={quantity}
-            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-full bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 shadow-md"
-          />
-        </div>
-
-        {/* Cost Preview */}
-        <div className="p-3 rounded-xl bg-slate-900/60 border border-white/5 space-y-1 text-slate-300">
-          <div className="flex justify-between">
-            <span>{t('అంచనా టర్నోవర్:', 'Estimated Turnover:')}</span>
-            <span className="font-semibold text-white">{formatINR(quantity * curPrice)}</span>
-          </div>
-          <div className="flex justify-between text-[11px] text-slate-400">
-            <span>{t('అందుబాటులో ఉన్న నగదు:', 'Available Cash Balance:')}</span>
-            <span className="font-mono text-emerald-400">{formatINR(cash)}</span>
+        {/* Cost Preview Bar */}
+        <div className="p-3 rounded-xl bg-slate-900/60 border border-white/5 flex flex-wrap items-center justify-between gap-3 text-slate-300">
+          <div className="flex items-center gap-4 text-xs flex-wrap">
+            <span>
+              {t('అంచనా టర్నోవర్:', 'Estimated Turnover:')}{' '}
+              <strong className="font-semibold text-white font-mono">{formatINR(quantity * curPrice)}</strong>
+            </span>
+            <span>
+              {t('అందుబాటులో ఉన్న నగదు:', 'Available Cash Balance:')}{' '}
+              <strong className="font-mono text-emerald-400 font-semibold">{formatINR(cash)}</strong>
+            </span>
+            <span className="text-[11px] text-slate-400 font-mono">
+              (LTP: ₹{curPrice.toFixed(2)} · {quantity} sh)
+            </span>
           </div>
         </div>
 
@@ -172,22 +209,6 @@ export const OrderForm: React.FC = () => {
             <span>{statusMessage.text}</span>
           </div>
         )}
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`w-full py-2.5 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 ${
-            side === 'BUY'
-              ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-950/40'
-              : 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-950/40'
-          }`}
-        >
-          {isSubmitting 
-            ? t('సిమ్యులేట్ అవుతోంది...', 'Simulating Execution...') 
-            : t(`సిమ్యులేటెడ్ ${side === 'BUY' ? 'కొనుగోలు' : 'అమ్మకం'} ఆర్డర్ సమర్పించు`, `Submit Simulated ${side} Order`)
-          }
-        </button>
       </form>
     </GlassCard>
   );

@@ -13,6 +13,7 @@ from backend.app.models.market_research import NewsArticle, CompanyProfile
 from backend.app.models.financial_document import FinancialDocument
 from backend.app.models.position_risk_state import PositionRiskState
 from backend.app.models.runner_lock import RunnerLock
+from backend.app.models.options_models import OptionsPortfolio, OptionPosition, OptionTrade
 
 __all__ = [
     "User",
@@ -34,5 +35,8 @@ __all__ = [
     "FinancialDocument",
     "PositionRiskState",
     "RunnerLock",
+    "OptionsPortfolio",
+    "OptionPosition",
+    "OptionTrade",
 ]
 

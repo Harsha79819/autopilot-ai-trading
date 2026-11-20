@@ -84,13 +84,46 @@ export const UpgradeToProModal: React.FC<UpgradeToProModalProps> = ({ isOpen, on
             <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
               <CheckCircle2 className="w-10 h-10" />
             </div>
-            <h4 className="text-xl font-bold text-emerald-300">🎉 పేమెంట్ విజయవంతమైంది!</h4>
+            <h4 className="text-xl font-bold text-emerald-300">🎉 Pro VIP ఉచితంగా యాక్టివేట్ అయ్యింది!</h4>
             <p className="text-xs sm:text-sm text-slate-300">
-              మీ **AutoPilot Pro VIP సబ్‌స్క్రిప్షన్** యాక్టివేట్ అయ్యింది! ఇప్పుడు అన్‌లిమిటెడ్ AI ప్రిడిక్షన్స్ మరియు లైవ్ సిగ్నల్స్ ఎంజాయ్ చేయండి.
+              మీ **AutoPilot Pro VIP ఫీచర్లు (డెమో & పేపర్ ట్రేడింగ్)** పూర్తిగా అన్‌లాక్ చేయబడ్డాయి! ఇప్పుడు అన్‌లిమిటెడ్ AI ప్రిడిక్షన్స్ మరియు లైవ్ సిగ్నల్స్ ఎంజాయ్ చేయండి.
             </p>
           </div>
         ) : (
           <div className="p-5 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+            {/* Free Demo Paper Trading Mode Notice */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/50 via-teal-950/40 to-slate-900 border border-emerald-500/40 text-xs text-emerald-200 flex items-center justify-between gap-3 shadow-lg shadow-emerald-950/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center flex-shrink-0 text-emerald-400">
+                  <Sparkles className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <div className="font-bold text-emerald-300 flex items-center gap-1.5">
+                    <span>🟢 పేపర్ ట్రేడింగ్ డెమో మోడ్</span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-mono">100% ఉచితం</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    టెస్టింగ్ మోడ్‌లో అన్ని VIP ఫీచర్లు పూర్తిగా ఉచితం. ఎటువంటి పేమెంట్ అవసరం లేదు!
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('autopilot_pro_user', 'true');
+                  setIsSuccess(true);
+                  setTimeout(() => {
+                    onClose();
+                    setIsSuccess(false);
+                  }, 1800);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-xs shadow-md shadow-emerald-500/25 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
+              >
+                <span>ఉచితంగా అన్‌లాక్ చేయి (Free)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             {/* Billing Toggle */}
             <div className="flex items-center justify-center p-1 rounded-2xl bg-slate-950/60 border border-white/10">
               <button

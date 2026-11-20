@@ -189,3 +189,33 @@ async def test_intraday_square_off_at_1515(db, test_user_and_portfolio, monkeypa
     assert sq_off_audit is not None
     assert sq_off_audit.decision == "EXECUTED"
     assert "15:15 IST" in sq_off_audit.reason
+
+
+@pytest.mark.asyncio
+async def test_friday_square_off_at_1510(db, test_user_and_portfolio, monkeypatch):
+    """Verify that on Friday at 15:10 IST, positions are force-liquidated to prevent weekend gap risk."""
+    user, portfolio, pos = test_user_and_portfolio
+    monkeypatch.setattr(settings, "PREVENT_WEEKEND_HOLDINGS", True)
+    monkeypatch.setattr(settings, "FRIDAY_FORCE_SQUARE_OFF_TIME", "15:10")
+    runner = AutoPilotRunner()
+
+    normal_quote = make_test_quote(symbol="INFY", price=1005.0)
+    # 2026-01-16 is a Friday!
+    friday_square_off = datetime(2026, 1, 16, 15, 11, 0, tzinfo=IST)
+    assert friday_square_off.weekday() == 4  # Verify it's Friday
+
+    with patch("backend.app.services.auto_trader.SessionLocal", return_value=db):
+        with patch("backend.app.services.auto_trader.market_provider.get_quote", return_value=normal_quote):
+            with patch("backend.app.services.auto_trader.is_market_session_active", return_value=(True, "Market Open")):
+                with patch("backend.app.services.auto_trader.to_ist_datetime", return_value=friday_square_off):
+                    await runner.run_single_cycle()
+
+    positions = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
+    assert len(positions) == 0
+
+    sq_off_audit = db.query(AuditLog).filter(
+        AuditLog.user_id == user.id,
+        AuditLog.event_type == "INTRADAY_SQUARE_OFF"
+    ).first()
+    assert sq_off_audit is not None
+    assert "FRIDAY_WEEKEND_SQUARE_OFF" in sq_off_audit.reason

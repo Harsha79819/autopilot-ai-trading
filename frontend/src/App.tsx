@@ -4,7 +4,6 @@ import { LanguageProvider } from './context/LanguageContext';
 import { TradingProvider, useTrading } from './context/TradingContext';
 import { Navbar } from './components/layout/Navbar';
 import { MobileTabs } from './components/layout/MobileTabs';
-import { HeaderBar } from './components/dashboard/HeaderBar';
 import { HeroPortfolioCard } from './components/dashboard/HeroPortfolioCard';
 import { ThreeOptionCards } from './components/dashboard/ThreeOptionCards';
 import { OpenPositionsCard } from './components/dashboard/OpenPositionsCard';
@@ -49,22 +48,23 @@ import { OrderBlockView } from './components/views/OrderBlockView';
 import { AiLearningView } from './components/views/AiLearningView';
 import { ProductTourModal } from './components/onboarding/ProductTourModal';
 import { ProCommandBar } from './components/dashboard/ProCommandBar';
+import { OptionsDeskView } from './components/options/OptionsDeskView';
 import { StrategyInfo } from './types';
 import { api } from './services/api';
-import { Sliders, TrendingUp, BarChart2, Layers, Receipt, Table, ShoppingCart, Radio, Sparkles, Activity, Columns } from 'lucide-react';
+import { Sliders, TrendingUp, BarChart2, Layers, Receipt, Table, ShoppingCart, Radio, Sparkles, Activity, Columns, Zap } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  const { activeTab, portfolio, aiStatus } = useTrading();
+  const { activeTab, setActiveTab, portfolio, aiStatus } = useTrading();
   const { t } = useLanguage();
   const [chartViewMode, setChartViewMode] = useState<'equity' | 'live_market' | 'both'>('equity');
   
   // Pro Terminal Sub-Tabs: Instant tab switching & multi-tab split view
-  type DashboardSubTab = 'ledger' | 'trading' | 'charts' | 'brain' | 'split' | 'all';
+  type DashboardSubTab = 'ledger' | 'trading' | 'charts' | 'brain' | 'options' | 'split' | 'all';
   const [dashboardTab, setDashboardTab] = useState<DashboardSubTab>(() => {
     return (localStorage.getItem('autopilot_dashboard_pro_tab') as DashboardSubTab) || 'all';
   });
-  const [splitLeftTab, setSplitLeftTab] = useState<'ledger' | 'trading' | 'charts' | 'brain'>('ledger');
-  const [splitRightTab, setSplitRightTab] = useState<'ledger' | 'trading' | 'charts' | 'brain'>('trading');
+  const [splitLeftTab, setSplitLeftTab] = useState<'ledger' | 'trading' | 'charts' | 'brain' | 'options'>('ledger');
+  const [splitRightTab, setSplitRightTab] = useState<'ledger' | 'trading' | 'charts' | 'brain' | 'options'>('options');
   const [isExpandedHero, setIsExpandedHero] = useState<boolean>(() => {
     const cached = localStorage.getItem('autopilot_expanded_hero');
     return cached !== null ? cached === 'true' : true;
@@ -127,7 +127,7 @@ const MainContent: React.FC = () => {
   }, []);
 
   // Helper to render individual dashboard tab modules
-  const renderTabContent = (tabKey: 'ledger' | 'trading' | 'charts' | 'brain') => {
+  const renderTabContent = (tabKey: 'ledger' | 'trading' | 'charts' | 'brain' | 'options') => {
     switch (tabKey) {
       case 'ledger':
         return (
@@ -199,17 +199,16 @@ const MainContent: React.FC = () => {
               </div>
             </div>
 
-            {/* Grid Layout: Charts + Quick Order Form */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              <div className="lg:col-span-2 space-y-4">
-                {(chartViewMode === 'equity' || chartViewMode === 'both') && <PerformanceChart />}
-                {(chartViewMode === 'live_market' || chartViewMode === 'both') && <LiveStockChart />}
-              </div>
-              <div>
-                <OrderForm />
-              </div>
+            {/* Full-Width Spacious HD Charts */}
+            <div className="space-y-4">
+              {(chartViewMode === 'equity' || chartViewMode === 'both') && <PerformanceChart />}
+              {(chartViewMode === 'live_market' || chartViewMode === 'both') && <LiveStockChart />}
             </div>
 
+            {/* Manual Paper Order Execution */}
+            <OrderForm />
+
+            {/* Realized P&L Reconciliation & Order History */}
             <RealizedPnLCard />
             <OrderHistory />
           </div>
@@ -221,6 +220,12 @@ const MainContent: React.FC = () => {
             <AiDailyLearningCard />
             <DailySummaryCard onOpenJournal={() => setShowJournalModal(true)} />
             <BottomStatusGrid onOpenDiagnostics={() => setShowDiagnosticsModal(true)} />
+          </div>
+        );
+      case 'options':
+        return (
+          <div className="animate-fade-in space-y-4">
+            <OptionsDeskView />
           </div>
         );
     }
@@ -259,6 +264,51 @@ const MainContent: React.FC = () => {
         onOpenVoice={() => setShowVoiceModal(true)}
       />
 
+      {/* Master 2-Tab Dual Desk Navigation: 1. Main Equity Trading Desk | 2. Options Trading Desk */}
+      <div className="bg-[#0b0f19]/90 backdrop-blur-md border border-white/10 p-1.5 sm:p-2 rounded-2xl shadow-xl mb-4">
+        <div className="grid grid-cols-2 gap-2">
+          {/* Tab 1: Main Trading Desk */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex flex-col sm:flex-row items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl font-bold transition-all cursor-pointer ${
+              activeTab === 'dashboard'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-cyan-500/25 border border-cyan-400/50 ring-1 ring-cyan-400/40'
+                : 'bg-white/[0.03] text-slate-400 hover:text-white hover:bg-white/[0.06] border border-white/5'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${activeTab === 'dashboard' ? 'bg-cyan-300 ring-4 ring-cyan-400/30' : 'bg-slate-600'}`} />
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-300" />
+              <span className="text-xs sm:text-sm tracking-tight">{t('1. మెయిన్ ట్రేడింగ్ డెస్క్', '1. Main Trading Desk')}</span>
+            </div>
+            <span className="text-[10px] sm:text-xs font-mono px-2 py-0.5 rounded-full bg-black/30 border border-white/10 text-cyan-200">
+              {t('ఈక్విటీ & స్వింగ్', 'Equity Stocks')}
+            </span>
+          </button>
+
+          {/* Tab 2: Options Trading Desk */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('options')}
+            className={`flex flex-col sm:flex-row items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl font-bold transition-all cursor-pointer ${
+              activeTab === 'options'
+                ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-500 text-white shadow-lg shadow-amber-500/25 border border-amber-400/50 ring-1 ring-amber-400/40'
+                : 'bg-white/[0.03] text-slate-400 hover:text-white hover:bg-white/[0.06] border border-white/5'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${activeTab === 'options' ? 'bg-amber-300 ring-4 ring-amber-400/30' : 'bg-slate-600'}`} />
+              <Zap className="w-4 h-4 sm:w-5 sm:h-5 fill-amber-300 text-amber-300" />
+              <span className="text-xs sm:text-sm tracking-tight">{t('2. ఆప్షన్స్ ట్రేడింగ్ డెస్క్', '2. Options Trading Desk')}</span>
+            </div>
+            <span className="text-[10px] sm:text-xs font-mono px-2 py-0.5 rounded-full bg-black/30 border border-white/10 text-amber-200">
+              {t('F&O నిఫ్టీ & స్టాక్స్', 'NIFTY & Stocks F&O')}
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Tab: Dashboard (Pro Terminal with Instant Tabs & Multi-Tab Split) */}
       {activeTab === 'dashboard' && (
         <div className="space-y-4">
@@ -278,12 +328,6 @@ const MainContent: React.FC = () => {
           {/* Optional Expanded Classic Hero Cards (Only visible when user toggles 'Hero Cards') */}
           {isExpandedHero && (
             <div className="space-y-4 animate-fade-in">
-              <HeaderBar
-                onOpenDiagnostics={() => setShowDiagnosticsModal(true)}
-                onOpenChat={() => setShowAiChatModal(true)}
-                onOpenVoice={() => setShowVoiceModal(true)}
-                onOpenTour={() => setShowTourModal(true)}
-              />
               <HeroPortfolioCard />
               <ThreeOptionCards
                 onOpenInvest={() => setShowInvestModal(true)}
@@ -402,6 +446,9 @@ const MainContent: React.FC = () => {
           {/* Tab 4 Content: AI Brain & Automation */}
           {dashboardTab === 'brain' && renderTabContent('brain')}
 
+          {/* Tab 5 Content: Options Trading Desk (F&O Virtual Desk) */}
+          {dashboardTab === 'options' && renderTabContent('options')}
+
           {/* Multi-Tab Split Mode: 2 Tabs Side-by-Side (or stacked on mobile) */}
           {dashboardTab === 'split' && (
             <div className="space-y-4 animate-fade-in">
@@ -419,6 +466,7 @@ const MainContent: React.FC = () => {
                     <option value="trading">⚡ Live Trading & Scanner</option>
                     <option value="charts">📊 Realized Trades & Charts</option>
                     <option value="brain">🧠 AGI Brain & Automation</option>
+                    <option value="options">⚡ NIFTY Options Desk</option>
                   </select>
                 </div>
 
@@ -431,6 +479,7 @@ const MainContent: React.FC = () => {
                     onChange={(e) => setSplitRightTab(e.target.value as any)}
                     className="bg-slate-800 text-white text-xs rounded-lg px-2.5 py-1 border border-white/10"
                   >
+                    <option value="options">⚡ NIFTY Options Desk</option>
                     <option value="trading">⚡ Live Trading & Scanner</option>
                     <option value="ledger">📑 Daily Ledger (Day 2 Live)</option>
                     <option value="charts">📊 Realized Trades & Charts</option>
@@ -457,8 +506,16 @@ const MainContent: React.FC = () => {
               {renderTabContent('trading')}
               {renderTabContent('charts')}
               {renderTabContent('brain')}
+              {renderTabContent('options')}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Master Tab 2: Options Trading Desk (F&O Virtual Desk) */}
+      {activeTab === 'options' && (
+        <div className="space-y-6 animate-fade-in">
+          <OptionsDeskView />
         </div>
       )}
 

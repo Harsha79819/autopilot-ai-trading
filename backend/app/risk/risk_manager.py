@@ -28,6 +28,16 @@ def get_today_ist_start_utc() -> datetime:
         return today_midnight_ist.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def get_now_ist() -> datetime:
+    """Return timezone-aware datetime for current time in IST."""
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo(settings.TIMEZONE))
+    except Exception:
+        from datetime import timezone, timedelta
+        return datetime.now(timezone(timedelta(hours=5, minutes=30)))
+
+
 class RiskManager:
     """Enforces non-bypassable pre-trade and continuous risk guardrails."""
 
@@ -48,6 +58,24 @@ class RiskManager:
         # 1. Kill switch check
         if kill_switch_manager.is_stopped(portfolio):
             return False, "Emergency Stop / Kill Switch is active."
+
+        # 1b. Weekend & Friday Gap Risk Guard
+        now_ist = get_now_ist()
+        if getattr(settings, "PREVENT_WEEKEND_HOLDINGS", True):
+            if now_ist.weekday() >= 5:
+                return False, "Market closed for weekend. New entries strictly prohibited."
+            if now_ist.weekday() == 4:
+                cutoff_time_str = getattr(settings, "FRIDAY_NO_NEW_ENTRY_TIME", "13:00")
+                try:
+                    from datetime import time as dt_time
+                    c_hour, c_min = map(int, cutoff_time_str.split(":"))
+                    if now_ist.time() >= dt_time(c_hour, c_min):
+                        return False, (
+                            f"Friday Weekend Risk Guard: New BUY orders blocked after {cutoff_time_str} IST "
+                            f"to prevent catastrophic Monday gap-down risk."
+                        )
+                except Exception:
+                    pass
 
         # 2. Portfolio metrics
         metrics = portfolio_ledger.calculate_metrics(db, portfolio)
@@ -70,7 +98,8 @@ class RiskManager:
         today_realized_loss = sum(t.realized_pnl for t in today_trades if t.realized_pnl < 0)
         max_allowed_daily_loss = min(portfolio.initial_cash * (settings.MAX_DAILY_LOSS_PCT / 100.0), settings.MAX_DAILY_LOSS_INR) if portfolio.initial_cash > 0 else settings.MAX_DAILY_LOSS_INR
 
-        if abs(today_realized_loss) >= max_allowed_daily_loss:
+        is_adaptive = getattr(settings, "ADAPTIVE_TESTING_MODE", True)
+        if abs(today_realized_loss) >= max_allowed_daily_loss and not is_adaptive:
             return False, (
                 f"Maximum daily loss threshold reached: today's loss is ₹{abs(today_realized_loss):.2f} "
                 f"(limit: ₹{max_allowed_daily_loss:.2f} / ₹{settings.MAX_DAILY_LOSS_INR:.2f}). Trading halted for today."
@@ -78,20 +107,25 @@ class RiskManager:
 
         # 5. Position Sizing Cap & Stop Loss Rupee Risk Verification
         proposed_value = quantity * price
-        max_pos_value = metrics.total_portfolio_value * (settings.MAX_POSITION_SIZE_PCT / 100.0)
+        allowed_pos_pct = settings.MAX_POSITION_SIZE_PCT
+        if now_ist.weekday() == 4:
+            allowed_pos_pct = min(allowed_pos_pct, getattr(settings, "FRIDAY_MAX_POSITION_SIZE_PCT", 25.0))
+        elif is_adaptive and abs(today_realized_loss) >= max_allowed_daily_loss:
+            allowed_pos_pct = min(allowed_pos_pct, 20.0) # Conservative sizing in adaptive recovery
+        max_pos_value = metrics.total_portfolio_value * (allowed_pos_pct / 100.0)
 
-        # Allow 1 whole share if it fits in available cash, or position within MAX_POSITION_SIZE_PCT (95%)
+        # Allow 1 whole share if it fits in available cash, or position within allowed_pos_pct (95% normal, 25% Friday)
         is_single_share_fit = (quantity == 1 and proposed_value <= portfolio.cash_balance)
         if proposed_value > max_pos_value and not is_single_share_fit:
             return False, (
                 f"Proposed position size ₹{proposed_value:.2f} exceeds max allowed "
-                f"allocation of ₹{max_pos_value:.2f} ({settings.MAX_POSITION_SIZE_PCT}% of portfolio value)."
+                f"allocation of ₹{max_pos_value:.2f} ({allowed_pos_pct}% of portfolio value)."
             )
 
-        # Downside Risk Verification: Ensure Stop Loss risk in INR does not exceed remaining daily loss limit
+        # Downside Risk Verification: Ensure Stop Loss risk in INR does not exceed remaining daily loss limit (unless in adaptive testing mode)
         trade_risk_inr = proposed_value * (settings.STOP_LOSS_PCT / 100.0)
         remaining_daily_risk = max_allowed_daily_loss - abs(today_realized_loss)
-        if trade_risk_inr > remaining_daily_risk:
+        if trade_risk_inr > remaining_daily_risk and not is_adaptive:
             return False, (
                 f"Trade downside risk at Stop Loss (₹{trade_risk_inr:.2f}) exceeds remaining daily loss allowance "
                 f"(₹{remaining_daily_risk:.2f}). Trade blocked for capital protection."
@@ -118,8 +152,10 @@ class RiskManager:
         # Risk state evaluation
         if is_stopped:
             risk_state = "EMERGENCY_STOP"
-        elif metrics.max_drawdown_pct >= settings.MAX_PORTFOLIO_DRAWDOWN_PCT or today_loss_pct >= settings.MAX_DAILY_LOSS_PCT:
+        elif metrics.max_drawdown_pct >= settings.MAX_PORTFOLIO_DRAWDOWN_PCT:
             risk_state = "HALTED"
+        elif today_loss_pct >= settings.MAX_DAILY_LOSS_PCT:
+            risk_state = "ADAPTIVE_RECOVERY" if getattr(settings, "ADAPTIVE_TESTING_MODE", True) else "HALTED"
         elif metrics.max_drawdown_pct > (settings.MAX_PORTFOLIO_DRAWDOWN_PCT * 0.7) or today_loss_pct > (settings.MAX_DAILY_LOSS_PCT * 0.7):
             risk_state = "WARNING"
         else:

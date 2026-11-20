@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, User as UserIcon, Lock, Mail, ShieldCheck, LogIn, UserPlus, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTrading } from '../../context/TradingContext';
@@ -62,10 +63,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({ onClose }) => {
     }
   };
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 animate-fade-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -240,6 +241,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ onClose }) => {
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

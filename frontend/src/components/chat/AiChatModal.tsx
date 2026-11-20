@@ -45,7 +45,7 @@ interface AiChatModalProps {
 type CopilotMode = 'all' | 'market' | 'wealth';
 
 export const AiChatModal: React.FC<AiChatModalProps> = ({ isOpen, onClose, onOpenVoice, onOpenTour }) => {
-  const { refreshPortfolio, refreshAutoPilot, setActiveTab } = useTrading();
+  const { portfolio, refreshPortfolio, refreshAutoPilot, setActiveTab } = useTrading();
   const [mode, setMode] = useState<CopilotMode>('all');
   const [isTelugu, setIsTelugu] = useState(false);
   const [isProModalOpen, setIsProModalOpen] = useState(false);
@@ -102,11 +102,27 @@ How may I assist your trading decisions today?
   if (!isOpen) return null;
 
   const handleChipClick = (chipText: string) => {
-    if (chipText.includes('Pro') || chipText.includes('⭐')) {
+    // Only match explicit VIP Pro chips like "⭐ Pro: Live Prediction Signals", NEVER ordinary words like "Profits"
+    const isProChip = chipText.includes('⭐') || /\bPro:\b/i.test(chipText);
+    const isDemoMode = portfolio?.is_paper_trading !== false || localStorage.getItem('autopilot_pro_user') === 'true';
+
+    if (isProChip) {
+      if (isDemoMode) {
+        // In Demo / Paper Trading mode, all VIP Pro capabilities are 100% free and unlocked!
+        let queryToSend = chipText.replace(/⭐\s*Pro:\s*/i, '').trim();
+        if (queryToSend.includes("లైవ్ ప్రిడిక్షన్") || queryToSend.includes("Live Prediction") || queryToSend.includes("Live Trading Signals")) {
+          queryToSend = isTelugu 
+            ? "లైవ్ ప్రిడిక్షన్ సిగ్నల్స్ మరియు ప్రతి స్టాక్ బుల్లిష్ / బేరిష్ ప్రాబబిలిటీ % ఎంత? (Live Trading Signals & Probability %)"
+            : "What are the Live Trading Signals and Bullish vs Bearish probability % for our universe?";
+        }
+        sendMessage(queryToSend);
+        return;
+      }
       setProFeatureTrigger(chipText);
       setIsProModalOpen(true);
       return;
     }
+
     sendMessage(chipText);
   };
 
@@ -472,7 +488,7 @@ How may I assist your trading decisions today?
                         </span>
                         <div className="flex flex-wrap items-center gap-1.5">
                           {m.follow_up_suggestions.map((chip, idx) => {
-                            const isPro = chip.includes('Pro') || chip.includes('⭐');
+                            const isPro = chip.includes('⭐') || /\bPro:\b/i.test(chip);
                             return (
                               <button
                                 key={idx}

@@ -14,6 +14,7 @@ chat_history.txt
 # Databases and SQLite artifacts (track main production autopilot.db so Render matches Local exactly)
 *.db-wal
 *.db-journal
+backend/data/test_*.db
 !backend/data/autopilot.db
 
 # Environment files and credentials (preserve .env.example)

@@ -356,3 +356,268 @@ export interface DailyLedgerResponse {
   days: DailyLedgerEntry[];
 }
 
+export interface OptionGreeksInfo {
+  symbol: string;
+  ltp: number;
+  iv: number;
+  delta: number;
+  theta: number;
+  oi: number;
+  lot_size: number;
+  margin_required: number;
+}
+
+export interface OptionStrikeItem {
+  strike: number;
+  is_atm: boolean;
+  ce: OptionGreeksInfo;
+  pe: OptionGreeksInfo;
+}
+
+export interface OptionChainResponse {
+  underlying: string;
+  underlying_name?: string;
+  underlying_type?: string;
+  spot_price: number;
+  change_pct: number;
+  expiry_date: string;
+  lot_size: number;
+  strike_step?: number;
+  atm_strike: number;
+  strikes: OptionStrikeItem[];
+  server_time_ist: string;
+}
+
+export interface OptionPosition {
+  id: number;
+  symbol: string;
+  underlying: string;
+  strike_price: number;
+  option_type: 'CE' | 'PE';
+  strategy_type?: string;
+  paired_strike?: number;
+  net_debit?: number;
+  expiry_date: string;
+  lot_size: number;
+  quantity: number;
+  entry_premium: number;
+  current_premium: number;
+  stop_loss_premium: number;
+  target_premium: number;
+  trailing_stop_premium: number;
+  trailing_activated: boolean;
+  is_open: boolean;
+  unrealized_pnl: number;
+  unrealized_pnl_pct: number;
+  invested_margin: number;
+  created_at: string;
+}
+
+export interface OptionTrade {
+  id: number;
+  symbol: string;
+  underlying: string;
+  strike_price: number;
+  option_type: 'CE' | 'PE';
+  expiry_date: string;
+  lot_size: number;
+  quantity: number;
+  entry_premium: number;
+  exit_premium: number;
+  realized_pnl: number;
+  return_pct: number;
+  fees: number;
+  entry_time: string;
+  exit_time: string;
+  exit_reason: string;
+  trade_notes?: string;
+}
+
+export interface OptionsPortfolio {
+  initial_capital: number;
+  cash_balance: number;
+  realized_pnl: number;
+  total_fees: number;
+  peak_equity: number;
+  current_equity: number;
+  unrealized_pnl: number;
+  total_portfolio_value: number;
+  is_autopilot_enabled: boolean;
+  whatsapp_phone?: string;
+  whatsapp_alerts_enabled?: boolean;
+  broker_name?: string;
+  broker_client_code?: string;
+  is_live_broker_routing?: boolean;
+  open_positions: OptionPosition[];
+  recent_trades: OptionTrade[];
+  win_rate_pct: number;
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+}
+
+export interface SegmentPerformance {
+  name: string;
+  initial_capital: number;
+  current_equity: number;
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate_pct: number;
+  realized_pnl: number;
+  total_fees: number;
+  roi_pct: number;
+  profit_factor: number;
+  risk_profile: string;
+  holding_type: string;
+}
+
+export interface OptionsComparisonResponse {
+  equity: SegmentPerformance;
+  options: SegmentPerformance;
+  ai_insight_telugu: string;
+}
+
+export interface OptionAISignal {
+  underlying?: string;
+  spot_price: number;
+  change_pct: number;
+  bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  confidence_pct: number;
+  recommended_strike: number;
+  recommended_type: 'CE' | 'PE' | 'NONE';
+  recommended_symbol?: string | null;
+  reason: string;
+}
+
+export interface UnderlyingInfo {
+  symbol: string;
+  name: string;
+  type: 'INDEX' | 'STOCK';
+  spot_price: number;
+  change_pct: number;
+  lot_size: number;
+  strike_step: number;
+}
+
+export interface PCRPainLevel {
+  strike: number;
+  total_loss_cr: number;
+  is_max_pain: boolean;
+}
+
+export interface PCRMaxPainData {
+  underlying: string;
+  spot_price: number;
+  pcr: number;
+  pcr_sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  max_pain_strike: number;
+  total_ce_oi: number;
+  total_pe_oi: number;
+  pain_levels: PCRPainLevel[];
+  ai_interpretation: string;
+  ai_interpretation_telugu: string;
+}
+
+export interface SpreadOrderPayload {
+  underlying: string;
+  spread_type: 'BULL_CALL_SPREAD' | 'BEAR_PUT_SPREAD';
+  quantity?: number;
+}
+
+export interface WhatsAppConfig {
+  whatsapp_phone: string;
+  whatsapp_phone_number_id?: string;
+  has_meta_token?: boolean;
+  whatsapp_api_key?: string;
+  whatsapp_provider?: string;
+  whatsapp_alerts_enabled: boolean;
+}
+
+export interface WhatsAppTestResponse {
+  status: string;
+  phone: string;
+  wa_link: string;
+  whatsapp_link?: string;
+  message: string;
+  timestamp: string;
+}
+
+export interface ChallengeStage {
+  level: number;
+  name: string;
+  target: string;
+  desc: string;
+  unlocked: boolean;
+}
+
+export interface ChallengeBadge {
+  id: string;
+  name: string;
+  icon: string;
+  desc: string;
+  earned: boolean;
+}
+
+export interface ChallengeProgress {
+  initial_capital: number;
+  current_equity: number;
+  target_capital: number;
+  progress_pct: number;
+  roi_pct: number;
+  days_active: number;
+  total_trades: number;
+  win_rate_pct: number;
+  current_stage_name: string;
+  current_stage_level: number;
+  stages: ChallengeStage[];
+  badges: ChallengeBadge[];
+  daily_advice_en: string;
+  daily_advice_telugu: string;
+}
+
+export interface TradeReplayStep {
+  step_index: number;
+  time_offset_min: number;
+  spot_price: number;
+  option_premium: number;
+  trailing_stop: number;
+  unrealized_pnl: number;
+  pnl_pct: number;
+  event_note?: string;
+}
+
+export interface TradeReplayData {
+  trade_id: number;
+  symbol: string;
+  underlying: string;
+  option_type: string;
+  strike_price: number;
+  entry_premium: number;
+  exit_premium: number;
+  realized_pnl: number;
+  return_pct: number;
+  exit_reason: string;
+  entry_time: string;
+  exit_time: string;
+  trajectory: TradeReplayStep[];
+  post_mortem_en: string;
+  post_mortem_telugu: string;
+}
+
+export interface SupportedBroker {
+  id: string;
+  name: string;
+  is_virtual: boolean;
+  description: string;
+}
+
+export interface BrokerBridgeConfig {
+  broker_name: string;
+  broker_client_code: string;
+  is_live_broker_routing: boolean;
+  has_api_key: boolean;
+  supported_brokers: SupportedBroker[];
+}
+
+

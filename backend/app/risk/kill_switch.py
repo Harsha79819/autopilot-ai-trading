@@ -24,6 +24,18 @@ class KillSwitchManager:
             timestamp=now
         ))
 
+        if activate:
+            try:
+                from backend.app.services.whatsapp_service import WhatsAppAlertService
+                wa_msg = WhatsAppAlertService.format_risk_alert(
+                    event_type="EMERGENCY_KILL_SWITCH_ACTIVE",
+                    reason=reason or "Emergency Stop activated. All buying halted to protect capital.",
+                    portfolio_value=portfolio.cash_balance
+                )
+                WhatsAppAlertService.notify_user_if_enabled(db, portfolio.user_id, wa_msg, "RISK_ALERT")
+            except Exception:
+                pass
+
         if activate and getattr(settings, "KILL_SWITCH_CLOSES_POSITIONS", False):
             from backend.app.models.position import Position
             from backend.app.models.position_risk_state import PositionRiskState

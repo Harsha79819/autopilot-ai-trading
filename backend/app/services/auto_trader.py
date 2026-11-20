@@ -436,6 +436,13 @@ class AutoPilotRunner:
                 # Synchronize AGI self-learning from user's historical trades
                 self._sync_agi_learning(db, user.id)
 
+                # Autonomous Options Desk cycle (Options BUY, SELL, Trailing SL, Square-off)
+                try:
+                    from backend.app.services.options_engine import OptionsEngine
+                    OptionsEngine.autonomous_options_cycle(db, user.id)
+                except Exception as opt_err:
+                    logger.error(f"Error in Options AutoPilot cycle: {opt_err}")
+
                 # A. Check existing positions for Target Profit, Stop Loss, or Trailing Stop FIRST
                 # Note: Stop-loss must auto-sell even when risk manager or kill-switch halts new buys
                 positions = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
@@ -619,84 +626,108 @@ class AutoPilotRunner:
                 # Re-query positions after potential sell
                 positions = db.query(Position).filter(Position.portfolio_id == portfolio.id).all()
 
-                # Intraday 15:15 Auto Square-Off Check
+                # Intraday & Friday/Weekend Auto Square-Off Check
                 now_ist = to_ist_datetime(now)
                 cur_time_ist = now_ist.time()
-                if getattr(settings, "INTRADAY_ONLY", True) and cur_time_ist >= time(15, 15) and cur_time_ist <= time(15, 30):
-                    if positions:
-                        logger.info(f"Intraday 15:15 square-off: closing {len(positions)} open positions for user {user.id}")
-                        for pos in positions:
-                            quote = latest_quotes.get(pos.symbol)
-                            cur_price = quote.current_price if quote else pos.average_buy_price
-                            reason = "INTRADAY_SQUARE_OFF: 15:15 IST Market Square-off per INTRADAY_ONLY policy"
-                            order_in = OrderCreate(
+                is_friday = (now_ist.weekday() == 4)
+                is_weekend = (now_ist.weekday() >= 5)
+
+                should_square_off = False
+                square_off_reason = ""
+
+                if getattr(settings, "INTRADAY_ONLY", True) or getattr(settings, "PREVENT_WEEKEND_HOLDINGS", True):
+                    if is_weekend:
+                        should_square_off = True
+                        square_off_reason = "WEEKEND_PROTECTION: Market closed for weekend. Liquidated to eliminate gap-down risk."
+                    elif is_friday:
+                        fri_sq_str = getattr(settings, "FRIDAY_FORCE_SQUARE_OFF_TIME", "15:10")
+                        try:
+                            f_hr, f_min = map(int, fri_sq_str.split(":"))
+                            if cur_time_ist >= time(f_hr, f_min):
+                                should_square_off = True
+                                square_off_reason = f"FRIDAY_WEEKEND_SQUARE_OFF: {fri_sq_str} IST Friday liquidation. Zero weekend gap risk."
+                        except Exception:
+                            if cur_time_ist >= time(15, 10):
+                                should_square_off = True
+                                square_off_reason = "FRIDAY_WEEKEND_SQUARE_OFF: 15:10 IST Friday liquidation. Zero weekend gap risk."
+                    elif cur_time_ist >= time(15, 15):
+                        should_square_off = True
+                        square_off_reason = "INTRADAY_SQUARE_OFF: 15:15 IST Market Square-off per INTRADAY_ONLY policy"
+
+                if should_square_off and positions:
+                    logger.info(f"{square_off_reason}: closing {len(positions)} open positions for user {user.id}")
+                    for pos in positions:
+                        quote = latest_quotes.get(pos.symbol)
+                        cur_price = quote.current_price if quote else pos.average_buy_price
+                        reason = square_off_reason
+                        order_in = OrderCreate(
+                            symbol=pos.symbol,
+                            side="SELL",
+                            order_type="MARKET",
+                            quantity=pos.quantity,
+                            price=cur_price
+                        )
+                        paper_broker.execute_paper_order(
+                            db=db,
+                            user=user,
+                            order_in=order_in,
+                            quote=quote,
+                            risk_manager=risk_manager
+                        )
+                        try:
+                            from backend.app.models.trading_journal import TradingJournal
+                            entry_time = self._position_entry_times.get((user.id, pos.symbol), now - timedelta(seconds=60))
+                            holding_sec = int((now - entry_time).total_seconds())
+                            pnl_val = round((cur_price - pos.average_buy_price) * pos.quantity, 2)
+                            pnl_pct_val = round(((cur_price - pos.average_buy_price) / pos.average_buy_price) * 100.0, 2)
+                            db.add(TradingJournal(
+                                user_id=user.id,
+                                portfolio_id=portfolio.id,
                                 symbol=pos.symbol,
-                                side="SELL",
-                                order_type="MARKET",
+                                side="BUY_SELL",
                                 quantity=pos.quantity,
-                                price=cur_price
-                            )
-                            paper_broker.execute_paper_order(
-                                db=db,
-                                user=user,
-                                order_in=order_in,
-                                quote=quote,
-                                risk_manager=risk_manager
-                            )
-                            try:
-                                from backend.app.models.trading_journal import TradingJournal
-                                entry_time = self._position_entry_times.get((user.id, pos.symbol), now - timedelta(seconds=60))
-                                holding_sec = int((now - entry_time).total_seconds())
-                                pnl_val = round((cur_price - pos.average_buy_price) * pos.quantity, 2)
-                                pnl_pct_val = round(((cur_price - pos.average_buy_price) / pos.average_buy_price) * 100.0, 2)
-                                db.add(TradingJournal(
-                                    user_id=user.id,
-                                    portfolio_id=portfolio.id,
-                                    symbol=pos.symbol,
-                                    side="BUY_SELL",
-                                    quantity=pos.quantity,
-                                    entry_price=pos.average_buy_price,
-                                    exit_price=cur_price,
-                                    stop_loss=pos.average_buy_price * 0.985,
-                                    take_profit=pos.average_buy_price * 1.03,
-                                    risk_reward_ratio=2.0,
-                                    risk_amount=round(pos.average_buy_price * 0.015 * pos.quantity, 2),
-                                    realized_pnl=pnl_val,
-                                    realized_pnl_pct=pnl_pct_val,
-                                    setup_reason="Intraday Position",
-                                    exit_reason=reason,
-                                    emotion_tag="DISCIPLINED",
-                                    ai_critique="Intraday square-off at 15:15 IST executed cleanly. Zero overnight gap risk.",
-                                    holding_seconds=holding_sec,
-                                    created_at=entry_time,
-                                    closed_at=now
-                                ))
-                                db.add(AuditLog(
-                                    user_id=user.id,
-                                    event_type="INTRADAY_SQUARE_OFF",
-                                    symbol=pos.symbol,
-                                    decision="EXECUTED",
-                                    reason="Auto square-off at 15:15 IST per INTRADAY_ONLY risk policy",
-                                    details_json=json.dumps({
-                                        "exit_price": cur_price,
-                                        "quantity": pos.quantity,
-                                        "realized_pnl": pnl_val
-                                    }),
-                                    timestamp=now
-                                ))
-                                db.query(PositionRiskState).filter(
-                                    PositionRiskState.user_id == user.id,
-                                    PositionRiskState.symbol == pos.symbol
-                                ).delete()
-                                db.commit()
-                            except Exception as log_err:
-                                logger.error(f"Error logging intraday square-off: {log_err}")
+                                entry_price=pos.average_buy_price,
+                                exit_price=cur_price,
+                                stop_loss=pos.average_buy_price * 0.985,
+                                take_profit=pos.average_buy_price * 1.03,
+                                risk_reward_ratio=2.0,
+                                risk_amount=round(pos.average_buy_price * 0.015 * pos.quantity, 2),
+                                realized_pnl=pnl_val,
+                                realized_pnl_pct=pnl_pct_val,
+                                setup_reason="Intraday Position",
+                                exit_reason=reason,
+                                emotion_tag="DISCIPLINED",
+                                ai_critique="Intraday square-off executed cleanly. Zero overnight gap risk.",
+                                holding_seconds=holding_sec,
+                                created_at=entry_time,
+                                closed_at=now
+                            ))
+                            db.add(AuditLog(
+                                user_id=user.id,
+                                event_type="INTRADAY_SQUARE_OFF",
+                                symbol=pos.symbol,
+                                decision="EXECUTED",
+                                reason=f"Auto square-off per policy: {reason}",
+                                details_json=json.dumps({
+                                    "exit_price": cur_price,
+                                    "quantity": pos.quantity,
+                                    "realized_pnl": pnl_val
+                                }),
+                                timestamp=now
+                            ))
+                            db.query(PositionRiskState).filter(
+                                PositionRiskState.user_id == user.id,
+                                PositionRiskState.symbol == pos.symbol
+                            ).delete()
+                            db.commit()
+                        except Exception as log_err:
+                            logger.error(f"Error logging intraday square-off: {log_err}")
 
-                            self._position_targets.pop((user.id, pos.symbol), None)
-                            self._position_entry_times.pop((user.id, pos.symbol), None)
-                            self._position_highs.pop((user.id, pos.symbol), None)
+                        self._position_targets.pop((user.id, pos.symbol), None)
+                        self._position_entry_times.pop((user.id, pos.symbol), None)
+                        self._position_highs.pop((user.id, pos.symbol), None)
 
-                        positions = []
+                    positions = []
 
                 metrics = portfolio_ledger.calculate_metrics(
                     db,
@@ -707,8 +738,9 @@ class AutoPilotRunner:
                 # B. Halt & Pause Check: Daily loss limit or emergency risk kill-switch
                 # When triggered for this user, skip candidate evaluation for this user without starving other users
                 risk_status = risk_manager.get_risk_status(db, portfolio)
-                is_halted = kill_switch_manager.is_stopped(portfolio) or risk_status.risk_state in ("HALTED", "EMERGENCY_STOP")
-                if is_halted:
+                is_kill_switched = kill_switch_manager.is_stopped(portfolio) or risk_status.risk_state == "EMERGENCY_STOP"
+                is_hard_halt = (risk_status.risk_state == "HALTED" and not getattr(settings, "ADAPTIVE_TESTING_MODE", True))
+                if is_kill_switched or is_hard_halt:
                     halt_reason = (
                         "Emergency Kill Switch is ACTIVE."
                         if kill_switch_manager.is_stopped(portfolio)
@@ -770,7 +802,47 @@ class AutoPilotRunner:
                     logger.info(f"AutoPilot loop paused for user {user.id}: {halt_reason}. Continuing with other users.")
                     continue
 
-                # C. Check Intraday 15:00 cutoff for new entries
+                # C. Weekend & Friday 13:00 / Daily 15:00 Entry Cutoffs
+                if is_weekend:
+                    if len(positions) == 0:
+                        self._last_ai_status = {
+                            "status": "SCANNING",
+                            "message": "Weekend Market Closed: System in standby. Zero weekend gap risk.",
+                            "best_stock": None,
+                            "best_score": 0,
+                            "active_positions_count": 0,
+                            "target_profit": None,
+                            "stop_loss": None,
+                            "autopilot_enabled": self.autopilot_enabled,
+                            "updated_at": now.isoformat()
+                        }
+                        await self.broadcast_ai_status_if_changed(self._last_ai_status)
+                    continue
+
+                if is_friday:
+                    fri_cutoff_str = getattr(settings, "FRIDAY_NO_NEW_ENTRY_TIME", "13:00")
+                    try:
+                        f_hr, f_min = map(int, fri_cutoff_str.split(":"))
+                        if cur_time_ist >= time(f_hr, f_min):
+                            logger.info(f"Friday weekend risk cutoff ({cur_time_ist.strftime('%H:%M')} >= {fri_cutoff_str} IST). Skipping new entries.")
+                            if len(positions) == 0:
+                                self._last_ai_status = {
+                                    "status": "SCANNING",
+                                    "message": f"Friday Weekend Protection: No new entries after {fri_cutoff_str} IST to eliminate Monday gap-down risk.",
+                                    "best_stock": None,
+                                    "best_score": 0,
+                                    "active_positions_count": 0,
+                                    "target_profit": None,
+                                    "stop_loss": None,
+                                    "autopilot_enabled": self.autopilot_enabled,
+                                    "updated_at": now.isoformat()
+                                }
+                                await self.broadcast_ai_status_if_changed(self._last_ai_status)
+                            continue
+                    except Exception:
+                        pass
+
+                # Check Intraday 15:00 cutoff for new entries
                 if getattr(settings, "INTRADAY_ONLY", True) and cur_time_ist >= time(15, 0):
                     logger.info(f"Intraday entry cutoff reached ({cur_time_ist.strftime('%H:%M')} >= 15:00 IST). Skipping new entries.")
                     if len(positions) == 0:
@@ -793,6 +865,10 @@ class AutoPilotRunner:
                 min_price_cutoff = getattr(settings, "MIN_STOCK_PRICE_INR", 100.0)
                 MAX_CONCURRENT_POSITIONS = 8
                 max_pos_pct = getattr(settings, "MAX_POSITION_SIZE_PCT", 95.0)
+                if is_friday:
+                    max_pos_pct = min(max_pos_pct, getattr(settings, "FRIDAY_MAX_POSITION_SIZE_PCT", 25.0))
+                elif risk_status.risk_state == "ADAPTIVE_RECOVERY":
+                    max_pos_pct = min(max_pos_pct, 25.0)
 
                 # Filter and score eligible candidates
                 scored_candidates: List[Tuple[str, Quote, float]] = []

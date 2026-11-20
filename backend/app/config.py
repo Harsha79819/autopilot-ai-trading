@@ -83,6 +83,12 @@ class Settings(BaseSettings):
     # Overnight & Gap Risk Policy
     INTRADAY_ONLY: bool = True             # True disallows new entries after 15:00 IST and auto-squares off at 15:15 IST
     KILL_SWITCH_CLOSES_POSITIONS: bool = False # When True, activating kill switch liquidates all open positions immediately
+    FRIDAY_NO_NEW_ENTRY_TIME: str = "13:00"  # No new BUY orders after 13:00 IST on Fridays (eliminates weekend gap risk)
+    FRIDAY_MAX_POSITION_SIZE_PCT: float = 25.0 # Max 25% capital allocation on Fridays (avoids 95% over-allocation)
+    FRIDAY_FORCE_SQUARE_OFF_TIME: str = "15:10" # Mandatory square-off time on Fridays (15:10 IST)
+    PREVENT_WEEKEND_HOLDINGS: bool = True  # Hard guarantee: Zero overnight/weekend carried positions
+    ADAPTIVE_TESTING_MODE: bool = False    # When False, strictly enforces daily loss halt per SEBI risk rules
+    ADAPTIVE_RECOVERY_MAX_RISK_PCT: float = 0.5 # Conservative 0.5% risk cap during adaptive recovery testing
 
     # Strategy & Cost Gate Parameters
     COST_AWARE_GATE_MULTIPLIER: float = 3.0 # expected_move >= K * total_costs

@@ -17,6 +17,7 @@ class User(Base):
 
     # Relationships for isolated user data
     portfolio = relationship("Portfolio", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    options_portfolio = relationship("OptionsPortfolio", backref="user", uselist=False, cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="user", cascade="all, delete-orphan")
     trades = relationship("Trade", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")

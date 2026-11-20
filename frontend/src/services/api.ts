@@ -16,7 +16,19 @@ import {
   TradingJournalEntry,
   TradingJournalSummary,
   DailyLedgerEntry,
-  DailyLedgerResponse
+  DailyLedgerResponse,
+  OptionChainResponse,
+  OptionAISignal,
+  OptionsPortfolio,
+  OptionsComparisonResponse,
+  UnderlyingInfo,
+  PCRMaxPainData,
+  SpreadOrderPayload,
+  WhatsAppConfig,
+  WhatsAppTestResponse,
+  ChallengeProgress,
+  TradeReplayData,
+  BrokerBridgeConfig
 } from '../types';
 
 const BASE_URL = '/api';
@@ -524,6 +536,339 @@ export const api = {
     if (!res.ok) throw new Error('Failed to fetch compounding tracker');
     return res.json();
   },
+
+  // Options Desk APIs
+  async getOptionsUnderlyings(): Promise<UnderlyingInfo[]> {
+    const res = await fetch(`${BASE_URL}/options/underlyings`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch options underlyings');
+    return res.json();
+  },
+
+  async getOptionsChain(underlying: string = 'NIFTY'): Promise<OptionChainResponse> {
+    const res = await fetch(`${BASE_URL}/options/chain?underlying=${encodeURIComponent(underlying)}`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch options chain');
+    return res.json();
+  },
+
+  async getOptionsSignal(underlying: string = 'NIFTY'): Promise<OptionAISignal> {
+    const res = await fetch(`${BASE_URL}/options/signal?underlying=${encodeURIComponent(underlying)}`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch options signal');
+    return res.json();
+  },
+
+  async getOptionsPortfolio(): Promise<OptionsPortfolio> {
+    const res = await authFetch(`${BASE_URL}/options/portfolio`);
+    if (!res.ok) throw new Error('Failed to fetch options portfolio');
+    return res.json();
+  },
+
+  async placeOptionOrder(data: {
+    symbol: string;
+    strike_price: number;
+    option_type: string;
+    expiry_date: string;
+    quantity?: number;
+    underlying?: string;
+  }): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/order`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to place option order');
+    }
+    return res.json();
+  },
+
+  async squareOffOption(positionId: number): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/square-off/${positionId}`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to square off option');
+    }
+    return res.json();
+  },
+
+  async toggleOptionsAutopilot(): Promise<{ status: string; is_autopilot_enabled: boolean; message: string }> {
+    const res = await authFetch(`${BASE_URL}/options/autopilot/toggle`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to toggle options autopilot');
+    }
+    return res.json();
+  },
+
+  async getOptionsComparison(): Promise<OptionsComparisonResponse> {
+    const res = await authFetch(`${BASE_URL}/options/comparison`);
+    if (!res.ok) throw new Error('Failed to fetch options comparison');
+    return res.json();
+  },
+
+  // 1. PCR & Max Pain
+  async getPCRMaxPain(underlying: string = 'NIFTY'): Promise<PCRMaxPainData> {
+    const res = await fetch(`${BASE_URL}/options/pcr-maxpain?underlying=${encodeURIComponent(underlying)}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch PCR & Max Pain data');
+    return res.json();
+  },
+
+  // 2. 1-Click Hedged Spreads
+  async placeSpreadOrder(payload: SpreadOrderPayload): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/spread/order`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to execute hedged spread');
+    }
+    return res.json();
+  },
+
+  // 3. 30-Day ₹5k Capital Compounding Challenge
+  async getChallengeProgress(): Promise<ChallengeProgress> {
+    const res = await authFetch(`${BASE_URL}/options/challenge`);
+    if (!res.ok) throw new Error('Failed to fetch compounding challenge progress');
+    return res.json();
+  },
+
+  // 4. Tick-by-Tick Trade Replay & Simulator
+  async getTradeReplay(tradeId: number): Promise<TradeReplayData> {
+    const res = await authFetch(`${BASE_URL}/options/trade-replay/${tradeId}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch trade replay');
+    }
+    return res.json();
+  },
+
+  // 5. WhatsApp Real-Time Notification Engine
+  async getWhatsAppConfig(): Promise<WhatsAppConfig> {
+    const res = await authFetch(`${BASE_URL}/options/whatsapp/config`);
+    if (!res.ok) throw new Error('Failed to fetch WhatsApp config');
+    return res.json();
+  },
+
+  async configureWhatsApp(data: {
+    phone: string;
+    alerts_enabled: boolean;
+    phone_number_id?: string;
+    access_token?: string;
+    api_key?: string;
+  }): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/whatsapp/configure`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to save WhatsApp config');
+    }
+    return res.json();
+  },
+
+  async testWhatsAppAlert(data: { phone: string; custom_message?: string }): Promise<WhatsAppTestResponse> {
+    const res = await authFetch(`${BASE_URL}/options/whatsapp/test`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to send WhatsApp test alert');
+    }
+    return res.json();
+  },
+
+  // 6. 1-Click Real Broker Bridge Gateway
+  async getBrokerBridgeConfig(): Promise<BrokerBridgeConfig> {
+    const res = await authFetch(`${BASE_URL}/options/broker/config`);
+    if (!res.ok) throw new Error('Failed to fetch broker bridge config');
+    return res.json();
+  },
+
+  async configureBrokerBridge(data: {
+    broker_name: string;
+    broker_api_key?: string;
+    broker_client_code?: string;
+    is_live_broker_routing: boolean;
+  }): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/broker/configure`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to save broker configuration');
+    }
+    return res.json();
+  },
+
+  async testBrokerBridgeConnection(data: {
+    broker_name: string;
+    broker_api_key?: string;
+    broker_client_code?: string;
+    is_live_broker_routing?: boolean;
+  }): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/broker/test-connection`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Broker connection test failed');
+    }
+    return res.json();
+  },
+
+  // Capital Vault & 3-Tier Allocation APIs
+  async getVaultStatus(): Promise<{
+    main_equity_cash_balance: number;
+    options_cash_balance: number;
+    options_realized_pnl: number;
+    profit_vault_locked: number;
+    recent_transfers?: Array<{
+      id: number;
+      amount: number;
+      from_desk: string;
+      to_desk: string;
+      timestamp: string;
+      reason: string;
+    }>;
+    strategies: {
+      option_1_vault: {
+        name: string;
+        status: string;
+        locked_amount: number;
+        description: string;
+      };
+      option_2_dynamic_spreads: {
+        name: string;
+        status: string;
+        description: string;
+      };
+      option_3_bluechip_swing: {
+        name: string;
+        status: string;
+        description: string;
+      };
+    };
+  }> {
+    const res = await authFetch(`${BASE_URL}/options/vault/status`);
+    if (!res.ok) throw new Error('Failed to fetch vault status');
+    return res.json();
+  },
+
+  async transferProfitVault(
+    amount: number = 100000.0,
+    fromDesk: string = 'OPTIONS',
+    toDesk: string = 'VAULT',
+    pin?: string
+  ): Promise<{
+    success: boolean;
+    transferred_amount: number;
+    from_desk: string;
+    to_desk: string;
+    options_cash_balance: number;
+    equity_cash_balance: number;
+    vault_balance?: number;
+    message: string;
+    timestamp: string;
+  }> {
+    const res = await authFetch(`${BASE_URL}/options/vault/transfer`, {
+      method: 'POST',
+      body: JSON.stringify({ amount, from_desk: fromDesk, to_desk: toDesk, pin, note: 'Capital Vault Transfer' }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Vault transfer failed');
+    }
+    return res.json();
+  },
+
+  async updateVaultPin(currentPin: string, newPin: string): Promise<{ success: boolean; message: string }> {
+    const res = await authFetch(`${BASE_URL}/options/vault/pin`, {
+      method: 'POST',
+      body: JSON.stringify({ current_pin: currentPin, new_pin: newPin }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update vault PIN');
+    }
+    return res.json();
+  },
+
+  async undoLastVaultTransfer(): Promise<{
+    success: boolean;
+    undone_amount: number;
+    from_desk: string;
+    to_desk: string;
+    options_cash_balance: number;
+    equity_cash_balance: number;
+    message: string;
+    timestamp: string;
+  }> {
+    const res = await authFetch(`${BASE_URL}/options/vault/undo`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to undo last vault transfer');
+    }
+    return res.json();
+  },
+
+  async toggleVaultStrategy(strategyKey: string, enabled: boolean): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/vault/strategy/toggle`, {
+      method: 'POST',
+      body: JSON.stringify({ strategy_key: strategyKey, enabled }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to toggle strategy');
+    }
+    return res.json();
+  },
+
+  async transferOptionsFunds(data: {
+    amount: number;
+    from_desk?: string;
+    note?: string;
+  }): Promise<{
+    success: boolean;
+    transferred_amount: number;
+    from_desk: string;
+    to_desk: string;
+    options_cash_balance: number;
+    equity_cash_balance: number;
+    message: string;
+    timestamp: string;
+  }> {
+    const res = await authFetch(`${BASE_URL}/options/transfer-funds`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Fund transfer failed');
+    }
+    return res.json();
+  },
+
+  async getTaxAndChargesBreakdown(): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/taxes`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch tax breakdown');
+    }
+    return res.json();
+  },
 };
+
 
 

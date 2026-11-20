@@ -205,6 +205,37 @@ class PaperBroker:
         ))
         db.commit()
         db.refresh(order)
+
+        # Dispatch real-time WhatsApp alert across the platform
+        try:
+            from backend.app.services.whatsapp_service import WhatsAppAlertService
+            side = order_in.side.upper()
+            if side == "BUY":
+                wa_msg = WhatsAppAlertService.format_equity_buy_alert(
+                    symbol=order_in.symbol,
+                    quantity=sim_res.quantity,
+                    price=sim_res.execution_price,
+                    total_value=sim_res.gross_amount,
+                    stop_loss=round(sim_res.execution_price * 0.98, 2),
+                    take_profit=round(sim_res.execution_price * 1.04, 2),
+                    reason="AutoPilot AI Swing Setup"
+                )
+                WhatsAppAlertService.notify_user_if_enabled(db, user.id, wa_msg, "EQUITY_BUY")
+            elif side == "SELL":
+                pnl = getattr(trade, "realized_pnl", 0.0) if trade else 0.0
+                ret_pct = getattr(trade, "return_pct", 0.0) if trade else 0.0
+                wa_msg = WhatsAppAlertService.format_equity_sell_alert(
+                    symbol=order_in.symbol,
+                    quantity=sim_res.quantity,
+                    exit_price=sim_res.execution_price,
+                    realized_pnl=pnl,
+                    return_pct=ret_pct,
+                    reason="Take-Profit Hit / Position Closed"
+                )
+                WhatsAppAlertService.notify_user_if_enabled(db, user.id, wa_msg, "EQUITY_SELL")
+        except Exception as wa_err:
+            pass
+
         return OrderResponse.model_validate(order)
 
 

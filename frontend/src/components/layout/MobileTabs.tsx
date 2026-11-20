@@ -15,7 +15,9 @@ import {
   FileText,
   Receipt,
   Settings,
-  Compass
+  Compass,
+  Zap,
+  MessageSquare
 } from 'lucide-react';
 import { useTrading } from '../../context/TradingContext';
 
@@ -24,10 +26,9 @@ export const MobileTabs: React.FC = () => {
   const [showDrawer, setShowDrawer] = useState(false);
 
   const MAIN_MOBILE = [
-    { id: 'dashboard', label: 'Home', icon: Activity },
-    { id: 'ai-adviser', label: 'AI Adviser', icon: BrainCircuit },
+    { id: 'dashboard', label: '1. Main Desk', icon: Activity },
+    { id: 'options', label: '2. Options', icon: Zap },
     { id: 'markets', label: 'Markets', icon: TrendingUp },
-    { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
   ];
 
   const ALL_VIEWS = [
