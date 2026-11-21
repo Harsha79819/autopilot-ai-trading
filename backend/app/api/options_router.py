@@ -634,3 +634,40 @@ def get_tax_and_charges_breakdown(
     return OptionsEngine.get_tax_and_charges_breakdown(db=db, user_id=current_user.id)
 
 
+# -------------------------------------------------------------
+# 6. Automated Daily WhatsApp Schedule Management
+# -------------------------------------------------------------
+@router.get("/whatsapp/schedule")
+def get_whatsapp_schedule_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the daily automated WhatsApp notification schedule,
+    covering trading days (09:00, 15:30, 19:00) and weekend/holidays (10:00, 18:00),
+    along with today's dispatch state and next trigger time.
+    """
+    from backend.app.services.daily_scheduler_service import DailySchedulerService
+    return DailySchedulerService.get_schedule_status(db)
+
+
+@router.post("/whatsapp/schedule/test-slot")
+def test_whatsapp_schedule_slot(
+    slot_key: str = Query(..., description="Schedule slot key (e.g. MORNING_BRIEF, MARKET_WRAP, EVENING_DIGEST, WEEKEND_MORNING, WEEKEND_EVENING)"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually triggers an immediate test dispatch for any scheduled briefing slot,
+    sending both the WhatsApp text message and the neural voice note to the user.
+    """
+    from backend.app.services.daily_scheduler_service import DailySchedulerService
+    if slot_key not in DailySchedulerService.SLOTS_CONFIG:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid slot_key '{slot_key}'. Valid options: {list(DailySchedulerService.SLOTS_CONFIG.keys())}"
+        )
+    return DailySchedulerService.dispatch_slot(slot_key=slot_key, db=db, force=True)
+
+
+

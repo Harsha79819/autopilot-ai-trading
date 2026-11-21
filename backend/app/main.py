@@ -106,13 +106,17 @@ async def lifespan(app: FastAPI):
         finally:
             db.close()
 
-    # Start continuous background auto-pilot runner
+    # Start continuous background auto-pilot runner & daily WhatsApp scheduler
     if settings.AUTOPILOT_RUNNER_ENABLED:
         autopilot_runner.start()
+
+    from backend.app.services.daily_scheduler_service import daily_scheduler_worker
+    daily_scheduler_worker.start()
 
     yield
 
     # Shutdown
+    daily_scheduler_worker.stop()
     autopilot_runner.stop()
     logger.info("AutoPilot AI Trading Platform shutdown complete.")
 

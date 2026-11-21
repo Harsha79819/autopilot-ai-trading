@@ -685,6 +685,23 @@ export const api = {
     return res.json();
   },
 
+  async getWhatsAppSchedule(): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/whatsapp/schedule`);
+    if (!res.ok) throw new Error('Failed to fetch WhatsApp schedule');
+    return res.json();
+  },
+
+  async testWhatsAppScheduleSlot(slotKey: string): Promise<any> {
+    const res = await authFetch(`${BASE_URL}/options/whatsapp/schedule/test-slot?slot_key=${slotKey}`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to test schedule slot');
+    }
+    return res.json();
+  },
+
   // 6. 1-Click Real Broker Bridge Gateway
   async getBrokerBridgeConfig(): Promise<BrokerBridgeConfig> {
     const res = await authFetch(`${BASE_URL}/options/broker/config`);
