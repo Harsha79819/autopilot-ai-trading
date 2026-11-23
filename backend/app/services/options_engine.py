@@ -760,7 +760,8 @@ class OptionsEngine:
 
         for sym in SUPPORTED_UNDERLYINGS.keys():
             signal = cls.evaluate_ai_signal(sym)
-            if signal["bias"] in ("BULLISH", "BEARISH") and signal["confidence_pct"] >= 55.0:
+            # High Conviction Gate: Only enter trades with >= 72.0% AI confidence to minimize loss risk
+            if signal["bias"] in ("BULLISH", "BEARISH") and signal["confidence_pct"] >= 72.0:
                 if signal["confidence_pct"] > highest_confidence:
                     highest_confidence = signal["confidence_pct"]
                     best_candidate = signal
@@ -772,8 +773,8 @@ class OptionsEngine:
         """
         Executed on every background auto-pilot tick:
         1. Evaluates SL, TP, Trailing SL, and 15:10 IST square-off.
-        2. If portfolio has autopilot enabled, no open position, and time is < 15:00 IST:
-           Scans all underlyings and executes top AI option trade!
+        2. If portfolio has autopilot enabled, no open position, and time is < 13:30 IST:
+           Scans all underlyings and executes top AI option trade with >= 72% conviction!
         """
         portfolio = cls.get_or_create_portfolio(db, user_id)
 
@@ -784,9 +785,9 @@ class OptionsEngine:
             return {"status": "DISABLED", "exits": exits}
 
         now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-        # No new entries after 15:00 IST
-        if now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 0):
-            return {"status": "CUTOFF_PASSED", "exits": exits}
+        # Golden Hours Rule: No new option entries after 13:30 IST to prevent late-day time decay traps
+        if now_ist.hour > 13 or (now_ist.hour == 13 and now_ist.minute >= 30):
+            return {"status": "CUTOFF_PASSED", "reason": "No entries after 13:30 IST to avoid theta trap", "exits": exits}
 
         # Check if already holding an open position
         open_pos = db.query(OptionPosition).filter(
