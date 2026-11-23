@@ -800,6 +800,49 @@ class AutoPilotRunner:
                     }
                     await self.broadcast_ai_status_if_changed(self._last_ai_status)
                     logger.info(f"AutoPilot loop paused for user {user.id}: {halt_reason}. Continuing with other users.")
+
+                    # Immediate WhatsApp Alert on Circuit Breaker / Trading Halt
+                    try:
+                        from backend.app.models.options_models import OptionsPortfolio
+                        from backend.app.models.watchlist_alert import NotificationLog
+                        opt_port = db.query(OptionsPortfolio).filter(OptionsPortfolio.id == 1).first()
+                        today_str = now_ist.strftime("%Y-%m-%d")
+                        already_alerted = db.query(NotificationLog).filter(
+                            NotificationLog.category == "TRADING_HALTED_ALERT",
+                            NotificationLog.created_at.like(f"{today_str}%")
+                        ).first()
+
+                        if opt_port and opt_port.whatsapp_alerts_enabled and opt_port.whatsapp_phone and not already_alerted:
+                            halt_msg = (
+                                f"🚨 *AutoPilot అలర్ట్: ట్రేడింగ్ తాత్కాలికంగా ఆపివేయబడింది!* 🛑\n"
+                                f"━━━━━━━━━━━━━━━━━━\n"
+                                f"⚠️ *కారణం:* {halt_reason}\n"
+                                f"🛡️ *రక్షణ చర్య:* క్యాపిటల్ రక్షణ కోసం సర్క్యూట్ బ్రేకర్ యాక్టివేట్ చేయబడింది. కొత్త ఆర్డర్లు బ్లాక్ చేయబడ్డాయి.\n"
+                                f"💼 *ప్రస్తుత బ్యాలెన్స్:* ₹{portfolio.cash_balance:,.2f} సురక్షితంగా రక్షించబడింది.\n"
+                                f"⏰ *సమయం:* {now_ist.strftime('%H:%M IST')} | {today_str}\n"
+                                f"━━━━━━━━━━━━━━━━━━\n"
+                                f"_AutoPilot AI • Risk Guardian_"
+                            )
+                            if opt_port.whatsapp_phone_number_id and opt_port.whatsapp_access_token:
+                                WhatsAppAlertService.send_meta_cloud_api(
+                                    phone=opt_port.whatsapp_phone,
+                                    message=halt_msg,
+                                    phone_number_id=opt_port.whatsapp_phone_number_id,
+                                    access_token=opt_port.whatsapp_access_token
+                                )
+                            db.add(NotificationLog(
+                                user_id=user.id,
+                                title="Trading Halted Alert",
+                                message=halt_msg,
+                                category="TRADING_HALTED_ALERT",
+                                severity="WARNING",
+                                is_read=True,
+                                created_at=now
+                            ))
+                            db.commit()
+                    except Exception as halt_alert_err:
+                        logger.error(f"Error dispatching halt alert to WhatsApp: {halt_alert_err}")
+
                     continue
 
                 # C. Weekend & Friday 13:00 / Daily 15:00 Entry Cutoffs
