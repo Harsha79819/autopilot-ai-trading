@@ -347,7 +347,7 @@ def test_whatsapp_alert(
     """Send test alert to verify WhatsApp integration and return 1-click dispatch link."""
     time_str = WhatsAppAlertService.get_ist_time_str()
     sample_msg = test_in.custom_message or (
-        "👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
+        "👋 *హలో హర్ష గారు! నేను మీ ఫ్రెండ్ ని, ప్రెసెంట్ అప్‌డేట్:* 📊\n"
         "━━━━━━━━━━━━━━━━━━\n"
         "⚡ *వాట్సాప్ అలర్ట్స్ కనెక్ట్ అయ్యాయి!* 🟢\n\n"
         "✅ మీ మొబైల్ నంబర్‌కు లైవ్ ట్రేడింగ్ అలర్ట్స్ మరియు వాయిస్ నోట్స్ సక్సెస్‌ఫుల్‌గా సెట్ చేయబడ్డాయి.\n\n"
@@ -359,9 +359,10 @@ def test_whatsapp_alert(
         "• ⚡ మధ్యాహ్నం 15:10 IST ఆటో స్క్వేర్-ఆఫ్\n"
         "• 🌅 ఉదయం & సాయంత్రం డైలీ బ్రీఫింగ్స్\n"
         f"⏰ సమయం: {time_str}\n"
+        "🌐 *లైవ్ ప్లాట్‌ఫారమ్:* https://autopilot-ai-trading.onrender.com\n"
         "━━━━━━━━━━━━━━━━━━\n"
         "🛡️ _AutoPilot AI • మీ క్యాపిటల్ రక్షణే ప్రథమ ప్రాధాన్యం!_\n"
-        "🎧 _అను వాయిస్ ఆడియో కింద ప్లే చేసి వినవచ్చు._"
+        "🎧 _వాయిస్ అప్‌డేట్ కింద వినండి!_"
     )
     res = WhatsAppAlertService.dispatch_alert(
         db=db,

@@ -76,11 +76,11 @@ def test_message_and_voice_builder():
         # Weekend evening
         res = DailySchedulerService.build_message_and_voice("WEEKEND_EVENING", now_ist, opt_port, None)
         assert "వీకెండ్ ఈవెనింగ్ బ్రీఫింగ్" in res["text"]
-        assert "అను" in res["voice"]
+        assert "ఫ్రెండ్" in res["voice"]
 
         # Morning brief
         res_m = DailySchedulerService.build_message_and_voice("MORNING_BRIEF", now_ist, opt_port, None)
-        assert "శుభోదయం" in res_m["text"]
+        assert "హలో హర్ష గారు" in res_m["text"]
         assert "9:15 AM" in res_m["text"]
     finally:
         db.close()

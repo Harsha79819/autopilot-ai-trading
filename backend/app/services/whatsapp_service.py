@@ -67,7 +67,7 @@ class WhatsAppAlertService:
         strat_badge = "🛡️ హెడ్జ్డ్ స్ప్రెడ్ (Hedged Spread)" if strategy != "NAKED" else "⚡ ఆప్షన్ కొనుగోలు (1-Lot Buy)"
 
         return (
-            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
+            f"👋 *హలో హర్ష గారు! నేను మీ ఫ్రెండ్ ని, ప్రెసెంట్ అప్‌డేట్:* 📊\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"⚡ *కొత్త ఆప్షన్స్ ట్రేడ్ తీసుకున్నాం!* 🟢\n"
             f"📌 *రకం:* {strat_badge}\n\n"
@@ -82,7 +82,7 @@ class WhatsAppAlertService:
             f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"🛡️ _రక్షణ నిబంధన: ఈ రోజు మధ్యాహ్నం 03:10 PM కల్లా ఆటోమేటిక్‌గా క్లోజ్ అవుతుంది. ఓవర్‌నైట్ రిస్క్ ఏమీ ఉండదు._\n"
-            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
+            f"🎧 _వాయిస్ అప్‌డేట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -115,7 +115,7 @@ class WhatsAppAlertService:
         bal_line = f"💼 *ప్రస్తుత ఖాతా నగదు బ్యాలెన్స్:* ₹{current_balance:,.2f}\n" if current_balance else ""
 
         return (
-            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
+            f"👋 *హలో హర్ష గారు! నేను మీ ఫ్రెండ్ ని, ప్రెసెంట్ అప్‌డేట్:* 📊\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"{icon} *{header}*\n\n"
             f"📊 *ట్రేడ్:* `{symbol}`\n"
@@ -124,9 +124,10 @@ class WhatsAppAlertService:
             f"📋 *క్లోజ్ అయిన కారణం:* {reason_display}\n"
             f"{bal_line}"
             f"⏰ *సమయం:* {time_str}\n"
+            f"🌐 *లైవ్ ప్లాట్‌ఫారమ్:* https://autopilot-ai-trading.onrender.com\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"✅ _పెట్టుబడి మరియు లాభం మొత్తం మీ ఖాతాలో సురక్షితంగా జమ అయ్యాయి._\n"
-            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
+            f"🎧 _వాయిస్ అప్‌డేట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -140,7 +141,7 @@ class WhatsAppAlertService:
         """Format a trailing stop loss elevation alert in simple Telugu."""
         time_str = cls.get_ist_time_str()
         return (
-            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
+            f"👋 *హలో హర్ష గారు! నేను మీ ఫ్రెండ్ ని, ప్రెసెంట్ అప్‌డేట్:* 📊\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"🟡 *లాభం రక్షణ పెంచబడింది (Trailing Stop Locked)* 📈\n\n"
             f"⚡ *ట్రేడ్:* `{symbol}`\n"
@@ -165,7 +166,7 @@ class WhatsAppAlertService:
         sign = "+" if realized_pnl >= 0 else ""
         time_str = cls.get_ist_time_str()
         return (
-            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
+            f"👋 *హలో హర్ష గారు! నేను మీ ఫ్రెండ్ ని, ప్రెసెంట్ అప్‌డేట్:* 📊\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"📊 *పోర్ట్‌ఫోలియో తాజా స్థితి (Live Digest)* 🕒\n\n"
             f"💼 *నగదు బ్యాలెన్స్:* ₹{cash_balance:,.2f}\n"
@@ -174,8 +175,10 @@ class WhatsAppAlertService:
             f"💵 *నికర లాభనష్టం:* {sign}₹{realized_pnl:,.2f}\n"
             f"🎯 *యాక్టివ్ పొజిషన్లు:* {open_pos_str}\n\n"
             f"⏰ *సమయం:* {time_str}\n"
+            f"🌐 *లైవ్ ప్లాట్‌ఫారమ్:* https://autopilot-ai-trading.onrender.com\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🤖 _AutoPilot AI రక్షణ వ్యవస్థ 100% యాక్టివ్‌గా ఉంది._"
+            f"🤖 _AutoPilot AI రక్షణ వ్యవస్థ 100% యాక్టివ్‌గా ఉంది._\n"
+            f"🎧 _వాయిస్ అప్‌డేట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -194,7 +197,7 @@ class WhatsAppAlertService:
         sl_str = f"₹{stop_loss:.2f} (-2.0% SL)" if stop_loss else "ఆటోమేటిక్ డైనమిక్ SL"
         tp_str = f"₹{take_profit:.2f} (+4.0% TP)" if take_profit else "ట్రైలింగ్ రన్నర్"
         return (
-            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
+            f"👋 *హలో హర్ష గారు! నేను మీ ఫ్రెండ్ ని, ప్రెసెంట్ అప్‌డేట్:* 📊\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"📈 *ఈక్విటీ స్టాక్ కొనుగోలు (Equity Buy)* 🟢\n\n"
             f"📊 *స్టాక్:* *{symbol}* ({quantity} షేర్లు)\n"
@@ -206,7 +209,7 @@ class WhatsAppAlertService:
             f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"🛡️ _క్రమశిక్షణతో కూడిన స్వింగ్ ట్రేడింగ్ రక్షణ యాక్టివ్‌గా ఉంది._\n"
-            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
+            f"🎧 _వాయిస్ అప్‌డేట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -227,17 +230,18 @@ class WhatsAppAlertService:
         pnl_badge = f"🟢 *నికర లాభం (Net Profit):* +₹{realized_pnl:,.2f} (+{return_pct:.2f}%)" if is_profit else f"🔴 *ముగిసిన ఫలితం:* -₹{abs(realized_pnl):,.2f} ({return_pct:.2f}%)"
 
         return (
-            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
+            f"👋 *హలో హర్ష గారు! నేను మీ ఫ్రెండ్ ని, ప్రెసెంట్ అప్‌డేట్:* 📊\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"{icon} *{header}*\n\n"
             f"📊 *స్టాక్:* *{symbol}* ({quantity} షేర్లు)\n"
             f"💵 *అమ్మిన ధర:* ₹{exit_price:.2f}\n"
-            f"{pnl_badge}\n"
+            f"{pnl_badge}\n\n"
             f"📋 *కారణం:* {reason}\n"
             f"⏰ *సమయం:* {time_str}\n"
+            f"🌐 *లైవ్ ప్లాట్‌ఫారమ్:* https://autopilot-ai-trading.onrender.com\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"💡 _పెట్టుబడి నగదు మీ ఈక్విటీ బ్యాలెన్స్‌లో జమ చేయబడింది._\n"
-            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
+            f"🎧 _వాయిస్ అప్‌డేట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -251,7 +255,7 @@ class WhatsAppAlertService:
         time_str = cls.get_ist_time_str()
         val_str = f"\n💼 *పోర్ట్‌ఫోలియో విలువ:* ₹{portfolio_value:,.2f}" if portfolio_value else ""
         return (
-            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
+            f"👋 *హలో హర్ష గారు! నేను మీ ఫ్రెండ్ ని, ప్రెసెంట్ అప్‌డేట్:* 📊\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"⚠️ *అత్యవసర భద్రతా అలర్ట్ (Risk Guardian Alert)* 🛑\n\n"
             f"🚨 *ఈవెంట్:* {event_type}\n"
@@ -259,7 +263,7 @@ class WhatsAppAlertService:
             f"🔒 *ట్రేడింగ్ రక్షణ వ్యవస్థ ఆన్ చేయబడింది - క్యాపిటల్ పూర్తిగా సురక్షితం.*\n"
             f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
+            f"🎧 _వాయిస్ అప్‌డేట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -339,6 +343,7 @@ class WhatsAppAlertService:
             if any(hint in line for hint in [
                 'వాయిస్ రిపోర్ట్',
                 'వాయిస్ ఆడియో',
+                'వాయిస్ అప్‌డేట్',
                 'ప్లే చేసి వినవచ్చు',
                 'Audio voice note sent below',
                 'Voice audio briefing',
@@ -356,11 +361,11 @@ class WhatsAppAlertService:
 
         spoken = '. '.join(lines)
         if has_telugu:
-            if not any(spoken.startswith(g) for g in ["నమస్కారం", "శుభోదయం", "హలో"]):
-                spoken = f"నమస్కారం హర్ష గారు, నేను మీ అను ని. {spoken}"
+            if not any(spoken.startswith(g) for g in ["హలో", "నమస్కారం", "శుభోదయం"]):
+                spoken = f"హలో హర్ష గారు, నేను మీ ఫ్రెండ్ ని. ప్రెసెంట్ అప్‌డేట్: {spoken}"
         else:
-            if not spoken.startswith("Hello Boss"):
-                spoken = f"Hello Boss! This is Anu reporting today. {spoken}"
+            if not spoken.startswith("Hello Harsha"):
+                spoken = f"Hello Harsha garu! Nenu mee friend ni, present update: {spoken}"
         return spoken
 
     @classmethod
