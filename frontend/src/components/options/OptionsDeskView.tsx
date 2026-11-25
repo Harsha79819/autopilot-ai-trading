@@ -447,6 +447,99 @@ export const OptionsDeskView: React.FC = () => {
         </div>
       </div>
 
+      {/* 2b. Live Guardian Monitor (Placed right on top of Capital Safety Vault per trader request) */}
+      {activePosition ? (
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/40 rounded-2xl p-5 shadow-2xl">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-xs font-bold rounded animate-pulse">
+                  🟢 {t('లైవ్ పొజిషన్ మానిటర్', 'LIVE GUARDIAN MONITOR')}
+                </span>
+                <span className="text-xs text-slate-400 font-mono">
+                  {t('పరిమాణం:', 'Size:')} {activePosition.quantity} {t('షేర్లు', 'shares')}
+                </span>
+              </div>
+              <h2 className="text-xl font-black text-white font-mono mt-1">
+                {activePosition.symbol} ({activePosition.option_type === 'CE' ? 'CALL OPTION' : 'PUT OPTION'})
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="text-xs text-slate-400">{t('లైవ్ అన్‌రియలైజ్డ్ P&L', 'Live Unrealized P&L')}</div>
+                <div className={`text-2xl font-black font-mono ${
+                  activePosition.unrealized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
+                  {activePosition.unrealized_pnl >= 0 ? '+' : ''}₹{activePosition.unrealized_pnl.toFixed(2)}
+                  <span className="text-xs ml-1.5 font-normal">
+                    ({activePosition.unrealized_pnl_pct >= 0 ? '+' : ''}{activePosition.unrealized_pnl_pct.toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+
+              <button
+                disabled={actionLoading}
+                onClick={() => handleSquareOff(activePosition.id)}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5 cursor-pointer"
+              >
+                {actionLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                {t('స్క్వేర్-ఆఫ్ (Exit Now)', 'Square-Off (Exit Now)')}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">
+            <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+              <div className="text-slate-400">{t('ఎంట్రీ ప్రీమియం', 'Entry Premium')}</div>
+              <div className="text-white font-mono font-bold text-sm mt-0.5">₹{activePosition.entry_premium.toFixed(2)}</div>
+              <div className="text-[11px] text-slate-500">{t('మార్జిన్:', 'Margin:')} ₹{activePosition.invested_margin.toFixed(2)}</div>
+            </div>
+
+            <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+              <div className="text-slate-400">{t('ప్రస్తుత ప్రీమియం (LTP)', 'Current LTP')}</div>
+              <div className="text-white font-mono font-bold text-sm mt-0.5">₹{activePosition.current_premium.toFixed(2)}</div>
+              <div className="text-[11px] text-emerald-400">{t('బ్లాక్-స్కోల్స్ లైవ్ ధర', 'Live Pricing')}</div>
+            </div>
+
+            <div className="bg-slate-950/60 p-3 rounded-xl border border-rose-900/40">
+              <div className="text-rose-400 font-medium">{t('హార్డ్ స్టాప్ లాస్ (-20%)', 'Hard Stop Loss (-20%)')}</div>
+              <div className="text-rose-300 font-mono font-bold text-sm mt-0.5">₹{activePosition.stop_loss_premium.toFixed(2)}</div>
+              <div className="text-[11px] text-slate-500">{t('ఆటోమేటిక్ ఎగ్జిట్ గ్యారంటీ', 'Guaranteed Exit')}</div>
+            </div>
+
+            <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-900/40">
+              <div className="text-emerald-400 font-medium">{t('టార్గెట్ 1 (+40%)', 'Target 1 (+40%)')}</div>
+              <div className="text-emerald-300 font-mono font-bold text-sm mt-0.5">₹{activePosition.target_premium.toFixed(2)}</div>
+              <div className="text-[11px] text-slate-500">
+                {t('ట్రెయిలింగ్ SL:', 'Trailing SL:')} {activePosition.trailing_activated ? t('యాక్టివ్', 'Active') : t('వెయిటింగ్', 'Waiting')}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-slate-900/80 border border-indigo-500/30 rounded-2xl p-4 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-bold rounded-lg font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              🟢 {t('లైవ్ పొజిషన్ మానిటర్', 'LIVE GUARDIAN MONITOR')}
+            </span>
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                {t('స్టాండ్‌బై మోడ్: ఓపెన్ రిస్క్ లేదు (0 కాంట్రాక్ట్‌లు)', 'Standby Mode: Zero Open Risk (0 Contracts Active)')}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                {t('AI స్కానర్ నిరంతరం పర్యవేక్షిస్తోంది • కన్విక్షన్ ≥72% రాగానే లైవ్ మానిటరింగ్ ఆటోమేటిక్‌గా మొదలవుతుంది', 'AI actively scanning • Live monitoring activates instantly when high-conviction (≥72%) setup is filled')}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs shrink-0">
+            <span className="px-2.5 py-1 bg-slate-950/70 border border-slate-800 text-slate-300 rounded-lg text-[11px] font-mono">
+              🛡️ {t('రక్షణ: -20% SL • 15:10 కట్‌ఆఫ్', 'Guard: -20% Hard SL • 15:10 EOD Cutoff')}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* 3. Capital Safety Vault & 2-Way Flow (Vice Versa Transfer Station) */}
       <CapitalVaultManager onTransferComplete={() => fetchData(selectedUnderlying)} />
@@ -575,77 +668,7 @@ export const OptionsDeskView: React.FC = () => {
         )}
       </div>
 
-      {/* 5. Active Position Live Guardian (If any open position exists) */}
-      {activePosition && (
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/40 rounded-2xl p-5 shadow-2xl">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-xs font-bold rounded">
-                  🟢 {t('లైవ్ పొజిషన్ మానిటర్', 'LIVE GUARDIAN MONITOR')}
-                </span>
-                <span className="text-xs text-slate-400 font-mono">
-                  {t('పరిమాణం:', 'Size:')} {activePosition.quantity} {t('షేర్లు', 'shares')}
-                </span>
-              </div>
-              <h2 className="text-xl font-black text-white font-mono mt-1">
-                {activePosition.symbol} ({activePosition.option_type === 'CE' ? 'CALL OPTION' : 'PUT OPTION'})
-              </h2>
-            </div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-xs text-slate-400">{t('లైవ్ అన్‌రియలైజ్డ్ P&L', 'Live Unrealized P&L')}</div>
-                <div className={`text-2xl font-black font-mono ${
-                  activePosition.unrealized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                }`}>
-                  {activePosition.unrealized_pnl >= 0 ? '+' : ''}₹{activePosition.unrealized_pnl.toFixed(2)}
-                  <span className="text-xs ml-1.5 font-normal">
-                    ({activePosition.unrealized_pnl_pct >= 0 ? '+' : ''}{activePosition.unrealized_pnl_pct.toFixed(1)}%)
-                  </span>
-                </div>
-              </div>
-
-              <button
-                disabled={actionLoading}
-                onClick={() => handleSquareOff(activePosition.id)}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5 cursor-pointer"
-              >
-                {actionLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                {t('స్క్వేర్-ఆఫ్ (Exit Now)', 'Square-Off (Exit Now)')}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">
-            <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-slate-400">{t('ఎంట్రీ ప్రీమియం', 'Entry Premium')}</div>
-              <div className="text-white font-mono font-bold text-sm mt-0.5">₹{activePosition.entry_premium.toFixed(2)}</div>
-              <div className="text-[11px] text-slate-500">{t('మార్జిన్:', 'Margin:')} ₹{activePosition.invested_margin.toFixed(2)}</div>
-            </div>
-
-            <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-slate-400">{t('ప్రస్తుత ప్రీమియం (LTP)', 'Current LTP')}</div>
-              <div className="text-white font-mono font-bold text-sm mt-0.5">₹{activePosition.current_premium.toFixed(2)}</div>
-              <div className="text-[11px] text-emerald-400">{t('బ్లాక్-స్కోల్స్ లైవ్ ధర', 'Live Pricing')}</div>
-            </div>
-
-            <div className="bg-slate-950/60 p-3 rounded-xl border border-rose-900/40">
-              <div className="text-rose-400 font-medium">{t('హార్డ్ స్టాప్ లాస్ (-20%)', 'Hard Stop Loss (-20%)')}</div>
-              <div className="text-rose-300 font-mono font-bold text-sm mt-0.5">₹{activePosition.stop_loss_premium.toFixed(2)}</div>
-              <div className="text-[11px] text-slate-500">{t('ఆటోమేటిక్ ఎగ్జిట్ గ్యారంటీ', 'Guaranteed Exit')}</div>
-            </div>
-
-            <div className="bg-slate-950/60 p-3 rounded-xl border border-emerald-900/40">
-              <div className="text-emerald-400 font-medium">{t('టార్గెట్ 1 (+40%)', 'Target 1 (+40%)')}</div>
-              <div className="text-emerald-300 font-mono font-bold text-sm mt-0.5">₹{activePosition.target_premium.toFixed(2)}</div>
-              <div className="text-[11px] text-slate-500">
-                {t('ట్రెయిలింగ్ SL:', 'Trailing SL:')} {activePosition.trailing_activated ? t('యాక్టివ్', 'Active') : t('వెయిటింగ్', 'Waiting')}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 5b. 30-Day ₹5,000 Capital Compounding Challenge */}
       <CompoundingChallengeWidget />
