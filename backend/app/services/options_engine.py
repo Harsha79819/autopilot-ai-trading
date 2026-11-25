@@ -391,14 +391,23 @@ class OptionsEngine:
         current_premium = black_scholes_price(spot, strike_price, t_years, 0.07, cfg["iv_base"], option_type)
 
         # Determine effective trade quantity (full capital utilization up to full available cash, no money saved)
-        order_qty = quantity or base_lot
-        required_margin = current_premium * order_qty
-
         max_deployable = min(max(portfolio.cash_balance - 25.0, 100.0), MAX_POSITION_MARGIN) if portfolio.cash_balance > 0 else MAX_POSITION_MARGIN
-        if required_margin > max_deployable:
-            affordable_qty = max(int(max_deployable / current_premium), 1)
-            order_qty = affordable_qty
+        if not quantity:
+            lot_cost = current_premium * base_lot
+            affordable_lots = max(int(max_deployable / lot_cost), 1) if lot_cost > 0 else 1
+            order_qty = affordable_lots * base_lot
             required_margin = current_premium * order_qty
+            while affordable_lots > 1 and (required_margin + FLAT_BROKERAGE_PER_ORDER) > portfolio.cash_balance:
+                affordable_lots -= 1
+                order_qty = affordable_lots * base_lot
+                required_margin = current_premium * order_qty
+        else:
+            order_qty = quantity
+            required_margin = current_premium * order_qty
+            if required_margin > max_deployable:
+                affordable_qty = max(int(max_deployable / current_premium), 1)
+                order_qty = affordable_qty
+                required_margin = current_premium * order_qty
 
         # Initial regulatory buy fees: ₹20 Brokerage + 0.003% Stamp duty
         stamp_duty = round(0.00003 * required_margin, 2)
@@ -1045,13 +1054,22 @@ class OptionsEngine:
         else:
             raise ValueError(f"Unsupported spread type '{spread_type}'. Must be BULL_CALL_SPREAD or BEAR_PUT_SPREAD.")
 
-        order_qty = quantity or lot_size
-        required_margin = round(net_debit_per_unit * order_qty, 2)
-
         max_deployable = min(max(portfolio.cash_balance - 50.0, 100.0), MAX_POSITION_MARGIN) if portfolio.cash_balance > 0 else MAX_POSITION_MARGIN
-        if required_margin > max_deployable:
-            order_qty = max(int(max_deployable / net_debit_per_unit), 1)
+        if not quantity:
+            spread_lot_cost = net_debit_per_unit * lot_size
+            affordable_lots = max(int(max_deployable / spread_lot_cost), 1) if spread_lot_cost > 0 else 1
+            order_qty = affordable_lots * lot_size
             required_margin = round(net_debit_per_unit * order_qty, 2)
+            while affordable_lots > 1 and (required_margin + (FLAT_BROKERAGE_PER_ORDER * 2)) > portfolio.cash_balance:
+                affordable_lots -= 1
+                order_qty = affordable_lots * lot_size
+                required_margin = round(net_debit_per_unit * order_qty, 2)
+        else:
+            order_qty = quantity
+            required_margin = round(net_debit_per_unit * order_qty, 2)
+            if required_margin > max_deployable:
+                order_qty = max(int(max_deployable / net_debit_per_unit), 1)
+                required_margin = round(net_debit_per_unit * order_qty, 2)
 
         # 2 legs: Buy leg + Sell leg = ₹40 entry brokerage + stamp duty
         entry_fee = round((FLAT_BROKERAGE_PER_ORDER * 2) + (0.00003 * required_margin), 2)
