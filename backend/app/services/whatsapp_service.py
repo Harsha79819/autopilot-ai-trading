@@ -339,12 +339,27 @@ class WhatsAppAlertService:
 
         lines = []
         for line in t.split('\n'):
-            # Skip UI / instruction hints from spoken audio
-            if any(hint in line for hint in [
+            line_str = line.strip()
+            if not line_str:
+                continue
+            # Strip URLs and website links completely from voice audio
+            if any(u in line_str.lower() for u in ['http://', 'https://', 'www.', '.onrender.com', 'onrender']):
+                continue
+            # Skip UI / instruction hints / footers / slogans from spoken audio
+            if any(hint in line_str for hint in [
+                'లైవ్ ప్లాట్‌ఫారమ్',
+                'లైవ్ ప్లాట్ఫారమ్',
+                'లైవ్ డ్యాష్‌బోర్డ్',
+                'ప్లాట్‌ఫారమ్',
+                'ప్లాట్ఫారమ్',
                 'వాయిస్ రిపోర్ట్',
                 'వాయిస్ ఆడియో',
                 'వాయిస్ అప్‌డేట్',
+                'వాయిస్ అప్డేట్',
                 'ప్లే చేసి వినవచ్చు',
+                'ప్రథమ ప్రాధాన్యం',
+                'క్యాపిటల్ రక్షణే',
+                'AutoPilot AI',
                 'Audio voice note sent below',
                 'Voice audio briefing',
                 'Tap play while travelling',
@@ -352,7 +367,9 @@ class WhatsAppAlertService:
                 'SEBI Discipline'
             ]):
                 continue
-            cleaned = re.sub(r'[*_~`•━]+', ' ', line)
+            cleaned = re.sub(r'https?://\S+', '', line_str)
+            cleaned = re.sub(r'www\.\S+', '', cleaned)
+            cleaned = re.sub(r'[*_~`•━]+', ' ', cleaned)
             cleaned = re.sub(r'[\U00010000-\U0010ffff]', '', cleaned)
             cleaned = re.sub(r'[^\w\s.,;:!?\u0c00-\u0c7f-]', ' ', cleaned).strip()
             cleaned = re.sub(r'\s+', ' ', cleaned).strip()
@@ -371,14 +388,14 @@ class WhatsAppAlertService:
     @classmethod
     def generate_anu_voice_mp3(cls, spoken_text: str) -> Optional[str]:
         """
-        Synthesizes high-fidelity, ultra-natural neural speech for Anu using Microsoft Azure Neural TTS (edge-tts),
+        Synthesizes high-fidelity, ultra-natural neural speech for voice updates using Microsoft Azure Neural TTS (edge-tts),
         with fallback to macOS Indian Siri voice (Tara) or local TTS.
         """
         try:
-            fd_mp3, mp3_path = tempfile.mkstemp(suffix=".mp3", prefix="anu_neural_voice_")
+            fd_mp3, mp3_path = tempfile.mkstemp(suffix=".mp3", prefix="voice_update_")
             os.close(fd_mp3)
 
-            # 1. Studio-grade Neural Voice (Neerja Expressive - natural, warm Indian female assistant)
+            # 1. Studio-grade Neural Voice (te-IN-ShrutiNeural for Telugu, NeerjaExpressive for Indian English)
             try:
                 import asyncio
                 import edge_tts
@@ -388,7 +405,7 @@ class WhatsAppAlertService:
                 voice_name = "te-IN-ShrutiNeural" if has_telugu else "en-IN-NeerjaExpressiveNeural"
 
                 async def _synthesize():
-                    communicate = edge_tts.Communicate(spoken_text, voice=voice_name, rate="+5%", pitch="+0Hz")
+                    communicate = edge_tts.Communicate(spoken_text, voice=voice_name, rate="+14%", pitch="+0Hz")
                     await communicate.save(mp3_path)
 
                 asyncio.run(_synthesize())
