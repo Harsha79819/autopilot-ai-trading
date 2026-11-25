@@ -10,7 +10,18 @@ import urllib.error
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
+import socket
 from sqlalchemy.orm import Session
+
+# Force IPv4 preference to prevent TLS handshake hangs on macOS / cloud networks
+try:
+    _orig_getaddrinfo = socket.getaddrinfo
+    def _ipv4_preferred_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        target_family = socket.AF_INET if isinstance(host, str) and any(h in host for h in ["bing.com", "microsoft.com", "azure", "facebook.com", "whatsapp.com"]) else family
+        return _orig_getaddrinfo(host, port, target_family, type, proto, flags)
+    socket.getaddrinfo = _ipv4_preferred_getaddrinfo
+except Exception:
+    pass
 
 from backend.app.models.watchlist_alert import NotificationLog
 
@@ -464,13 +475,13 @@ class WhatsAppAlertService:
             }
             with open(file_path, "rb") as f:
                 files = {
-                    "file": ("anu_voice_report.mp3", f, mime_type)
+                    "file": ("voice_update.mp3", f, mime_type)
                 }
                 data = {
                     "messaging_product": "whatsapp",
                     "type": mime_type
                 }
-                resp = requests.post(url, headers=headers, files=files, data=data, timeout=20)
+                resp = requests.post(url, headers=headers, files=files, data=data, timeout=45)
             if resp.status_code == 200:
                 resp_json = resp.json()
                 media_id = resp_json.get("id")
