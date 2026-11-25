@@ -38,8 +38,12 @@ def test_get_schedule_status():
 def test_duplicate_prevention_logic():
     db = SessionLocal()
     try:
-        today_str = "2026-11-21"
+        today_str = datetime.utcnow().strftime("%Y-%m-%d")
         slot_key = "TEST_SLOT"
+
+        # Clean up any leftover test row from previous runs
+        db.query(NotificationLog).filter(NotificationLog.category == f"SCHEDULED_{slot_key}").delete()
+        db.commit()
 
         # Initially not dispatched
         assert DailySchedulerService.has_slot_dispatched_today(db, slot_key, today_str) is False

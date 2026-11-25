@@ -345,20 +345,23 @@ def test_whatsapp_alert(
     db: Session = Depends(get_db)
 ):
     """Send test alert to verify WhatsApp integration and return 1-click dispatch link."""
+    time_str = WhatsAppAlertService.get_ist_time_str()
     sample_msg = test_in.custom_message or (
-        "👩‍💼 *Hello Boss! This is Anu reporting today...*\n"
+        "👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
         "━━━━━━━━━━━━━━━━━━\n"
-        "⚡ *OPTIONS TRADING & EQUITY ALERTS ENGAGED!*\n"
-        "✅ WhatsApp Mobile Alerts & Hands-Free Audio Voice Notes connected!\n"
-        "🔔 Real-time alerts configured for:\n"
-        "• 🟢 Option BUY Orders & 🛡️ 1-Click Hedged Spreads\n"
-        "• 🛑 Hard Stop-Loss (-20% Capital Shield)\n"
-        "• 🎯 Profit Booking (+40% Target 1)\n"
-        "• 🟡 Trailing Stop-Loss Lock-in Steps\n"
-        "• ⚡ 15:10 IST Intraday EOD Square-Off\n"
+        "⚡ *వాట్సాప్ అలర్ట్స్ కనెక్ట్ అయ్యాయి!* 🟢\n\n"
+        "✅ మీ మొబైల్ నంబర్‌కు లైవ్ ట్రేడింగ్ అలర్ట్స్ మరియు వాయిస్ నోట్స్ సక్సెస్‌ఫుల్‌గా సెట్ చేయబడ్డాయి.\n\n"
+        "🔔 *మీకు వచ్చే ముఖ్యమైన అలర్ట్స్:*\n"
+        "• 🟢 కొత్త ఆప్షన్ కొనుగోలు (Option Buy Orders)\n"
+        "• 🎯 లాభం బుకింగ్ (+40% Profit Target)\n"
+        "• 🛑 స్టాప్‌లాస్ రక్షణ (-20% Capital Shield)\n"
+        "• 🟡 ట్రైలింగ్ స్టాప్‌లాస్ లాభం లాకింగ్\n"
+        "• ⚡ మధ్యాహ్నం 15:10 IST ఆటో స్క్వేర్-ఆఫ్\n"
+        "• 🌅 ఉదయం & సాయంత్రం డైలీ బ్రీఫింగ్స్\n"
+        f"⏰ సమయం: {time_str}\n"
         "━━━━━━━━━━━━━━━━━━\n"
-        "🛡️ _Top 7% SEBI Discipline Guardian Active._\n"
-        "🎧 _Audio voice note sent below. Tap play while travelling!_"
+        "🛡️ _AutoPilot AI • మీ క్యాపిటల్ రక్షణే ప్రథమ ప్రాధాన్యం!_\n"
+        "🎧 _అను వాయిస్ ఆడియో కింద ప్లే చేసి వినవచ్చు._"
     )
     res = WhatsAppAlertService.dispatch_alert(
         db=db,

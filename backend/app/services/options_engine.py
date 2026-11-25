@@ -585,7 +585,8 @@ class OptionsEngine:
                     exit_price=exit_premium,
                     realized_pnl=trade.realized_pnl,
                     return_pct=return_pct,
-                    exit_reason=exit_reason
+                    exit_reason=exit_reason,
+                    current_balance=portfolio.cash_balance
                 )
                 WhatsAppAlertService.dispatch_alert(
                     db=db,

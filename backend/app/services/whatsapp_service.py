@@ -8,7 +8,7 @@ import json
 import urllib.request
 import urllib.error
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 
@@ -36,6 +36,12 @@ class WhatsAppAlertService:
         return f"https://api.whatsapp.com/send?phone={cleaned}&text={encoded_msg}"
 
     @classmethod
+    def get_ist_time_str(cls) -> str:
+        """Returns current Indian Standard Time string (e.g. '03:45 PM IST')."""
+        ist = timezone(timedelta(hours=5, minutes=30))
+        return datetime.now(ist).strftime("%I:%M %p IST")
+
+    @classmethod
     def format_buy_alert(
         cls,
         symbol: str,
@@ -50,24 +56,33 @@ class WhatsAppAlertService:
         reason: str = "AI Momentum Signal",
         strategy: str = "NAKED"
     ) -> str:
-        """Format an emoji-rich trade entry WhatsApp message."""
-        strat_badge = "🛡️ 1-Click Hedged Spread" if strategy != "NAKED" else "⚡ 1-Lot Option BUY"
+        """Format an easy-to-read, crystal-clear Telugu + English trade entry WhatsApp message."""
+        opt_name = "కాల్ ఆప్షన్ (CE)" if option_type.upper() == "CE" else "పుట్ ఆప్షన్ (PE)"
+        strike_fmt = int(strike) if isinstance(strike, (int, float)) and float(strike).is_integer() else strike
+        time_str = cls.get_ist_time_str()
+
+        target_gain_rs = max(0.0, (target - premium) * quantity)
+        sl_risk_rs = max(0.0, (premium - stop_loss) * quantity)
+
+        strat_badge = "🛡️ హెడ్జ్డ్ స్ప్రెడ్ (Hedged Spread)" if strategy != "NAKED" else "⚡ ఆప్షన్ కొనుగోలు (1-Lot Buy)"
+
         return (
-            f"👩‍💼 *Hello Boss! This is Anu reporting today...*\n"
+            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"⚡ *OPTIONS TRADE ALERT:* {strat_badge}\n"
-            f"🟢 *ACTION:* BOUGHT {symbol}\n"
-            f"📊 *Asset:* {underlying} ({option_type} @ strike {strike})\n"
-            f"💵 *Entry Premium:* ₹{premium:.2f}\n"
-            f"📦 *Quantity:* {quantity} shares\n"
-            f"💼 *Margin Invested:* ₹{margin:.2f}\n"
-            f"🛑 *Stop-Loss:* ₹{stop_loss:.2f} (-20% Hard SL)\n"
-            f"🎯 *Target 1:* ₹{target:.2f} (+40% Profit Goal)\n"
-            f"💡 *AI Logic:* {reason}\n"
-            f"⏰ *Time:* {datetime.utcnow().strftime('%H:%M:%S UTC')}\n"
+            f"⚡ *కొత్త ఆప్షన్స్ ట్రేడ్ తీసుకున్నాం!* 🟢\n"
+            f"📌 *రకం:* {strat_badge}\n\n"
+            f"📊 *ఏం కొన్నాం:* *{underlying}* ({opt_name} @ {strike_fmt})\n"
+            f"🏷️ *కాంట్రాక్ట్:* `{symbol}`\n"
+            f"💵 *కొన్న ప్రీమియం ధర:* ₹{premium:.2f}\n"
+            f"📦 *పరిమాణం (Qty):* {quantity} షేర్లు (1 Lot)\n"
+            f"💼 *వాడిన పెట్టుబడి:* ₹{margin:,.2f}\n\n"
+            f"🎯 *లాభం టార్గెట్ (+40%):* ₹{target:.2f} (+₹{target_gain_rs:,.2f} లాభం రావచ్చు)\n"
+            f"🛑 *స్టాప్ లాస్ రక్షణ (-20%):* ₹{stop_loss:.2f} (రిస్క్ లిమిట్: -₹{sl_risk_rs:,.2f})\n\n"
+            f"💡 *కొనడానికి కారణం:* {reason}\n"
+            f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🛡️ _SEBI Top 7% Discipline: Intraday square-off at 15:10 IST guaranteed._\n"
-            f"🎧 _Audio voice note sent below. Tap play while travelling!_"
+            f"🛡️ _రక్షణ నిబంధన: ఈ రోజు మధ్యాహ్నం 03:10 PM కల్లా ఆటోమేటిక్‌గా క్లోజ్ అవుతుంది. ఓవర్‌నైట్ రిస్క్ ఏమీ ఉండదు._\n"
+            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -77,32 +92,41 @@ class WhatsAppAlertService:
         exit_price: float,
         realized_pnl: float,
         return_pct: float,
-        exit_reason: str
+        exit_reason: str,
+        current_balance: Optional[float] = None
     ) -> str:
-        """Format an exit / profit booking / stop-loss WhatsApp message."""
+        """Format an exit / profit booking / stop-loss WhatsApp message in simple Telugu."""
         is_profit = realized_pnl >= 0
         icon = "🎉" if is_profit else "🛑"
         sign = "+" if is_profit else ""
+        time_str = cls.get_ist_time_str()
 
         reason_display = {
-            "TARGET_HIT": "🎯 Target 1 (+40%) Hit - Profit Booked!",
-            "STOP_LOSS_HIT": "🔴 Hard Stop-Loss (-20%) Hit - Capital Protected!",
-            "TRAILING_STOP_HIT": "🟡 Trailing Stop Hit - Peak Profit Locked!",
-            "INTRADAY_SQUARE_OFF": "⚡ 15:10 IST EOD Square-off - Zero Overnight Decay!",
-            "MANUAL_EXIT": "👤 Manual Square-Off by Trader"
+            "TARGET_HIT": "🎯 టార్గెట్ రీచ్ అయ్యింది! పూర్తి లాభం బుక్ చేశాం",
+            "STOP_LOSS_HIT": "🛑 స్టాప్‌లాస్ ట్రిగ్గర్ అయ్యింది - క్యాపిటల్ రక్షించబడింది",
+            "TRAILING_STOP_HIT": "🟡 ట్రైలింగ్ స్టాప్‌లాస్ హిట్ అయ్యింది - గరిష్ట లాభం లాక్ చేశాం",
+            "INTRADAY_SQUARE_OFF": "⚡ 15:10 IST ముగింపు - ఓవర్‌నైట్ రిస్క్ లేకుండా క్లోజ్ చేశాం",
+            "MANUAL_EXIT": "👤 మీ ఆదేశానుసారం క్లోజ్ చేయబడింది"
         }.get(exit_reason, exit_reason)
 
+        header = "ఆప్షన్స్ లాభం బుక్ చేశాం (Profit Booked) 💰" if is_profit else "స్టాప్‌లాస్ రక్షణ (Position Closed) 🛡️"
+        pnl_badge = f"🟢 *వచ్చిన నికర లాభం (Net Profit):* +₹{realized_pnl:,.2f} (+{return_pct:.1f}%)" if is_profit else f"🔴 *ముగిసిన ఫలితం:* -₹{abs(realized_pnl):,.2f} ({return_pct:.1f}%)"
+
+        bal_line = f"💼 *ప్రస్తుత ఖాతా నగదు బ్యాలెన్స్:* ₹{current_balance:,.2f}\n" if current_balance else ""
+
         return (
-            f"👩‍💼 *Hello Boss! This is Anu reporting today...*\n"
+            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"{icon} *OPTIONS POSITION CLOSED:* {symbol}\n"
-            f"💵 *Exit Premium:* ₹{exit_price:.2f}\n"
-            f"{'🟢' if is_profit else '🔴'} *Realized P&L:* {sign}₹{realized_pnl:.2f} ({sign}{return_pct:.1f}%)\n"
-            f"📋 *Reason:* {reason_display}\n"
-            f"⏰ *Time:* {datetime.utcnow().strftime('%H:%M:%S UTC')}\n"
+            f"{icon} *{header}*\n\n"
+            f"📊 *ట్రేడ్:* `{symbol}`\n"
+            f"💵 *అమ్మిన ప్రీమియం ధర:* ₹{exit_price:.2f}\n"
+            f"{pnl_badge}\n\n"
+            f"📋 *క్లోజ్ అయిన కారణం:* {reason_display}\n"
+            f"{bal_line}"
+            f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"💡 _All funds safely credited back to your Options Capital buffer._\n"
-            f"🎧 _Audio voice note sent below. Tap play while travelling!_"
+            f"✅ _పెట్టుబడి మరియు లాభం మొత్తం మీ ఖాతాలో సురక్షితంగా జమ అయ్యాయి._\n"
+            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -113,16 +137,18 @@ class WhatsAppAlertService:
         current_premium: float,
         profit_pct: float
     ) -> str:
-        """Format a trailing stop loss elevation alert."""
+        """Format a trailing stop loss elevation alert in simple Telugu."""
+        time_str = cls.get_ist_time_str()
         return (
-            f"👩‍💼 *Hello Boss! This is Anu reporting today...*\n"
+            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🟡 *OPTIONS TRAILING STOP ELEVATED!* 📈\n"
-            f"⚡ *Symbol:* {symbol}\n"
-            f"🚀 *Surge Premium:* ₹{current_premium:.2f} (+{profit_pct:.1f}% profit)\n"
-            f"🔒 *New Locked-In SL Floor:* ₹{new_sl:.2f}\n"
+            f"🟡 *లాభం రక్షణ పెంచబడింది (Trailing Stop Locked)* 📈\n\n"
+            f"⚡ *ట్రేడ్:* `{symbol}`\n"
+            f"🚀 *ప్రస్తుత ధర:* ₹{current_premium:.2f} (+{profit_pct:.1f}% లాభంలో దూసుకుపోతోంది)\n"
+            f"🔒 *కొత్త స్టాప్‌లాస్ రక్షణ ఫ్లోర్:* ₹{new_sl:.2f}\n\n"
+            f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"💡 _85% of peak gains are now locked. No matter where market moves, profit is protected!_"
+            f"💡 _85% గరిష్ట లాభం లాక్ చేయబడింది. మార్కెట్ ఎటు కదిలినా మీ లాభం సురక్షితం!_"
         )
 
     @classmethod
@@ -133,21 +159,23 @@ class WhatsAppAlertService:
         win_rate: float,
         total_trades: int,
         realized_pnl: float,
-        open_pos_str: str = "None"
+        open_pos_str: str = "ఏమీ లేవు (Zero Risk)"
     ) -> str:
-        """Format a periodic daily / hourly summary digest."""
+        """Format a periodic daily summary digest in simple Telugu."""
         sign = "+" if realized_pnl >= 0 else ""
+        time_str = cls.get_ist_time_str()
         return (
-            f"👩‍💼 *Hello Boss! This is Anu reporting today...*\n"
+            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"📊 *PORTFOLIO LIVE DIGEST* 🕒\n"
-            f"💼 *Cash Balance:* ₹{cash_balance:.2f}\n"
-            f"📈 *Total Portfolio Value:* ₹{total_equity:.2f}\n"
-            f"🏆 *Win Rate:* {win_rate:.1f}% ({total_trades} trades)\n"
-            f"💵 *Net Realized P&L:* {sign}₹{realized_pnl:.2f}\n"
-            f"🎯 *Active Contracts:* {open_pos_str}\n"
+            f"📊 *పోర్ట్‌ఫోలియో తాజా స్థితి (Live Digest)* 🕒\n\n"
+            f"💼 *నగదు బ్యాలెన్స్:* ₹{cash_balance:,.2f}\n"
+            f"📈 *మొత్తం పోర్ట్‌ఫోలియో విలువ:* ₹{total_equity:,.2f}\n"
+            f"🏆 *విజయం రేటు (Win Rate):* {win_rate:.1f}% ({total_trades} ట్రేడ్లు)\n"
+            f"💵 *నికర లాభనష్టం:* {sign}₹{realized_pnl:,.2f}\n"
+            f"🎯 *యాక్టివ్ పొజిషన్లు:* {open_pos_str}\n\n"
+            f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🤖 _AutoPilot background risk guardian active._"
+            f"🤖 _AutoPilot AI రక్షణ వ్యవస్థ 100% యాక్టివ్‌గా ఉంది._"
         )
 
     @classmethod
@@ -162,21 +190,23 @@ class WhatsAppAlertService:
         reason: str = "AI Opportunity Momentum"
     ) -> str:
         """Format an equity stock buy order WhatsApp message."""
-        sl_str = f"₹{stop_loss:.2f} (-2.0% SL)" if stop_loss else "Automated Dynamic SL"
-        tp_str = f"₹{take_profit:.2f} (+4.0% TP)" if take_profit else "Trailing Runner"
+        time_str = cls.get_ist_time_str()
+        sl_str = f"₹{stop_loss:.2f} (-2.0% SL)" if stop_loss else "ఆటోమేటిక్ డైనమిక్ SL"
+        tp_str = f"₹{take_profit:.2f} (+4.0% TP)" if take_profit else "ట్రైలింగ్ రన్నర్"
         return (
-            f"👩‍💼 *Hello Boss! This is Anu reporting today...*\n"
+            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"📈 *EQUITY BUY FILLED:* {quantity} shares of *{symbol}*\n"
-            f"💵 *Fill Price:* ₹{price:.2f}\n"
-            f"💼 *Total Capital Used:* ₹{total_value:.2f}\n"
-            f"🛑 *Stop-Loss:* {sl_str}\n"
-            f"🎯 *Take-Profit:* {tp_str}\n"
-            f"💡 *AI Logic:* {reason}\n"
-            f"⏰ *Time:* {datetime.utcnow().strftime('%H:%M:%S UTC')}\n"
+            f"📈 *ఈక్విటీ స్టాక్ కొనుగోలు (Equity Buy)* 🟢\n\n"
+            f"📊 *స్టాక్:* *{symbol}* ({quantity} షేర్లు)\n"
+            f"💵 *కొన్న ధర:* ₹{price:.2f}\n"
+            f"💼 *మొత్తం వాడిన పెట్టుబడి:* ₹{total_value:,.2f}\n"
+            f"🛑 *స్టాప్ లాస్ రక్షణ:* {sl_str}\n"
+            f"🎯 *టార్గెట్ లాభం:* {tp_str}\n"
+            f"💡 *కారణం:* {reason}\n"
+            f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🛡️ _AutoPilot disciplined swing trading active._\n"
-            f"🎧 _Audio voice note sent below. Tap play while travelling!_"
+            f"🛡️ _క్రమశిక్షణతో కూడిన స్వింగ్ ట్రేడింగ్ రక్షణ యాక్టివ్‌గా ఉంది._\n"
+            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -192,18 +222,22 @@ class WhatsAppAlertService:
         """Format an equity stock sell/exit WhatsApp message."""
         is_profit = realized_pnl >= 0
         icon = "🎉" if is_profit else "🛑"
-        sign = "+" if is_profit else ""
+        time_str = cls.get_ist_time_str()
+        header = "ఈక్విటీ లాభం బుక్ చేశాం (Profit Booked) 💰" if is_profit else "ఈక్విటీ పొజిషన్ క్లోజ్ అయ్యింది 🛡️"
+        pnl_badge = f"🟢 *నికర లాభం (Net Profit):* +₹{realized_pnl:,.2f} (+{return_pct:.2f}%)" if is_profit else f"🔴 *ముగిసిన ఫలితం:* -₹{abs(realized_pnl):,.2f} ({return_pct:.2f}%)"
+
         return (
-            f"👩‍💼 *Hello Boss! This is Anu reporting today...*\n"
+            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"{icon} *EQUITY POSITION CLOSED:* {quantity} shares of *{symbol}*\n"
-            f"💵 *Exit Price:* ₹{exit_price:.2f}\n"
-            f"{'🟢' if is_profit else '🔴'} *Realized P&L:* {sign}₹{realized_pnl:.2f} ({sign}{return_pct:.2f}%)\n"
-            f"📋 *Reason:* {reason}\n"
-            f"⏰ *Time:* {datetime.utcnow().strftime('%H:%M:%S UTC')}\n"
+            f"{icon} *{header}*\n\n"
+            f"📊 *స్టాక్:* *{symbol}* ({quantity} షేర్లు)\n"
+            f"💵 *అమ్మిన ధర:* ₹{exit_price:.2f}\n"
+            f"{pnl_badge}\n"
+            f"📋 *కారణం:* {reason}\n"
+            f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"💡 _Funds credited back to your Equity Cash Balance._\n"
-            f"🎧 _Audio voice note sent below. Tap play while travelling!_"
+            f"💡 _పెట్టుబడి నగదు మీ ఈక్విటీ బ్యాలెన్స్‌లో జమ చేయబడింది._\n"
+            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -213,18 +247,19 @@ class WhatsAppAlertService:
         reason: str,
         portfolio_value: Optional[float] = None
     ) -> str:
-        """Format a critical risk management alert."""
-        val_str = f"\n💼 *Portfolio Equity:* ₹{portfolio_value:.2f}" if portfolio_value else ""
+        """Format a critical risk management alert in simple Telugu."""
+        time_str = cls.get_ist_time_str()
+        val_str = f"\n💼 *పోర్ట్‌ఫోలియో విలువ:* ₹{portfolio_value:,.2f}" if portfolio_value else ""
         return (
-            f"👩‍💼 *Hello Boss! This is Anu reporting today...*\n"
+            f"👩‍💼 *నమస్కారం హర్ష గారు! నేను మీ అను ని...* 🌸\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"⚠️ *AUTO-PILOT RISK GUARDIAN ALERT* 🛑\n"
-            f"🚨 *EVENT:* {event_type}\n"
-            f"📋 *Details:* {reason}{val_str}\n"
-            f"⏰ *Time:* {datetime.utcnow().strftime('%H:%M:%S UTC')}\n"
+            f"⚠️ *అత్యవసర భద్రతా అలర్ట్ (Risk Guardian Alert)* 🛑\n\n"
+            f"🚨 *ఈవెంట్:* {event_type}\n"
+            f"📋 *వివరాలు:* {reason}{val_str}\n"
+            f"🔒 *ట్రేడింగ్ రక్షణ వ్యవస్థ ఆన్ చేయబడింది - క్యాపిటల్ పూర్తిగా సురక్షితం.*\n"
+            f"⏰ *సమయం:* {time_str}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🔒 _Trading safety interlock engaged._\n"
-            f"🎧 _Audio voice note sent below. Tap play while travelling!_"
+            f"🎧 _అను వాయిస్ రిపోర్ట్ కింద వినండి!_"
         )
 
     @classmethod
@@ -259,22 +294,52 @@ class WhatsAppAlertService:
     def clean_text_for_speech(cls, text: str) -> str:
         """
         Convert alert markdown and abbreviations into clear, natural spoken sentences for Anu.
+        Handles both Telugu and English fluently.
         """
+        has_telugu = any('\u0c00' <= char <= '\u0c7f' for char in text)
+
         t = text
-        t = t.replace('₹', 'Rupees ')
-        t = t.replace('CE', 'Call Option')
-        t = t.replace('PE', 'Put Option')
-        t = t.replace('SL', 'Stop Loss')
-        t = t.replace('TP', 'Target Profit')
-        t = t.replace('P&L', 'Profit and Loss')
-        t = t.replace('EOD', 'End of Day')
-        t = t.replace('NIFTY', 'Nifty')
-        t = t.replace('BANKNIFTY', 'Bank Nifty')
+        if has_telugu:
+            # Replace tickers before short symbols
+            t = t.replace('RELIANCE', 'రిలయన్స్ ')
+            t = t.replace('BANKNIFTY', 'బ్యాంక్ నిఫ్టీ ')
+            t = t.replace('NIFTY', 'నిఫ్టీ ')
+            t = t.replace('TCS', 'టీసీఎస్ ')
+            t = t.replace('INFY', 'ఇన్ఫోసిస్ ')
+            t = t.replace('HDFCBANK', 'హెచ్‌డీఎఫ్‌సీ బ్యాంక్ ')
+            t = t.replace('ICICIBANK', 'ఐసీఐసీఐ బ్యాంక్ ')
+            t = t.replace('ITC', 'ఐటీసీ ')
+            t = t.replace('SBIN', 'ఎస్‌బీఐ ')
+            t = t.replace('₹', ' రూపాయలు ')
+            t = t.replace('%', ' శాతం ')
+            t = re.sub(r'(\d+)\s*CE\b', r'\1 కాల్ ఆప్షన్ ', t)
+            t = re.sub(r'(\d+)\s*PE\b', r'\1 పుట్ ఆప్షన్ ', t)
+            t = re.sub(r'\bCE\b', 'కాల్ ఆప్షన్', t)
+            t = re.sub(r'\bPE\b', 'పుట్ ఆప్షన్', t)
+            t = re.sub(r'\bSL\b', 'స్టాప్ లాస్', t)
+            t = re.sub(r'\bTP\b', 'టార్గెట్', t)
+            t = t.replace('P&L', 'లాభ నష్టాలు')
+            t = re.sub(r'\bQty\b', 'పరిమాణం', t)
+            t = re.sub(r'\bEOD\b', 'మార్కెట్ ముగింపు', t)
+        else:
+            t = t.replace('₹', 'Rupees ')
+            t = t.replace('%', ' percent ')
+            t = re.sub(r'\bCE\b', 'Call Option', t)
+            t = re.sub(r'\bPE\b', 'Put Option', t)
+            t = re.sub(r'\bSL\b', 'Stop Loss', t)
+            t = re.sub(r'\bTP\b', 'Target Profit', t)
+            t = t.replace('P&L', 'Profit and Loss')
+            t = re.sub(r'\bEOD\b', 'End of Day', t)
+            t = t.replace('NIFTY', 'Nifty')
+            t = t.replace('BANKNIFTY', 'Bank Nifty')
 
         lines = []
         for line in t.split('\n'):
-            # Skip UI hints from spoken audio
+            # Skip UI / instruction hints from spoken audio
             if any(hint in line for hint in [
+                'వాయిస్ రిపోర్ట్',
+                'వాయిస్ ఆడియో',
+                'ప్లే చేసి వినవచ్చు',
                 'Audio voice note sent below',
                 'Voice audio briefing',
                 'Tap play while travelling',
@@ -284,13 +349,18 @@ class WhatsAppAlertService:
                 continue
             cleaned = re.sub(r'[*_~`•━]+', ' ', line)
             cleaned = re.sub(r'[\U00010000-\U0010ffff]', '', cleaned)
-            cleaned = re.sub(r'[^\w\s.,;:!?-]', ' ', cleaned).strip()
+            cleaned = re.sub(r'[^\w\s.,;:!?\u0c00-\u0c7f-]', ' ', cleaned).strip()
+            cleaned = re.sub(r'\s+', ' ', cleaned).strip()
             if cleaned:
                 lines.append(cleaned)
 
         spoken = '. '.join(lines)
-        if not spoken.startswith("Hello Boss"):
-            spoken = f"Hello Boss! This is Anu reporting today. {spoken}"
+        if has_telugu:
+            if not any(spoken.startswith(g) for g in ["నమస్కారం", "శుభోదయం", "హలో"]):
+                spoken = f"నమస్కారం హర్ష గారు, నేను మీ అను ని. {spoken}"
+        else:
+            if not spoken.startswith("Hello Boss"):
+                spoken = f"Hello Boss! This is Anu reporting today. {spoken}"
         return spoken
 
     @classmethod
