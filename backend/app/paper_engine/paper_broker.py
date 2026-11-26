@@ -177,6 +177,13 @@ class PaperBroker:
         db.add(order)
         db.flush()
 
+        # Check position before execution if selling to capture entry buy price
+        existing_pos = db.query(Position).filter(
+            Position.portfolio_id == portfolio.id,
+            Position.symbol == order_in.symbol
+        ).first() if order_in.side.upper() == "SELL" else None
+        prev_buy_price = existing_pos.average_buy_price if existing_pos else None
+
         # Apply trade via double-entry ledger
         trade = portfolio_ledger.apply_trade_execution(
             db=db,
@@ -223,14 +230,15 @@ class PaperBroker:
                 WhatsAppAlertService.notify_user_if_enabled(db, user.id, wa_msg, "EQUITY_BUY")
             elif side == "SELL":
                 pnl = getattr(trade, "realized_pnl", 0.0) if trade else 0.0
-                ret_pct = getattr(trade, "return_pct", 0.0) if trade else 0.0
+                ret_pct = ((sim_res.execution_price - prev_buy_price) / prev_buy_price * 100.0) if prev_buy_price and prev_buy_price > 0 else 0.0
                 wa_msg = WhatsAppAlertService.format_equity_sell_alert(
                     symbol=order_in.symbol,
                     quantity=sim_res.quantity,
                     exit_price=sim_res.execution_price,
                     realized_pnl=pnl,
-                    return_pct=ret_pct,
-                    reason="Take-Profit Hit / Position Closed"
+                    return_pct=round(ret_pct, 2),
+                    reason="Take-Profit Hit / Position Closed" if pnl >= 0 else "Stop-Loss Hit / Protection Square-off",
+                    buy_price=prev_buy_price
                 )
                 WhatsAppAlertService.notify_user_if_enabled(db, user.id, wa_msg, "EQUITY_SELL")
         except Exception as wa_err:

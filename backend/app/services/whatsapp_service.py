@@ -104,7 +104,8 @@ class WhatsAppAlertService:
         realized_pnl: float,
         return_pct: float,
         exit_reason: str,
-        current_balance: Optional[float] = None
+        current_balance: Optional[float] = None,
+        entry_price: Optional[float] = None
     ) -> str:
         """Format an exit / profit booking / stop-loss WhatsApp message in simple Telugu."""
         is_profit = realized_pnl >= 0
@@ -123,6 +124,7 @@ class WhatsAppAlertService:
         header = "ఆప్షన్స్ లాభం బుక్ చేశాం (Profit Booked) 💰" if is_profit else "స్టాప్‌లాస్ రక్షణ (Position Closed) 🛡️"
         pnl_badge = f"🟢 *వచ్చిన నికర లాభం (Net Profit):* +₹{realized_pnl:,.2f} (+{return_pct:.1f}%)" if is_profit else f"🔴 *ముగిసిన ఫలితం:* -₹{abs(realized_pnl):,.2f} ({return_pct:.1f}%)"
 
+        entry_line = f"📥 *కొన్న ప్రీమియం ధర:* ₹{entry_price:.2f}\n" if entry_price is not None else ""
         bal_line = f"💼 *ప్రస్తుత ఖాతా నగదు బ్యాలెన్స్:* ₹{current_balance:,.2f}\n" if current_balance else ""
 
         return (
@@ -130,7 +132,8 @@ class WhatsAppAlertService:
             f"━━━━━━━━━━━━━━━━━━\n"
             f"{icon} *{header}*\n\n"
             f"📊 *ట్రేడ్:* `{symbol}`\n"
-            f"💵 *అమ్మిన ప్రీమియం ధర:* ₹{exit_price:.2f}\n"
+            f"{entry_line}"
+            f"📤 *అమ్మిన ప్రీమియం ధర:* ₹{exit_price:.2f}\n"
             f"{pnl_badge}\n\n"
             f"📋 *క్లోజ్ అయిన కారణం:* {reason_display}\n"
             f"{bal_line}"
@@ -231,7 +234,8 @@ class WhatsAppAlertService:
         exit_price: float,
         realized_pnl: float,
         return_pct: float,
-        reason: str = "PROFIT_BOOKED"
+        reason: str = "PROFIT_BOOKED",
+        buy_price: Optional[float] = None
     ) -> str:
         """Format an equity stock sell/exit WhatsApp message."""
         is_profit = realized_pnl >= 0
@@ -240,12 +244,15 @@ class WhatsAppAlertService:
         header = "ఈక్విటీ లాభం బుక్ చేశాం (Profit Booked) 💰" if is_profit else "ఈక్విటీ పొజిషన్ క్లోజ్ అయ్యింది 🛡️"
         pnl_badge = f"🟢 *నికర లాభం (Net Profit):* +₹{realized_pnl:,.2f} (+{return_pct:.2f}%)" if is_profit else f"🔴 *ముగిసిన ఫలితం:* -₹{abs(realized_pnl):,.2f} ({return_pct:.2f}%)"
 
+        buy_line = f"📥 *కొన్న ధర:* ₹{buy_price:.2f}\n" if buy_price is not None else ""
+
         return (
             f"👋 *హలో హర్ష గారు! నేను మీ ఫ్రెండ్ ని, ప్రెసెంట్ అప్‌డేట్:* 📊\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"{icon} *{header}*\n\n"
             f"📊 *స్టాక్:* *{symbol}* ({quantity} షేర్లు)\n"
-            f"💵 *అమ్మిన ధర:* ₹{exit_price:.2f}\n"
+            f"{buy_line}"
+            f"📤 *అమ్మిన ధర:* ₹{exit_price:.2f}\n"
             f"{pnl_badge}\n\n"
             f"📋 *కారణం:* {reason}\n"
             f"⏰ *సమయం:* {time_str}\n"
@@ -646,6 +653,42 @@ class WhatsAppAlertService:
                 "message": "Market closed: weekend sleep mode active",
                 "timestamp": datetime.utcnow().isoformat()
             }
+
+        # Suppress noisy intermediate trailing SL alerts to save quota
+        if category == "TRAILING_SL":
+            logger.info("Trailing SL update recorded internally; suppressed WhatsApp delivery to preserve message quota.")
+            return {
+                "status": "SUPPRESSED_TRAILING_SL",
+                "phone": phone,
+                "direct_sent": False,
+                "message": "Trailing SL updated internally",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+
+        # Strict Daily Quota Guard (Strictly <= 20 messages/day per user)
+        MAX_DAILY_WHATSAPP_ALERTS = 20
+        if category not in ("EMERGENCY_HALT", "CIRCUIT_BREAKER", "WHATSAPP_TEST"):
+            try:
+                now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                today_start_utc = datetime(now_ist.year, now_ist.month, now_ist.day) - timedelta(hours=5, minutes=30)
+                today_count = db.query(NotificationLog).filter(
+                    NotificationLog.user_id == user_id,
+                    NotificationLog.created_at >= today_start_utc
+                ).count()
+                if today_count >= MAX_DAILY_WHATSAPP_ALERTS:
+                    logger.warning(
+                        f"Daily WhatsApp limit of {MAX_DAILY_WHATSAPP_ALERTS} messages reached for user {user_id}. "
+                        f"Suppressing {category} to protect monthly quota."
+                    )
+                    return {
+                        "status": "DAILY_QUOTA_REACHED",
+                        "phone": phone,
+                        "direct_sent": False,
+                        "message": f"Daily quota limit ({MAX_DAILY_WHATSAPP_ALERTS}/day) reached. Preserved monthly allowance.",
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+            except Exception as quota_err:
+                logger.debug(f"Daily quota check error: {quota_err}")
 
         try:
             log_entry = NotificationLog(

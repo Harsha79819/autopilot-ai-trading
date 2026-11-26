@@ -595,7 +595,8 @@ class OptionsEngine:
                     realized_pnl=trade.realized_pnl,
                     return_pct=return_pct,
                     exit_reason=exit_reason,
-                    current_balance=portfolio.cash_balance
+                    current_balance=portfolio.cash_balance,
+                    entry_price=position.entry_premium
                 )
                 WhatsAppAlertService.dispatch_alert(
                     db=db,
@@ -686,24 +687,7 @@ class OptionsEngine:
                 new_trailing = round(cur_price * (1.0 - TRAILING_GIVEBACK_PCT), 2)
                 if new_trailing > pos.trailing_stop_premium:
                     pos.trailing_stop_premium = new_trailing
-                    logger.info(f"Trailing SL raised for {pos.symbol} to ₹{new_trailing:.2f}")
-                    if getattr(portfolio, "whatsapp_alerts_enabled", True) and getattr(portfolio, "whatsapp_phone", None):
-                        try:
-                            ts_alert = WhatsAppAlertService.format_trailing_sl_alert(
-                                symbol=pos.symbol,
-                                new_sl=new_trailing,
-                                current_premium=cur_price,
-                                profit_pct=profit_pct * 100.0
-                            )
-                            WhatsAppAlertService.dispatch_alert(
-                                db=db,
-                                user_id=user_id,
-                                phone=portfolio.whatsapp_phone,
-                                message=ts_alert,
-                                category="TRAILING_SL"
-                            )
-                        except Exception as wa_err:
-                            logger.warning(f"WhatsApp Trailing SL Alert skipped: {wa_err}")
+                    logger.info(f"Trailing SL raised silently for {pos.symbol} to ₹{new_trailing:.2f} (WhatsApp alert suppressed to conserve quota)")
 
             if pos.trailing_activated and cur_price <= pos.trailing_stop_premium:
                 res = cls.square_off_position(db, pos.id, exit_reason="TRAILING_STOP_HIT")

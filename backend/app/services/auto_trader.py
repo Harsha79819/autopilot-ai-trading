@@ -805,6 +805,7 @@ class AutoPilotRunner:
                     try:
                         from backend.app.models.options_models import OptionsPortfolio
                         from backend.app.models.watchlist_alert import NotificationLog
+                        from backend.app.services.whatsapp_service import WhatsAppAlertService
                         opt_port = db.query(OptionsPortfolio).filter(OptionsPortfolio.id == 1).first()
                         today_str = now_ist.strftime("%Y-%m-%d")
                         already_alerted = db.query(NotificationLog).filter(
