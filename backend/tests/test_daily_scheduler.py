@@ -11,12 +11,16 @@ from backend.app.services.daily_scheduler_service import DailySchedulerService
 def test_schedule_slots_configuration():
     slots = DailySchedulerService.SLOTS_CONFIG
     assert "MORNING_BRIEF" in slots
+    assert "EOD_SQUARE_OFF" in slots
+    assert "EOD_WATCHDOG" in slots
     assert "MARKET_WRAP" in slots
     assert "EVENING_DIGEST" in slots
     assert "WEEKEND_MORNING" in slots
     assert "WEEKEND_EVENING" in slots
 
     assert slots["MORNING_BRIEF"]["target_time"] == time(9, 0)
+    assert slots["EOD_SQUARE_OFF"]["target_time"] == time(15, 10)
+    assert slots["EOD_WATCHDOG"]["target_time"] == time(15, 12)
     assert slots["MARKET_WRAP"]["target_time"] == time(15, 30)
     assert slots["EVENING_DIGEST"]["target_time"] == time(19, 0)
     assert slots["WEEKEND_MORNING"]["target_time"] == time(10, 0)
@@ -30,7 +34,7 @@ def test_get_schedule_status():
         assert "current_time_ist" in status
         assert "is_trading_day" in status
         assert "slots" in status
-        assert len(status["slots"]) == 5
+        assert len(status["slots"]) == 7
     finally:
         db.close()
 

@@ -390,31 +390,39 @@ class OptionsEngine:
         _, t_years = cls.get_upcoming_expiry()
         current_premium = black_scholes_price(spot, strike_price, t_years, 0.07, cfg["iv_base"], option_type)
 
-        # Determine effective trade quantity (full capital utilization up to full available cash, no money saved)
-        max_deployable = min(max(portfolio.cash_balance - 25.0, 100.0), MAX_POSITION_MARGIN) if portfolio.cash_balance > 0 else MAX_POSITION_MARGIN
+        # Determine effective trade quantity (strict sizing: NEVER force 1 lot if cash is insufficient)
+        lot_cost = current_premium * base_lot
+        est_entry_fee = round(FLAT_BROKERAGE_PER_ORDER + (0.00003 * lot_cost) + (0.0003503 * lot_cost) + (0.18 * FLAT_BROKERAGE_PER_ORDER), 2)
+        total_lot_cost = round(lot_cost + est_entry_fee, 2)
+        cash_buffer = 25.0
+        available_cash = max(portfolio.cash_balance - cash_buffer, 0.0)
+
         if not quantity:
-            lot_cost = current_premium * base_lot
-            affordable_lots = max(int(max_deployable / lot_cost), 1) if lot_cost > 0 else 1
+            if total_lot_cost <= 0 or available_cash < total_lot_cost:
+                raise ValueError(
+                    f"నగదు సరిపోదు (Insufficient margin). కనీసం 1 లాట్ కొనుగోలుకు ₹{total_lot_cost:.2f} అవసరం, "
+                    f"కానీ అందుబాటులో ఉన్నది ₹{portfolio.cash_balance:.2f} మాత్రమే."
+                )
+            affordable_lots = int(available_cash // total_lot_cost)
+            if affordable_lots <= 0:
+                raise ValueError(
+                    f"నగదు సరిపోదు (Insufficient margin). కనీసం 1 లాట్ కొనుగోలుకు ₹{total_lot_cost:.2f} అవసరం."
+                )
             order_qty = affordable_lots * base_lot
-            required_margin = current_premium * order_qty
-            while affordable_lots > 1 and (required_margin + FLAT_BROKERAGE_PER_ORDER) > portfolio.cash_balance:
-                affordable_lots -= 1
-                order_qty = affordable_lots * base_lot
-                required_margin = current_premium * order_qty
+            required_margin = round(current_premium * order_qty, 2)
         else:
             order_qty = quantity
-            required_margin = current_premium * order_qty
-            if required_margin > max_deployable:
-                affordable_qty = max(int(max_deployable / current_premium), 1)
-                order_qty = affordable_qty
-                required_margin = current_premium * order_qty
+            required_margin = round(current_premium * order_qty, 2)
 
-        # Initial regulatory buy fees: ₹20 Brokerage + 0.003% Stamp duty
-        stamp_duty = round(0.00003 * required_margin, 2)
-        entry_fee = round(FLAT_BROKERAGE_PER_ORDER + stamp_duty, 2)
+        # Initial regulatory buy fees: ₹20 Brokerage + 0.003% Stamp duty + exchange charges + sebi + 18% GST
+        buy_stamp = round(0.00003 * required_margin, 2)
+        buy_exchange = round(0.0003503 * required_margin, 2)
+        buy_sebi = round(0.000001 * required_margin, 2)
+        buy_gst = round(0.18 * (FLAT_BROKERAGE_PER_ORDER + buy_exchange + buy_sebi), 2)
+        entry_fee = round(FLAT_BROKERAGE_PER_ORDER + buy_stamp + buy_exchange + buy_sebi + buy_gst, 2)
         total_debit = round(required_margin + entry_fee, 2)
 
-        # 3. Enforce available cash balance
+        # 3. Enforce available cash balance strictly
         if portfolio.cash_balance < total_debit:
             raise ValueError(
                 f"నగదు సరిపోదు (Insufficient margin). అవసరమైనది: ₹{total_debit:.2f}, అందుబాటులో: ₹{portfolio.cash_balance:.2f}."
@@ -424,9 +432,10 @@ class OptionsEngine:
         sl_premium = round(current_premium * (1.0 - SL_PERCENTAGE), 2)
         target_premium = round(current_premium * (1.0 + TP1_PERCENTAGE), 2)
 
-        # Deduct funds
-        portfolio.cash_balance -= total_debit
-        portfolio.total_fees += entry_fee
+        # Deduct funds (Single-point debit on Buy)
+        portfolio.cash_balance = round(portfolio.cash_balance - total_debit, 2)
+        assert portfolio.cash_balance >= 0.0, f"Critical constraint violated: negative cash balance {portfolio.cash_balance}"
+        portfolio.total_fees = round(portfolio.total_fees + entry_fee, 2)
 
         position = OptionPosition(
             portfolio_id=portfolio.id,
@@ -502,10 +511,11 @@ class OptionsEngine:
         cls,
         db: Session,
         position_id: int,
-        exit_reason: str = "MANUAL_EXIT"
+        exit_reason: str = "MANUAL_EXIT",
+        force_exit_premium: Optional[float] = None
     ) -> Dict[str, Any]:
         """
-        Liquidate an open option position at current theoretical premium.
+        Liquidate an open option position at current theoretical premium (or forced premium for simulation).
         """
         position = db.query(OptionPosition).filter(
             OptionPosition.id == position_id,
@@ -518,16 +528,19 @@ class OptionsEngine:
         portfolio = position.portfolio
         cfg = SUPPORTED_UNDERLYINGS.get(position.underlying, SUPPORTED_UNDERLYINGS["NIFTY"])
 
-        # Current exit price
-        spot, _ = cls.get_underlying_spot(position.underlying)
-        _, t_years = cls.get_upcoming_expiry()
-        raw_exit_premium = black_scholes_price(spot, position.strike_price, t_years, 0.07, cfg["iv_base"], position.option_type)
+        if force_exit_premium is not None:
+            exit_premium = force_exit_premium
+        else:
+            # Current exit price
+            spot, _ = cls.get_underlying_spot(position.underlying)
+            _, t_years = cls.get_upcoming_expiry()
+            raw_exit_premium = black_scholes_price(spot, position.strike_price, t_years, 0.07, cfg["iv_base"], position.option_type)
 
-        # Enforce realistic exchange price band / circuit limit (max +60% or min ₹0.50)
-        # Prevents Deep-ITM simulation bugs from generating impossible 3,000% single-day jumps
-        max_realistic_exit = round(position.entry_premium * (1.0 + TP2_PERCENTAGE), 2)
-        min_realistic_exit = 0.50
-        exit_premium = max(min(raw_exit_premium, max_realistic_exit), min_realistic_exit)
+            # Enforce realistic exchange price band / circuit limit (max +60% or min ₹0.50)
+            # Prevents Deep-ITM simulation bugs from generating impossible 3,000% single-day jumps
+            max_realistic_exit = round(position.entry_premium * (1.0 + TP2_PERCENTAGE), 2)
+            min_realistic_exit = 0.50
+            exit_premium = max(min(raw_exit_premium, max_realistic_exit), min_realistic_exit)
 
         # Compute exact statutory Indian F&O taxes & brokerage (STT, GST, NSE turnover, Stamp, SEBI)
         charges = cls.calculate_trade_statutory_charges(
@@ -542,11 +555,16 @@ class OptionsEngine:
         net_pnl = charges["net_pnl_after_charges"]
         return_pct = round(((exit_premium - position.entry_premium) / position.entry_premium) * 100.0, 2)
 
-        # Return capital to cash balance: (entry margin + net_pnl after all taxes & brokerage)
-        refund_amount = round((position.entry_premium * position.quantity) + net_pnl, 2)
-        portfolio.cash_balance = round(portfolio.cash_balance + refund_amount, 2)
+        # Credit net sell proceeds (sell turnover minus sell-side charges)
+        # Note: Buy charges were already debited at entry; deducting sell_charges here ensures
+        # exactly zero double-fee deduction and perfect ledger reconciliation.
+        sell_charges = charges["sell_charges"]
+        sell_turnover = round(exit_premium * position.quantity, 2)
+        net_sell_credit = round(sell_turnover - sell_charges, 2)
+
+        portfolio.cash_balance = round(portfolio.cash_balance + net_sell_credit, 2)
         portfolio.realized_pnl = round(portfolio.realized_pnl + net_pnl, 2)
-        portfolio.total_fees = round(portfolio.total_fees + total_trade_fees, 2)
+        portfolio.total_fees = round(portfolio.total_fees + sell_charges, 2)
 
         # Update peak equity
         current_equity = portfolio.cash_balance
@@ -557,7 +575,7 @@ class OptionsEngine:
         position.is_open = False
         position.current_premium = exit_premium
 
-        # Create trade record
+        # Create trade record with granular tax & fee audit
         trade = OptionTrade(
             portfolio_id=portfolio.id,
             symbol=position.symbol,
@@ -569,9 +587,17 @@ class OptionsEngine:
             quantity=position.quantity,
             entry_premium=position.entry_premium,
             exit_premium=exit_premium,
-            realized_pnl=round(gross_pnl - total_trade_fees, 2),
+            realized_pnl=net_pnl,
+            gross_pnl=gross_pnl,
+            net_pnl=net_pnl,
             return_pct=return_pct,
             fees=total_trade_fees,
+            brokerage=charges["brokerage"],
+            stt=charges["stt"],
+            exchange_charges=charges["exchange_charges"],
+            gst=charges["gst"],
+            stamp_duty=charges["stamp_duty"],
+            sebi_charges=charges["sebi_charges"],
             entry_time=position.created_at,
             exit_time=datetime.utcnow(),
             exit_reason=exit_reason,
@@ -581,9 +607,13 @@ class OptionsEngine:
         db.add(trade)
         db.commit()
 
+        # Run independent reconciliation audit after every trade
+        recon = cls.reconcile_portfolio_ledger(db, portfolio)
+
         logger.info(
             f"Option SQUARED OFF: {position.symbol} | Entry: ₹{position.entry_premium:.2f} | "
-            f"Exit: ₹{exit_premium:.2f} | Net P&L: ₹{trade.realized_pnl:+.2f} ({exit_reason})"
+            f"Exit: ₹{exit_premium:.2f} | Net P&L: ₹{trade.realized_pnl:+.2f} ({exit_reason}) | "
+            f"Reconciliation: {'CLEAN' if recon['is_reconciled'] else 'MISMATCH'}"
         )
 
         # Dispatch WhatsApp alert if configured
@@ -617,6 +647,87 @@ class OptionsEngine:
         }
 
     @classmethod
+    def reconcile_portfolio_ledger(cls, db: Session, portfolio: OptionsPortfolio) -> Dict[str, Any]:
+        """
+        Independent double-entry reconciliation:
+        Verifies that cash_balance == initial_capital + sum(net_pnl) - sum(open_positions_cost).
+        Logs an alert if discrepancy > 0.05.
+        """
+        closed_trades = db.query(OptionTrade).filter(OptionTrade.portfolio_id == portfolio.id).all()
+        open_positions = db.query(OptionPosition).filter(
+            OptionPosition.portfolio_id == portfolio.id,
+            OptionPosition.is_open == True
+        ).all()
+
+        sum_net_pnl = round(sum(t.realized_pnl for t in closed_trades), 2)
+        sum_open_cost = round(sum((p.entry_premium * p.quantity) for p in open_positions), 2)
+
+        expected_cash = round(portfolio.initial_capital + sum_net_pnl - sum_open_cost, 2)
+        discrepancy = round(portfolio.cash_balance - expected_cash, 2)
+
+        is_reconciled = abs(discrepancy) <= 0.05
+        if not is_reconciled:
+            logger.error(
+                f"RECONCILIATION MISMATCH: Portfolio {portfolio.id} Cash=₹{portfolio.cash_balance:.2f}, "
+                f"Expected=₹{expected_cash:.2f}, Discrepancy=₹{discrepancy:.2f}."
+            )
+        else:
+            logger.info(f"Reconciliation verified clean: Cash ₹{portfolio.cash_balance:.2f} matches ledger (Diff=₹{discrepancy:.2f}).")
+
+        return {
+            "is_reconciled": is_reconciled,
+            "cash_balance": portfolio.cash_balance,
+            "expected_cash": expected_cash,
+            "discrepancy": discrepancy,
+            "initial_capital": portfolio.initial_capital,
+            "sum_net_pnl": sum_net_pnl,
+            "sum_open_cost": sum_open_cost,
+            "total_trades": len(closed_trades)
+        }
+
+    @classmethod
+    def enforce_eod_square_off(cls, db: Session, reason: str = "INTRADAY_SQUARE_OFF") -> List[Dict[str, Any]]:
+        """
+        Dedicated, preemptive 15:10:00 IST square-off executor:
+        Force-squares off all open positions across all active portfolios to prevent overnight theta decay & gap risk.
+        """
+        open_positions = db.query(OptionPosition).filter(OptionPosition.is_open == True).all()
+        results = []
+        if not open_positions:
+            logger.info("Enforce EOD Square-off: No open option positions to close.")
+            return results
+
+        logger.info(f"Enforcing EOD 15:10 IST Square-off for {len(open_positions)} positions.")
+        for pos in open_positions:
+            try:
+                res = cls.square_off_position(db, pos.id, exit_reason=reason)
+                results.append({"symbol": pos.symbol, "result": res})
+            except Exception as e:
+                logger.error(f"Failed to square off position {pos.symbol}: {e}")
+        return results
+
+    @classmethod
+    def startup_catchup(cls, db: Session):
+        """
+        Startup Catch-up:
+        If server starts/restarts past 15:10 IST or during weekend/holiday,
+        immediately force square-off any lingering open option positions.
+        """
+        from backend.app.market_data.market_calendar import is_trading_day
+        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        is_past_cutoff = (now_ist.hour > 15) or (now_ist.hour == 15 and now_ist.minute >= 10)
+        is_outside_session = not is_trading_day(now_ist) or is_past_cutoff
+
+        if is_outside_session:
+            open_positions = db.query(OptionPosition).filter(OptionPosition.is_open == True).all()
+            if open_positions:
+                logger.warning(
+                    f"Startup catch-up: found {len(open_positions)} open positions outside market hours. "
+                    f"Executing immediate square-off."
+                )
+                cls.enforce_eod_square_off(db, reason="INTRADAY_SQUARE_OFF")
+
+    @classmethod
     def update_positions_and_check_risk(cls, db: Session, user_id: int) -> List[Dict[str, Any]]:
         """
         Continuous risk guardian loop:
@@ -643,8 +754,19 @@ class OptionsEngine:
 
         for pos in open_positions:
             cfg = SUPPORTED_UNDERLYINGS.get(pos.underlying, SUPPORTED_UNDERLYINGS["NIFTY"])
-            spot, _ = cls.get_underlying_spot(pos.underlying)
+            spot, change_pct = cls.get_underlying_spot(pos.underlying)
             cur_price = black_scholes_price(spot, pos.strike_price, t_years, 0.07, cfg["iv_base"], pos.option_type)
+
+            # Price Sanity Filter: Single-tick jump > 40% without market index move is treated as bad data
+            if pos.current_premium > 0:
+                tick_delta_pct = abs(cur_price - pos.current_premium) / pos.current_premium
+                if tick_delta_pct > 0.40 and abs(change_pct) < 3.0:
+                    logger.warning(
+                        f"Bad tick / erratic price spike ({tick_delta_pct*100:.1f}%) detected on {pos.symbol} "
+                        f"(old: ₹{pos.current_premium:.2f}, new: ₹{cur_price:.2f}). Rejecting spike for safety."
+                    )
+                    cur_price = pos.current_premium
+
             pos.current_premium = cur_price
 
             # Check Mandatory 15:10 IST Intraday Square-off
@@ -1038,10 +1160,16 @@ class OptionsEngine:
         else:
             raise ValueError(f"Unsupported spread type '{spread_type}'. Must be BULL_CALL_SPREAD or BEAR_PUT_SPREAD.")
 
-        max_deployable = min(max(portfolio.cash_balance - 50.0, 100.0), MAX_POSITION_MARGIN) if portfolio.cash_balance > 0 else MAX_POSITION_MARGIN
+        cash_buffer = 50.0
+        available_cash = max(portfolio.cash_balance - cash_buffer, 0.0)
+        max_deployable = min(available_cash, MAX_POSITION_MARGIN)
         if not quantity:
             spread_lot_cost = net_debit_per_unit * lot_size
-            affordable_lots = max(int(max_deployable / spread_lot_cost), 1) if spread_lot_cost > 0 else 1
+            affordable_lots = int(max_deployable // spread_lot_cost) if spread_lot_cost > 0 else 0
+            if affordable_lots <= 0:
+                raise ValueError(
+                    f"నగదు సరిపోదు (Insufficient margin for spread). అవసరమైనది: ₹{spread_lot_cost:.2f}, అందుబాటులో: ₹{portfolio.cash_balance:.2f}."
+                )
             order_qty = affordable_lots * lot_size
             required_margin = round(net_debit_per_unit * order_qty, 2)
             while affordable_lots > 1 and (required_margin + (FLAT_BROKERAGE_PER_ORDER * 2)) > portfolio.cash_balance:
@@ -1052,7 +1180,11 @@ class OptionsEngine:
             order_qty = quantity
             required_margin = round(net_debit_per_unit * order_qty, 2)
             if required_margin > max_deployable:
-                order_qty = max(int(max_deployable / net_debit_per_unit), 1)
+                order_qty = int(max_deployable // net_debit_per_unit)
+                if order_qty <= 0:
+                    raise ValueError(
+                        f"నగదు సరిపోదు (Insufficient margin for spread). అవసరమైనది: ₹{required_margin:.2f}, అందుబాటులో: ₹{portfolio.cash_balance:.2f}."
+                    )
                 required_margin = round(net_debit_per_unit * order_qty, 2)
 
         # 2 legs: Buy leg + Sell leg = ₹40 entry brokerage + stamp duty
@@ -1068,8 +1200,9 @@ class OptionsEngine:
         sl_premium = round(net_debit_per_unit * 0.50, 2)
         target_premium = round(net_debit_per_unit * 1.80, 2)
 
-        portfolio.cash_balance -= total_debit
-        portfolio.total_fees += entry_fee
+        portfolio.cash_balance = round(portfolio.cash_balance - total_debit, 2)
+        assert portfolio.cash_balance >= 0.0, f"Critical constraint violated: negative cash balance {portfolio.cash_balance}"
+        portfolio.total_fees = round(portfolio.total_fees + entry_fee, 2)
 
         position = OptionPosition(
             portfolio_id=portfolio.id,
@@ -1799,14 +1932,29 @@ class OptionsEngine:
         sell_turnover = round(sell_premium * quantity, 2)
         total_turnover = round(buy_turnover + sell_turnover, 2)
 
-        brokerage = 80.0 if is_spread else 40.0
-        stt = round(0.001 * sell_turnover, 2)
-        exchange_charges = round(0.0003503 * total_turnover, 2)
-        sebi_charges = round(0.000001 * total_turnover, 2)
-        stamp_duty = round(0.00003 * buy_turnover, 2)
-        gst = round(0.18 * (brokerage + exchange_charges + sebi_charges), 2)
+        buy_brokerage = 40.0 if is_spread else 20.0
+        sell_brokerage = 40.0 if is_spread else 20.0
+        brokerage = buy_brokerage + sell_brokerage
 
-        total_charges = round(brokerage + stt + exchange_charges + sebi_charges + stamp_duty + gst, 2)
+        stt = round(0.001 * sell_turnover, 2)
+        buy_exchange = round(0.0003503 * buy_turnover, 2)
+        sell_exchange = round(0.0003503 * sell_turnover, 2)
+        exchange_charges = round(buy_exchange + sell_exchange, 2)
+
+        buy_sebi = round(0.000001 * buy_turnover, 2)
+        sell_sebi = round(0.000001 * sell_turnover, 2)
+        sebi_charges = round(buy_sebi + sell_sebi, 2)
+
+        stamp_duty = round(0.00003 * buy_turnover, 2)
+
+        buy_gst = round(0.18 * (buy_brokerage + buy_exchange + buy_sebi), 2)
+        sell_gst = round(0.18 * (sell_brokerage + sell_exchange + sell_sebi), 2)
+        gst = round(buy_gst + sell_gst, 2)
+
+        buy_charges = round(buy_brokerage + stamp_duty + buy_exchange + buy_sebi + buy_gst, 2)
+        sell_charges = round(sell_brokerage + stt + sell_exchange + sell_sebi + sell_gst, 2)
+        total_charges = round(buy_charges + sell_charges, 2)
+
         gross_pnl = round(sell_turnover - buy_turnover, 2)
         net_pnl_after_charges = round(gross_pnl - total_charges, 2)
 
@@ -1824,6 +1972,8 @@ class OptionsEngine:
             "sebi_charges": sebi_charges,
             "stamp_duty": stamp_duty,
             "gst": gst,
+            "buy_charges": buy_charges,
+            "sell_charges": sell_charges,
             "total_charges": total_charges,
             "gross_pnl": gross_pnl,
             "net_pnl_after_charges": net_pnl_after_charges,

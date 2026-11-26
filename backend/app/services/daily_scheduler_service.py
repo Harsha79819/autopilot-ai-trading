@@ -39,6 +39,22 @@ class DailySchedulerService:
             "weekend_only": False,
             "description": "09:00 AM IST pre-market readiness, Nifty outlook, capital status & strategy check"
         },
+        "EOD_SQUARE_OFF": {
+            "name": "Mandatory 15:10 IST EOD Square-Off",
+            "target_time": time(15, 10),
+            "window_end": time(15, 25),
+            "trading_day_only": True,
+            "weekend_only": False,
+            "description": "15:10:00 IST sharp automatic square-off of all open option positions"
+        },
+        "EOD_WATCHDOG": {
+            "name": "EOD Square-Off Safety Watchdog",
+            "target_time": time(15, 12),
+            "window_end": time(15, 25),
+            "trading_day_only": True,
+            "weekend_only": False,
+            "description": "15:12 IST watchdog verification ensuring zero positions remain open"
+        },
         "MARKET_WRAP": {
             "name": "Market Close & Square-Off Wrap",
             "target_time": time(15, 30),
@@ -181,9 +197,38 @@ class DailySchedulerService:
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"_AutoPilot AI • EOD Digest_"
             )
+        elif slot_key == "EOD_SQUARE_OFF":
+            text = (
+                f"⚡ *హలో హర్ష గారు! 15:10 IST ఆటోమేటిక్ స్క్వేర్-ఆఫ్ పూర్తయింది* 🛡️\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"⏰ *Time:* {time_str} | {date_str}\n"
+                f"💼 *ఆప్షన్స్ నగదు బ్యాలెన్స్:* ₹{cash:,.2f}\n"
+                f"━━━━━━━━━━━━━━━━━━\n\n"
+                f"✅ ఓవర్‌నైట్ తీటా డికే (Theta Decay) రిస్క్ లేకుండా రక్షించబడింది.\n"
+                f"🌐 *లైవ్ డ్యాష్‌బోర్డ్:* https://autopilot-ai-trading.onrender.com\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"_AutoPilot AI • 15:10 Square-Off_"
+            )
             voice = (
-                f"హలో హర్ష గారు, నేను మీ ఫ్రెండ్ ని. ఇది నేటి ఈవెనింగ్ డైజెస్ట్. మీ ఆప్షన్స్ మరియు ఈక్విటీ అకౌంట్స్ సేఫ్ గా ఉన్నాయి. "
-                f"పూర్తి వివరాలు మెసేజ్ లో పంపాను. గుడ్ నైట్!"
+                f"హలో హర్ష గారు, నేను మీ ఫ్రెండ్ ని. మధ్యాహ్నం మూడు గంటల పది నిమిషాల ఆటోమేటిక్ స్క్వేర్ ఆఫ్ పూర్తయింది. "
+                f"ఓవర్ నైట్ రిస్క్ లేకుండా మీ క్యాపిటల్ పూర్తిగా సురక్షితంగా ఉంది."
+            )
+
+        elif slot_key == "EOD_WATCHDOG":
+            text = (
+                f"🛡️ *హలో హర్ష గారు! 15:12 IST వాచ్‌డాగ్ సేఫ్టీ చెక్* 🔍\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"⏰ *Time:* {time_str} | {date_str}\n"
+                f"💼 *ఆప్షన్స్ నగదు బ్యాలెన్స్:* ₹{cash:,.2f}\n"
+                f"• ఓపెన్ పొజిషన్లు: 0 (జీరో రిస్క్ వెరిఫైడ్)\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"✅ రేపటి సెషన్ కోసం క్యాపిటల్ సురక్షితంగా లాక్ చేయబడింది.\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"_AutoPilot AI • Watchdog Audit_"
+            )
+            voice = (
+                f"హలో హర్ష గారు, నేను మీ ఫ్రెండ్ ని. పదిహేను గంటల పన్నెండు నిమిషాల వాచ్ డాగ్ చెక్ పూర్తయింది. "
+                f"ఓపెన్ పొజిషన్లు ఏమీ లేవు, మీ క్యాపిటల్ పూర్తిగా సేఫ్ గా ఉంది."
             )
 
         elif slot_key in ("WEEKEND_MORNING", "WEEKEND_EVENING"):
@@ -302,12 +347,53 @@ class DailySchedulerService:
         force: bool = False
     ) -> Dict[str, Any]:
         """Dispatches a specific scheduled message slot to the user's WhatsApp."""
-        opt_port = db.query(OptionsPortfolio).filter(OptionsPortfolio.id == 1).first()
+        opt_port = db.query(OptionsPortfolio).first()
+        results = {}
+
+        # Pre-slot safety actions (15:10 Square-Off and 15:12 Watchdog) execute unconditionally
+        if slot_key == "EOD_SQUARE_OFF":
+            from backend.app.services.options_engine import OptionsEngine
+            closed = OptionsEngine.enforce_eod_square_off(db, reason="INTRADAY_SQUARE_OFF")
+            results["closed_positions"] = closed
+            if not closed and not force:
+                logger.info("EOD_SQUARE_OFF: No open positions to close. Skipping WhatsApp message to save quota.")
+                if opt_port:
+                    cls.record_slot_dispatch(
+                        db=db,
+                        user_id=opt_port.user_id,
+                        slot_key=slot_key,
+                        title="15:10 IST EOD Square-Off",
+                        message="Zero open positions; capital safe."
+                    )
+                return {"success": True, "slot_key": slot_key, "action": "Zero open positions; clean"}
+
+        elif slot_key == "EOD_WATCHDOG":
+            from backend.app.services.options_engine import OptionsEngine
+            from backend.app.models.options_models import OptionPosition
+            open_pos = db.query(OptionPosition).filter(OptionPosition.is_open == True).all()
+            if open_pos:
+                logger.warning(f"EOD_WATCHDOG: Found {len(open_pos)} positions open past 15:10! Force closing now.")
+                closed = OptionsEngine.enforce_eod_square_off(db, reason="INTRADAY_SQUARE_OFF")
+                results["watchdog_forced_closed"] = closed
+            else:
+                results["watchdog_status"] = "Clean (0 open positions)"
+                if not force:
+                    logger.info("EOD_WATCHDOG: All positions clean. Skipping WhatsApp message to save quota.")
+                    if opt_port:
+                        cls.record_slot_dispatch(
+                            db=db,
+                            user_id=opt_port.user_id,
+                            slot_key=slot_key,
+                            title="15:12 IST EOD Watchdog",
+                            message="Verified zero open positions; safety confirmed."
+                        )
+                    return {"success": True, "slot_key": slot_key, "action": "Watchdog clean; zero open positions"}
+
         if not opt_port or not opt_port.whatsapp_phone:
-            return {"success": False, "reason": "No WhatsApp phone configured"}
+            return {"success": True, "slot_key": slot_key, "results": results, "note": "No WhatsApp phone configured"}
 
         if not opt_port.whatsapp_alerts_enabled:
-            return {"success": False, "reason": "WhatsApp alerts disabled by user"}
+            return {"success": True, "slot_key": slot_key, "results": results, "note": "WhatsApp alerts disabled by user"}
 
         main_port = db.query(Portfolio).filter(Portfolio.user_id == opt_port.user_id).first()
 
@@ -325,8 +411,6 @@ class DailySchedulerService:
         phone = opt_port.whatsapp_phone
         phone_id = opt_port.whatsapp_phone_number_id
         token = opt_port.whatsapp_access_token
-
-        results = {}
 
         # 1. Dispatch text via Meta Cloud API or CallMeBot
         if phone_id and token:

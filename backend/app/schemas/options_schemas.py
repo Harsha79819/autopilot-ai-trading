@@ -79,8 +79,16 @@ class OptionTradeSchema(BaseModel):
     entry_premium: float
     exit_premium: float
     realized_pnl: float
+    gross_pnl: Optional[float] = 0.0
+    net_pnl: Optional[float] = 0.0
     return_pct: float
     fees: float
+    brokerage: Optional[float] = 40.0
+    stt: Optional[float] = 0.0
+    exchange_charges: Optional[float] = 0.0
+    gst: Optional[float] = 0.0
+    stamp_duty: Optional[float] = 0.0
+    sebi_charges: Optional[float] = 0.0
     entry_time: datetime
     exit_time: datetime
     exit_reason: str

@@ -967,9 +967,13 @@ class AutoPilotRunner:
                     risk_per_share = best_quote.current_price * (sl_pct / 100.0)
                     max_loss_qty = int(max_allowed_daily_loss // risk_per_share) if risk_per_share > 0 else 1
 
-                    qty = max(1, min(budget_qty, max_loss_qty))
+                    # Position sizing without forcing 1 lot on zero margin
+                    qty = min(budget_qty, max_loss_qty)
                     if (qty * unit_cost_est) > portfolio.cash_balance:
-                        qty = max(1, int(portfolio.cash_balance // unit_cost_est)) if unit_cost_est <= portfolio.cash_balance else 0
+                        qty = int(portfolio.cash_balance // unit_cost_est) if unit_cost_est > 0 else 0
+                    if qty <= 0:
+                        logger.info(f"Skipping {best_sym}: calculated qty is 0 (insufficient margin or risk limit).")
+                        continue
 
                     interval = max(int(getattr(settings, "AUTOPILOT_INTERVAL_SECONDS", 10.0)), 1)
                     cycle_slot = int(now.timestamp() // interval)
@@ -1212,9 +1216,13 @@ class AutoPilotRunner:
                 risk_per_share = quote.current_price * (sl_pct / 100.0)
                 max_loss_qty = int(max_allowed_daily_loss // risk_per_share) if risk_per_share > 0 else 1
 
-                qty = max(1, min(budget_qty, max_loss_qty))
+                # Position sizing without forcing 1 lot on zero margin
+                qty = min(budget_qty, max_loss_qty)
                 if (qty * unit_cost) > portfolio.cash_balance:
-                    qty = max(1, int(portfolio.cash_balance // unit_cost)) if unit_cost <= portfolio.cash_balance else 0
+                    qty = int(portfolio.cash_balance // unit_cost) if unit_cost > 0 else 0
+                if qty <= 0:
+                    logger.info(f"Skipping {sym}: calculated qty is 0 (insufficient margin or risk limit).")
+                    continue
 
                 if qty >= 1:
                     order_in = OrderCreate(

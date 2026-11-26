@@ -102,7 +102,12 @@ async def lifespan(app: FastAPI):
                 )
                 db.add(options_portfolio)
                 db.commit()
-                logger.info("Default demo user Options Portfolio initialized with ₹5,000.00 virtual capital.")
+            # Enforce startup catch-up: if server starts past 15:10 or on holiday, close lingering positions
+            try:
+                from backend.app.services.options_engine import OptionsEngine
+                OptionsEngine.startup_catchup(db)
+            except Exception as catchup_err:
+                logger.error(f"Error during options startup catch-up: {catchup_err}")
         finally:
             db.close()
 

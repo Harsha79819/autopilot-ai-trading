@@ -79,8 +79,16 @@ class OptionTrade(Base):
     entry_premium = Column(Float, nullable=False)
     exit_premium = Column(Float, nullable=False)
     realized_pnl = Column(Float, nullable=False)
+    gross_pnl = Column(Float, default=0.0, nullable=False)
+    net_pnl = Column(Float, default=0.0, nullable=False)
     return_pct = Column(Float, nullable=False)
-    fees = Column(Float, default=20.0, nullable=False)  # Typical ₹20 flat brokerage per F&O order
+    fees = Column(Float, default=40.0, nullable=False)  # Total statutory charges
+    brokerage = Column(Float, default=40.0, nullable=False)
+    stt = Column(Float, default=0.0, nullable=False)
+    exchange_charges = Column(Float, default=0.0, nullable=False)
+    gst = Column(Float, default=0.0, nullable=False)
+    stamp_duty = Column(Float, default=0.0, nullable=False)
+    sebi_charges = Column(Float, default=0.0, nullable=False)
     entry_time = Column(DateTime, default=datetime.utcnow, nullable=False)
     exit_time = Column(DateTime, default=datetime.utcnow, nullable=False)
     exit_reason = Column(String(50), nullable=False)  # "TARGET_HIT", "STOP_LOSS_HIT", "INTRADAY_SQUARE_OFF", "MANUAL_EXIT"
