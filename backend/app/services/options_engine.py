@@ -15,7 +15,7 @@ from backend.app.services.whatsapp_service import WhatsAppAlertService
 
 logger = logging.getLogger("autopilot.options_engine")
 
-MAX_POSITION_MARGIN = 5000.0  # Full capital utilization (deploy up to full ₹5,000 cash balance per user request; no artificial cash reserve)
+MAX_POSITION_MARGIN = 100000.0  # Full capital utilization (deploy up to 100% of available cash balance; no artificial cash reserve or cap)
 FLAT_BROKERAGE_PER_ORDER = 20.0  # ₹20 flat brokerage per F&O order
 SL_PERCENTAGE = 0.20  # -20% Hard Stop Loss
 TP1_PERCENTAGE = 0.40  # +40% Target 1
