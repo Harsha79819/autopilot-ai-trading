@@ -415,11 +415,14 @@ class WhatsAppAlertService:
                 has_telugu = any('\u0c00' <= char <= '\u0c7f' for char in spoken_text)
                 voice_name = "te-IN-ShrutiNeural" if has_telugu else "en-IN-NeerjaExpressiveNeural"
 
+                import concurrent.futures
+
                 async def _synthesize():
                     communicate = edge_tts.Communicate(spoken_text, voice=voice_name, rate="+14%", pitch="+0Hz")
                     await communicate.save(mp3_path)
 
-                asyncio.run(_synthesize())
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    pool.submit(lambda: asyncio.run(_synthesize())).result(timeout=25)
 
                 if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 1024:
                     logger.info(f"Anu studio-grade Neural Voice synthesized successfully with {voice_name}")
