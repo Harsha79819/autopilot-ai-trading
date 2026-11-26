@@ -10,6 +10,7 @@ from backend.app.models.options_models import OptionsPortfolio, OptionPosition, 
 from backend.app.models.portfolio import Portfolio
 from backend.app.models.trade import Trade
 from backend.app.market_data import demo_provider
+from backend.app.market_data.market_calendar import to_ist_datetime, is_trading_day
 from backend.app.scanner.universe import UNIVERSE_SYMBOLS
 from backend.app.services.whatsapp_service import WhatsAppAlertService
 
@@ -192,6 +193,7 @@ def calculate_greeks(
 
 class OptionsEngine:
     """Manages Multi-Asset Option Chains, Greeks, AutoPilot Execution, and Telemetry."""
+    _consecutive_spike_counts: Dict[int, int] = {}
 
     @classmethod
     def get_supported_underlyings(cls) -> List[Dict[str, Any]]:
@@ -240,7 +242,7 @@ class OptionsEngine:
         """
         Get the next weekly Thursday expiry date and remaining time in years.
         """
-        now = datetime.utcnow() + timedelta(hours=5, minutes=30)  # IST
+        now = to_ist_datetime(datetime.utcnow())  # IST
         today = now.date()
         days_ahead = (3 - today.weekday()) % 7
         if days_ahead == 0 and now.hour >= 15 and now.minute >= 30:
@@ -322,7 +324,7 @@ class OptionsEngine:
             "strike_step": strike_step,
             "atm_strike": atm_strike,
             "strikes": strikes_data,
-            "server_time_ist": (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime("%H:%M:%S")
+            "server_time_ist": to_ist_datetime(datetime.utcnow()).strftime("%H:%M:%S")
         }
 
     @classmethod
@@ -459,6 +461,7 @@ class OptionsEngine:
             quantity=order_qty,
             entry_premium=current_premium,
             current_premium=current_premium,
+            peak_premium=current_premium,
             stop_loss_premium=sl_premium,
             target_premium=target_premium,
             trailing_stop_premium=sl_premium,
@@ -615,6 +618,7 @@ class OptionsEngine:
             trade_notes=f"Exited {position.symbol} at ₹{exit_premium:.2f} ({return_pct:+.1f}%)"
         )
 
+        cls._consecutive_spike_counts.pop(position_id, None)
         db.add(trade)
         db.commit()
 
@@ -654,7 +658,8 @@ class OptionsEngine:
             "message": f"Closed {position.symbol}: ₹{trade.realized_pnl:+.2f} ({exit_reason})",
             "realized_pnl": trade.realized_pnl,
             "return_pct": return_pct,
-            "exit_reason": exit_reason
+            "exit_reason": exit_reason,
+            "exit_premium": exit_premium
         }
 
     @classmethod
@@ -724,8 +729,7 @@ class OptionsEngine:
         If server starts/restarts past 15:10 IST or during weekend/holiday,
         immediately force square-off any lingering open option positions.
         """
-        from backend.app.market_data.market_calendar import is_trading_day
-        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        now_ist = to_ist_datetime(datetime.utcnow())
         is_past_cutoff = (now_ist.hour > 15) or (now_ist.hour == 15 and now_ist.minute >= 10)
         is_outside_session = not is_trading_day(now_ist) or is_past_cutoff
 
@@ -758,7 +762,7 @@ class OptionsEngine:
             return []
 
         _, t_years = cls.get_upcoming_expiry()
-        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        now_ist = to_ist_datetime(datetime.utcnow())
         is_eod_squareoff_time = (now_ist.hour > 15) or (now_ist.hour == 15 and now_ist.minute >= 10)
 
         actions_taken = []
@@ -768,20 +772,9 @@ class OptionsEngine:
             spot, change_pct = cls.get_underlying_spot(pos.underlying)
             cur_price = black_scholes_price(spot, pos.strike_price, t_years, 0.07, cfg["iv_base"], pos.option_type)
 
-            # Price Sanity Filter: Single-tick jump > 15% without market index move is treated as bad data
-            if pos.current_premium > 0:
-                tick_delta_pct = abs(cur_price - pos.current_premium) / pos.current_premium
-                if tick_delta_pct > 0.15 and abs(change_pct) < 2.0:
-                    logger.warning(
-                        f"Bad tick / erratic price spike ({tick_delta_pct*100:.1f}%) detected on {pos.symbol} "
-                        f"(old: ₹{pos.current_premium:.2f}, new: ₹{cur_price:.2f}). Rejecting spike for safety."
-                    )
-                    cur_price = pos.current_premium
-
-            pos.current_premium = cur_price
-
-            # Check Mandatory 15:10 IST Intraday Square-off
+            # Check Mandatory 15:10 IST Intraday Square-off FIRST (bypasses sanity filter)
             if is_eod_squareoff_time:
+                cls._consecutive_spike_counts.pop(pos.id, None)
                 res = cls.square_off_position(db, pos.id, exit_reason="INTRADAY_SQUARE_OFF", force_exit_premium=cur_price)
                 actions_taken.append({
                     "symbol": pos.symbol,
@@ -791,8 +784,10 @@ class OptionsEngine:
                 })
                 continue
 
-            # Check Hard Stop-Loss (-20% or gap-down)
+            # Hard Stop-Loss Check (-20% or gap-down)
+            # CRITICAL RISK RULE: Down-spikes breaching SL are NEVER clamped by sanity filter!
             if cur_price <= pos.stop_loss_premium:
+                cls._consecutive_spike_counts.pop(pos.id, None)
                 res = cls.square_off_position(db, pos.id, exit_reason="STOP_LOSS_HIT", force_exit_premium=cur_price)
                 actions_taken.append({
                     "symbol": pos.symbol,
@@ -802,8 +797,47 @@ class OptionsEngine:
                 })
                 continue
 
+            # Trailing Stop-Loss Check (if already active and breached)
+            # Down-spikes breaching trailing floor are NEVER clamped by sanity filter!
+            if pos.trailing_activated and cur_price <= pos.trailing_stop_premium:
+                cls._consecutive_spike_counts.pop(pos.id, None)
+                res = cls.square_off_position(db, pos.id, exit_reason="TRAILING_STOP_HIT", force_exit_premium=cur_price)
+                actions_taken.append({
+                    "symbol": pos.symbol,
+                    "action": "TRAILING_STOP",
+                    "reason": f"Hit Trailing Stop at ₹{cur_price:.2f} <= ₹{pos.trailing_stop_premium:.2f}",
+                    "result": res
+                })
+                continue
+
+            # Price Sanity Filter for non-SL movements:
+            # Single-tick jump > 15% without market index move is treated as bad data
+            # UNLESS it is confirmed 3 times consecutively (sustained real move)
+            if pos.current_premium > 0:
+                tick_delta_pct = abs(cur_price - pos.current_premium) / pos.current_premium
+                if tick_delta_pct > 0.15 and abs(change_pct) < 2.0:
+                    cls._consecutive_spike_counts[pos.id] = cls._consecutive_spike_counts.get(pos.id, 0) + 1
+                    spike_count = cls._consecutive_spike_counts[pos.id]
+                    if spike_count < 3:
+                        logger.warning(
+                            f"Bad tick / erratic price spike ({tick_delta_pct*100:.1f}%) detected on {pos.symbol} "
+                            f"(old: ₹{pos.current_premium:.2f}, new: ₹{cur_price:.2f}, count {spike_count}/3). Rejecting spike for safety."
+                        )
+                        cur_price = pos.current_premium
+                    else:
+                        logger.info(
+                            f"Price move on {pos.symbol} sustained for 3 consecutive ticks "
+                            f"(₹{pos.current_premium:.2f} -> ₹{cur_price:.2f}). Confirming and accepting new market price."
+                        )
+                        cls._consecutive_spike_counts[pos.id] = 0
+                else:
+                    cls._consecutive_spike_counts[pos.id] = 0
+
+            pos.current_premium = cur_price
+
             # Check Multibagger Target (+100%)
             if cur_price >= pos.entry_premium * (1.0 + TP2_PERCENTAGE):
+                cls._consecutive_spike_counts.pop(pos.id, None)
                 res = cls.square_off_position(db, pos.id, exit_reason="TARGET_HIT", force_exit_premium=cur_price)
                 actions_taken.append({
                     "symbol": pos.symbol,
@@ -813,24 +847,20 @@ class OptionsEngine:
                 })
                 continue
 
-            # Check Trailing Stop-Loss
-            profit_pct = (cur_price - pos.entry_premium) / pos.entry_premium
+            # Update Peak Premium & Trailing Stop Ratchet
+            if pos.peak_premium is None or pos.peak_premium <= 0:
+                pos.peak_premium = max(pos.entry_premium, cur_price)
+            elif cur_price > pos.peak_premium:
+                pos.peak_premium = cur_price
+
+            profit_pct = (pos.peak_premium - pos.entry_premium) / pos.entry_premium
             if profit_pct >= TRAILING_ACTIVATION_PCT:
                 pos.trailing_activated = True
-                new_trailing = round(cur_price * (1.0 - TRAILING_GIVEBACK_PCT), 2)
+                new_trailing = round(pos.peak_premium * (1.0 - TRAILING_GIVEBACK_PCT), 2)
+                # Ratchet: trailing floor can ONLY increase, never decrease on pullbacks
                 if new_trailing > pos.trailing_stop_premium:
                     pos.trailing_stop_premium = new_trailing
                     logger.info(f"Trailing SL raised silently for {pos.symbol} to ₹{new_trailing:.2f} (WhatsApp alert suppressed to conserve quota)")
-
-            if pos.trailing_activated and cur_price <= pos.trailing_stop_premium:
-                res = cls.square_off_position(db, pos.id, exit_reason="TRAILING_STOP_HIT", force_exit_premium=cur_price)
-                actions_taken.append({
-                    "symbol": pos.symbol,
-                    "action": "TRAILING_STOP",
-                    "reason": f"Hit Trailing Stop at ₹{cur_price:.2f} <= ₹{pos.trailing_stop_premium:.2f}",
-                    "result": res
-                })
-                continue
 
         db.commit()
         return actions_taken
@@ -911,7 +941,7 @@ class OptionsEngine:
         if not portfolio.is_autopilot_enabled:
             return {"status": "DISABLED", "exits": exits}
 
-        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        now_ist = to_ist_datetime(datetime.utcnow())
         # Golden Hours Rule: No new option entries after 13:30 IST to prevent late-day time decay traps
         if now_ist.hour > 13 or (now_ist.hour == 13 and now_ist.minute >= 30):
             return {"status": "CUTOFF_PASSED", "reason": "No entries after 13:30 IST to avoid theta trap", "exits": exits}
@@ -957,18 +987,25 @@ class OptionsEngine:
         equity_portfolio = db.query(Portfolio).filter(Portfolio.user_id == user_id).first()
         equity_trades = db.query(Trade).filter(Trade.user_id == user_id).all() if equity_portfolio else []
 
-        eq_total = len(equity_trades)
-        eq_wins = sum(1 for t in equity_trades if t.realized_pnl > 0)
-        eq_losses = sum(1 for t in equity_trades if t.realized_pnl < 0)
+        # Closed sell positions: separate active trades from archived offline prototypes (e.g. TCS)
+        active_sells = [t for t in equity_trades if t.side == "SELL" and not getattr(t, "is_archived", False)]
+        archived_sells = [t for t in equity_trades if t.side == "SELL" and getattr(t, "is_archived", False)]
+
+        eq_total = len(active_sells)
+        eq_wins = sum(1 for t in active_sells if t.realized_pnl > 0)
+        eq_losses = sum(1 for t in active_sells if t.realized_pnl < 0)
         eq_win_rate = round((eq_wins / eq_total * 100), 1) if eq_total > 0 else 0.0
-        eq_net_pnl = round(equity_portfolio.realized_pnl, 2) if equity_portfolio else 0.0
-        eq_fees = round(equity_portfolio.total_fees_paid, 2) if equity_portfolio else 0.0
+        eq_net_pnl = round(sum(t.realized_pnl for t in active_sells), 2)
+        eq_fees = round(sum(t.total_charges for t in equity_trades if not getattr(t, "is_archived", False)), 2)
         eq_initial_cap = equity_portfolio.initial_cash if equity_portfolio else 50000.0
         eq_roi = round((eq_net_pnl / eq_initial_cap) * 100.0, 2) if eq_initial_cap > 0 else 0.0
 
-        eq_gross_wins = sum(t.realized_pnl for t in equity_trades if t.realized_pnl > 0)
-        eq_gross_losses = abs(sum(t.realized_pnl for t in equity_trades if t.realized_pnl < 0))
+        eq_gross_wins = sum(t.realized_pnl for t in active_sells if t.realized_pnl > 0)
+        eq_gross_losses = abs(sum(t.realized_pnl for t in active_sells if t.realized_pnl < 0))
         eq_profit_factor = round(eq_gross_wins / eq_gross_losses, 2) if eq_gross_losses > 0 else (99.0 if eq_gross_wins > 0 else 0.0)
+
+        archived_pnl = round(sum(t.realized_pnl for t in archived_sells), 2)
+        all_time_pnl = round(equity_portfolio.realized_pnl, 2) if equity_portfolio else 0.0
 
         opt_portfolio = cls.get_or_create_portfolio(db, user_id)
         opt_trades = db.query(OptionTrade).filter(OptionTrade.portfolio_id == opt_portfolio.id).all()
@@ -999,6 +1036,9 @@ class OptionsEngine:
                 "total_fees": eq_fees,
                 "roi_pct": eq_roi,
                 "profit_factor": eq_profit_factor,
+                "archived_trades": len(archived_sells),
+                "archived_pnl": archived_pnl,
+                "all_time_pnl": all_time_pnl,
                 "risk_profile": "స్థిరమైన పెట్టుబడి (Low-to-Medium Risk, Zero Decay)",
                 "holding_type": "స్వింగ్ / డెలివరీ (రోజుల తరబడి హోల్డ్ చేయవచ్చు)"
             },
@@ -1229,6 +1269,7 @@ class OptionsEngine:
             quantity=order_qty,
             entry_premium=net_debit_per_unit,
             current_premium=net_debit_per_unit,
+            peak_premium=net_debit_per_unit,
             stop_loss_premium=sl_premium,
             target_premium=target_premium,
             trailing_stop_premium=sl_premium,

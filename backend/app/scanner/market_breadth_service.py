@@ -6,7 +6,7 @@ and enforces the 2-picks-per-sector cap.
 from typing import Dict, Any, List
 from collections import defaultdict
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Standard NSE F&O Sector Map
 NSE_SECTOR_MAP: Dict[str, str] = {
@@ -123,7 +123,7 @@ class MarketBreadthService:
             "dots": dots,
             "bullish_board": top_bullish,
             "bearish_board": top_bearish,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
         self.cached_breadth = result

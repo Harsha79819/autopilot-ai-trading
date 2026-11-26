@@ -1,6 +1,6 @@
 """Trade execution model with granular fee breakdown."""
 from datetime import datetime
-from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from backend.app.database import Base
 
@@ -37,6 +37,8 @@ class Trade(Base):
     realized_pnl = Column(Float, default=0.0, nullable=False)  # Net realized profit/loss for sells
 
     executed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    is_archived = Column(Boolean, default=False, nullable=False)
+    trade_notes = Column(String(255), default="", nullable=True)
 
     # Relationships
     order = relationship("Order", back_populates="trade")

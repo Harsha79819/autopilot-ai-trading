@@ -24,6 +24,7 @@ except Exception:
     pass
 
 from backend.app.models.watchlist_alert import NotificationLog
+from backend.app.market_data.market_calendar import to_ist_datetime
 
 logger = logging.getLogger("autopilot.whatsapp")
 
@@ -669,7 +670,7 @@ class WhatsAppAlertService:
         MAX_DAILY_WHATSAPP_ALERTS = 20
         if category not in ("EMERGENCY_HALT", "CIRCUIT_BREAKER", "WHATSAPP_TEST"):
             try:
-                now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                now_ist = to_ist_datetime(datetime.utcnow())
                 today_start_utc = datetime(now_ist.year, now_ist.month, now_ist.day) - timedelta(hours=5, minutes=30)
                 today_count = db.query(NotificationLog).filter(
                     NotificationLog.user_id == user_id,

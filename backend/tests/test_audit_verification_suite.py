@@ -413,3 +413,200 @@ def test_item_4_stop_loss_persistence_and_spike_filter_and_gap_down(db):
     assert trade.exit_reason == "STOP_LOSS_HIT"
     # Gross loss: (65.00 - 100.00) * 25 = -₹875.00
     assert trade.gross_pnl == -875.00
+
+
+def test_item_3_deep_sanity_filter_down_spike_and_3_tick_confirmation(db):
+    """
+    Verification of Point 3:
+    1. Down-spike below SL: An erratic down-spike (e.g. drop from 100 to 70 when SL is 80)
+       is NEVER suppressed by the sanity filter; Stop-Loss must execute immediately.
+    2. 15:10 square-off: Always bypasses sanity filter and closes position cleanly.
+    3. 3-tick confirmation: Erratic non-SL price jump (>15% jump with <2% index move)
+       is clamped on ticks 1 & 2, but accepted on tick 3 when sustained.
+    """
+    portfolio = _get_audit_portfolio(db, initial_cash=5000.0)
+
+    # 1. Down-spike below SL: Price drops to 70.0 (SL is 80.0) while index moved 0.0%
+    pos_down = OptionPosition(
+        portfolio_id=portfolio.id,
+        symbol="NIFTY24NOV24100CE",
+        underlying="NIFTY",
+        strike_price=24100.0,
+        option_type="CE",
+        expiry_date="2026-11-28",
+        lot_size=25,
+        quantity=25,
+        entry_premium=100.0,
+        current_premium=100.0,
+        peak_premium=100.0,
+        stop_loss_premium=80.0,
+        target_premium=160.0,
+        trailing_stop_premium=80.0,
+        is_open=True
+    )
+    c_down = OptionsEngine.calculate_trade_statutory_charges(100.0, 100.0, 25)
+    portfolio.cash_balance = round(portfolio.cash_balance - (100.0 * 25 + c_down["buy_charges"]), 2)
+    db.add(pos_down)
+    db.commit()
+
+    with patch("backend.app.services.options_engine.OptionsEngine.get_underlying_spot") as mock_spot, \
+         patch("backend.app.services.options_engine.black_scholes_price") as mock_bs:
+        mock_spot.return_value = (24100.0, 0.0)  # Index flat (0.0% change)
+        mock_bs.return_value = 70.0  # Option dropped 30% to 70.0 (breached 80.0 SL)
+        mock_utc_day = datetime(2026, 11, 26, 5, 0, 0)  # 10:30 IST
+        with patch("backend.app.services.options_engine.datetime") as mock_dt:
+            mock_dt.utcnow.return_value = mock_utc_day
+            actions = OptionsEngine.update_positions_and_check_risk(db, portfolio.user_id)
+
+    db.refresh(pos_down)
+    assert pos_down.is_open is False  # Stop Loss executed! NEVER clamped!
+    assert len(actions) == 1
+    assert actions[0]["action"] == "STOP_LOSS"
+    assert actions[0]["result"]["exit_premium"] == 70.0
+
+    # 2. 3-Consecutive-Tick Confirmation:
+    # Position entered at 100.0. An erratic spike to 125.0 (+25%) occurs while index moved 0.1%.
+    pos_spike = OptionPosition(
+        portfolio_id=portfolio.id,
+        symbol="NIFTY24NOV24200CE",
+        underlying="NIFTY",
+        strike_price=24200.0,
+        option_type="CE",
+        expiry_date="2026-11-28",
+        lot_size=25,
+        quantity=25,
+        entry_premium=100.0,
+        current_premium=100.0,
+        peak_premium=100.0,
+        stop_loss_premium=80.0,
+        target_premium=160.0,
+        trailing_stop_premium=80.0,
+        is_open=True
+    )
+    db.add(pos_spike)
+    db.commit()
+    OptionsEngine._consecutive_spike_counts.clear()
+
+    with patch("backend.app.services.options_engine.OptionsEngine.get_underlying_spot") as mock_spot, \
+         patch("backend.app.services.options_engine.black_scholes_price") as mock_bs:
+        mock_spot.return_value = (24200.0, 0.1)  # Index flat
+        mock_bs.return_value = 125.0  # +25% spike
+        mock_utc_day = datetime(2026, 11, 26, 5, 0, 0)
+
+        with patch("backend.app.services.options_engine.datetime") as mock_dt:
+            mock_dt.utcnow.return_value = mock_utc_day
+            # Tick 1: Spike detected, clamped to 100.0, spike_count = 1
+            OptionsEngine.update_positions_and_check_risk(db, portfolio.user_id)
+            db.refresh(pos_spike)
+            assert pos_spike.current_premium == 100.0
+            assert OptionsEngine._consecutive_spike_counts.get(pos_spike.id) == 1
+
+            # Tick 2: Spike sustained, clamped to 100.0, spike_count = 2
+            OptionsEngine.update_positions_and_check_risk(db, portfolio.user_id)
+            db.refresh(pos_spike)
+            assert pos_spike.current_premium == 100.0
+            assert OptionsEngine._consecutive_spike_counts.get(pos_spike.id) == 2
+
+            # Tick 3: 3rd continuous tick! Confirmed and accepted!
+            OptionsEngine.update_positions_and_check_risk(db, portfolio.user_id)
+            db.refresh(pos_spike)
+            assert pos_spike.current_premium == 125.0  # Confirmed!
+            assert OptionsEngine._consecutive_spike_counts.get(pos_spike.id) == 0  # Reset!
+
+
+def test_item_4_ratchet_trailing_floor_persistence_and_pullback(db):
+    """
+    Verification of Point 4:
+    1. Position enters at ₹100.00.
+    2. Price reaches +40% gain (₹140.00). Trailing activates, peak_premium=140.0,
+       trailing floor ratchets to ₹123.20 (140 * 0.88).
+    3. Server restart / crash simulation: DB session reloaded, peak_premium and trailing floor recovered.
+    4. Price pulls back to ₹130.00 (+30% gain): trailing floor MUST NOT drop below ₹123.20 (ratchet locked).
+    5. Price falls to ₹120.00 (below ₹123.20): trailing stop triggers exit immediately at ₹120.00.
+    """
+    portfolio = _get_audit_portfolio(db, initial_cash=5000.0)
+
+    # 1. Entry at ₹100.00
+    pos = OptionPosition(
+        portfolio_id=portfolio.id,
+        symbol="NIFTY24NOV24300CE",
+        underlying="NIFTY",
+        strike_price=24300.0,
+        option_type="CE",
+        expiry_date="2026-11-28",
+        lot_size=25,
+        quantity=25,
+        entry_premium=100.0,
+        current_premium=100.0,
+        peak_premium=100.0,
+        stop_loss_premium=80.0,
+        target_premium=160.0,
+        trailing_stop_premium=80.0,
+        trailing_activated=False,
+        is_open=True
+    )
+    c_pos = OptionsEngine.calculate_trade_statutory_charges(100.0, 100.0, 25)
+    portfolio.cash_balance = round(portfolio.cash_balance - (100.0 * 25 + c_pos["buy_charges"]), 2)
+    db.add(pos)
+    db.commit()
+    pos_id = pos.id
+
+    # 2. Price surges to ₹140.00 (+40% gain)
+    with patch("backend.app.services.options_engine.OptionsEngine.get_underlying_spot") as mock_spot, \
+         patch("backend.app.services.options_engine.black_scholes_price") as mock_bs:
+        mock_spot.return_value = (24500.0, 2.5)  # Realistic market rally >2%
+        mock_bs.return_value = 140.0
+        mock_utc_day = datetime(2026, 11, 26, 5, 0, 0)
+        with patch("backend.app.services.options_engine.datetime") as mock_dt:
+            mock_dt.utcnow.return_value = mock_utc_day
+            OptionsEngine.update_positions_and_check_risk(db, portfolio.user_id)
+
+    db.refresh(pos)
+    assert pos.trailing_activated is True
+    assert pos.peak_premium == 140.0
+    # Trailing floor: 140.0 * (1 - 0.12) = 123.20
+    assert pos.trailing_stop_premium == 123.20
+    assert pos.is_open is True
+
+    # 3. Simulate Server Restart / Crash Recovery
+    db.expire_all()
+    recovered = db.query(OptionPosition).filter(OptionPosition.id == pos_id).first()
+    assert recovered is not None
+    assert recovered.peak_premium == 140.0
+    assert recovered.trailing_activated is True
+    assert recovered.trailing_stop_premium == 123.20
+
+    # 4. Pullback: Price drops from ₹140.00 to ₹130.00 (+30% gain)
+    with patch("backend.app.services.options_engine.OptionsEngine.get_underlying_spot") as mock_spot, \
+         patch("backend.app.services.options_engine.black_scholes_price") as mock_bs:
+        mock_spot.return_value = (24450.0, 2.1)
+        mock_bs.return_value = 130.0
+        mock_utc_day = datetime(2026, 11, 26, 5, 5, 0)
+        with patch("backend.app.services.options_engine.datetime") as mock_dt:
+            mock_dt.utcnow.return_value = mock_utc_day
+            actions = OptionsEngine.update_positions_and_check_risk(db, portfolio.user_id)
+
+    db.refresh(recovered)
+    # Ratchet rule: Trailing floor MUST NOT decrease on pullbacks!
+    assert recovered.trailing_stop_premium == 123.20
+    assert recovered.peak_premium == 140.0
+    assert recovered.is_open is True  # 130.0 > 123.20, so still open
+    assert len(actions) == 0
+
+    # 5. Price breaches floor: Drops to ₹120.00 (below ₹123.20 floor)
+    with patch("backend.app.services.options_engine.OptionsEngine.get_underlying_spot") as mock_spot, \
+         patch("backend.app.services.options_engine.black_scholes_price") as mock_bs:
+        mock_spot.return_value = (24300.0, 1.5)
+        mock_bs.return_value = 120.0
+        mock_utc_day = datetime(2026, 11, 26, 5, 10, 0)
+        with patch("backend.app.services.options_engine.datetime") as mock_dt:
+            mock_dt.utcnow.return_value = mock_utc_day
+            actions = OptionsEngine.update_positions_and_check_risk(db, portfolio.user_id)
+
+    db.refresh(recovered)
+    assert recovered.is_open is False  # Trailing stop hit!
+    assert len(actions) == 1
+    assert actions[0]["action"] == "TRAILING_STOP"
+    assert actions[0]["result"]["exit_premium"] == 120.0
+    assert actions[0]["result"]["exit_reason"] == "TRAILING_STOP_HIT"
+

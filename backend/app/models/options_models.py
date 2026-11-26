@@ -53,6 +53,7 @@ class OptionPosition(Base):
     quantity = Column(Integer, default=25, nullable=False)
     entry_premium = Column(Float, nullable=False)
     current_premium = Column(Float, nullable=False)
+    peak_premium = Column(Float, default=0.0, nullable=False)  # Ratchet high-water mark for trailing stop
     stop_loss_premium = Column(Float, nullable=False)
     target_premium = Column(Float, nullable=False)
     trailing_stop_premium = Column(Float, nullable=False)
