@@ -143,7 +143,7 @@ class TraderSkillEngine:
 
         shares_by_risk = math.floor(risk_per_trade_inr / max(risk_per_share, 0.01))
         shares_by_cap = math.floor(max_capital_allocation / max(price, 0.01))
-        recommended_shares = max(1, min(shares_by_risk, shares_by_cap))
+        recommended_shares = max(0, min(shares_by_risk, shares_by_cap))
         allocated_capital = recommended_shares * price
 
         if is_te:

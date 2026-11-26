@@ -2,7 +2,7 @@
 import math
 import json
 import logging
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, time, timedelta
 from typing import Dict, List, Optional, Any, Tuple
 from sqlalchemy.orm import Session
 
@@ -354,11 +354,22 @@ class OptionsEngine:
         option_type: str,
         expiry_date: str,
         quantity: Optional[int] = None,
-        underlying: str = "NIFTY"
+        underlying: str = "NIFTY",
+        enforce_market_hours: bool = False
     ) -> Dict[str, Any]:
         """
         Execute simulated option buy order with strict risk controls.
         """
+        if enforce_market_hours:
+            from backend.app.market_data.market_calendar import to_ist_datetime, is_trading_day
+            now_ist = to_ist_datetime(datetime.utcnow())
+            cur_time = now_ist.time()
+            if (cur_time >= time(15, 10)) or (cur_time < time(9, 15)) or not is_trading_day(now_ist):
+                raise ValueError(
+                    f"మార్కెట్ సమయం ముగిసింది (15:10 IST Cutoff). 15:10 IST తర్వాత కొత్త ఆప్షన్స్ ఎంట్రీ అనుమతించబడదు. "
+                    f"ప్రస్తుత సమయం: {now_ist.strftime('%H:%M:%S IST')}."
+                )
+
         sym_underlying = underlying.upper()
         cfg = SUPPORTED_UNDERLYINGS.get(sym_underlying, SUPPORTED_UNDERLYINGS["NIFTY"])
         base_lot = cfg["lot_size"]
@@ -757,10 +768,10 @@ class OptionsEngine:
             spot, change_pct = cls.get_underlying_spot(pos.underlying)
             cur_price = black_scholes_price(spot, pos.strike_price, t_years, 0.07, cfg["iv_base"], pos.option_type)
 
-            # Price Sanity Filter: Single-tick jump > 40% without market index move is treated as bad data
+            # Price Sanity Filter: Single-tick jump > 15% without market index move is treated as bad data
             if pos.current_premium > 0:
                 tick_delta_pct = abs(cur_price - pos.current_premium) / pos.current_premium
-                if tick_delta_pct > 0.40 and abs(change_pct) < 3.0:
+                if tick_delta_pct > 0.15 and abs(change_pct) < 2.0:
                     logger.warning(
                         f"Bad tick / erratic price spike ({tick_delta_pct*100:.1f}%) detected on {pos.symbol} "
                         f"(old: ₹{pos.current_premium:.2f}, new: ₹{cur_price:.2f}). Rejecting spike for safety."
@@ -771,7 +782,7 @@ class OptionsEngine:
 
             # Check Mandatory 15:10 IST Intraday Square-off
             if is_eod_squareoff_time:
-                res = cls.square_off_position(db, pos.id, exit_reason="INTRADAY_SQUARE_OFF")
+                res = cls.square_off_position(db, pos.id, exit_reason="INTRADAY_SQUARE_OFF", force_exit_premium=cur_price)
                 actions_taken.append({
                     "symbol": pos.symbol,
                     "action": "EOD_SQUARE_OFF",
@@ -780,9 +791,9 @@ class OptionsEngine:
                 })
                 continue
 
-            # Check Hard Stop-Loss (-20%)
+            # Check Hard Stop-Loss (-20% or gap-down)
             if cur_price <= pos.stop_loss_premium:
-                res = cls.square_off_position(db, pos.id, exit_reason="STOP_LOSS_HIT")
+                res = cls.square_off_position(db, pos.id, exit_reason="STOP_LOSS_HIT", force_exit_premium=cur_price)
                 actions_taken.append({
                     "symbol": pos.symbol,
                     "action": "STOP_LOSS",
@@ -793,7 +804,7 @@ class OptionsEngine:
 
             # Check Multibagger Target (+100%)
             if cur_price >= pos.entry_premium * (1.0 + TP2_PERCENTAGE):
-                res = cls.square_off_position(db, pos.id, exit_reason="TARGET_HIT")
+                res = cls.square_off_position(db, pos.id, exit_reason="TARGET_HIT", force_exit_premium=cur_price)
                 actions_taken.append({
                     "symbol": pos.symbol,
                     "action": "TARGET_HIT",
@@ -812,7 +823,7 @@ class OptionsEngine:
                     logger.info(f"Trailing SL raised silently for {pos.symbol} to ₹{new_trailing:.2f} (WhatsApp alert suppressed to conserve quota)")
 
             if pos.trailing_activated and cur_price <= pos.trailing_stop_premium:
-                res = cls.square_off_position(db, pos.id, exit_reason="TRAILING_STOP_HIT")
+                res = cls.square_off_position(db, pos.id, exit_reason="TRAILING_STOP_HIT", force_exit_premium=cur_price)
                 actions_taken.append({
                     "symbol": pos.symbol,
                     "action": "TRAILING_STOP",

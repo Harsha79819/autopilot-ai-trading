@@ -63,7 +63,9 @@ class OrderBlockStrategy(BaseStrategy):
         # Check proximity to Zone Z within 0.15%
         pullback_threshold = zone_z * 0.0015
         if abs(current_p - zone_z) <= pullback_threshold:
-            qty = max(1, int(self.max_risk_per_trade / risk)) if risk > 0 else 1
+            qty = int(self.max_risk_per_trade // risk) if risk > 0 else 0
+            if qty <= 0:
+                return None
             side = "BUY" if setup_data["type"] == "BULLISH" else "SELL"
 
             return {
