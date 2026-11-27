@@ -33,10 +33,36 @@ def get_db():
         db.close()
 
 
+def auto_migrate_columns():
+    """Ensure missing columns are automatically added to SQLite tables."""
+    from sqlalchemy import text
+    migrations = [
+        ("trades", "is_archived", "BOOLEAN DEFAULT 0"),
+        ("trades", "trade_notes", "VARCHAR(255) DEFAULT ''"),
+        ("option_positions", "peak_premium", "FLOAT DEFAULT 0.0"),
+        ("option_trades", "gross_pnl", "FLOAT DEFAULT 0.0"),
+        ("option_trades", "net_pnl", "FLOAT DEFAULT 0.0"),
+        ("option_trades", "brokerage", "FLOAT DEFAULT 40.0"),
+        ("option_trades", "stt", "FLOAT DEFAULT 0.0"),
+        ("option_trades", "exchange_charges", "FLOAT DEFAULT 0.0"),
+        ("option_trades", "gst", "FLOAT DEFAULT 0.0"),
+        ("option_trades", "stamp_duty", "FLOAT DEFAULT 0.0"),
+        ("option_trades", "sebi_charges", "FLOAT DEFAULT 0.0"),
+    ]
+    with engine.connect() as conn:
+        for table, col, col_type in migrations:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type};"))
+                conn.commit()
+            except Exception:
+                pass
+
+
 def init_db():
-    """Create all database tables."""
+    """Create all database tables and apply automatic safe column migrations."""
     # Import all models so they are registered with Base metadata
     import backend.app.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    auto_migrate_columns()
 
