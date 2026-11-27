@@ -18,7 +18,6 @@ import {
   ChevronUp,
   Play,
   Square,
-  MessageSquare,
   Cpu,
   Receipt,
   Download,
@@ -41,7 +40,6 @@ import { PCRMaxPainBar } from './PCRMaxPainBar';
 import { HedgedSpreadCard } from './HedgedSpreadCard';
 import { CompoundingChallengeWidget } from './CompoundingChallengeWidget';
 import { CapitalVaultManager } from './CapitalVaultManager';
-import { WhatsAppSettingsModal } from './WhatsAppSettingsModal';
 import { TradeReplayModal } from './TradeReplayModal';
 import { BrokerBridgeModal } from './BrokerBridgeModal';
 import { TaxAndChargesModal } from './TaxAndChargesModal';
@@ -59,7 +57,6 @@ export const OptionsDeskView: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [showRulesGuide, setShowRulesGuide] = useState<boolean>(false);
   const [orderFeedback, setOrderFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState<boolean>(false);
   const [isBrokerModalOpen, setIsBrokerModalOpen] = useState<boolean>(false);
   const [isTaxModalOpen, setIsTaxModalOpen] = useState<boolean>(false);
   const [selectedReplayTradeId, setSelectedReplayTradeId] = useState<number | null>(null);
@@ -284,19 +281,6 @@ export const OptionsDeskView: React.FC = () => {
                 )}
               </button>
 
-              {/* WhatsApp Alerts Trigger Button */}
-              <button
-                type="button"
-                onClick={() => setIsWhatsAppModalOpen(true)}
-                className="text-xs px-2.5 py-1 rounded-full font-bold transition flex items-center gap-1.5 cursor-pointer bg-slate-800 hover:bg-emerald-950/40 text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 shadow-sm"
-                title={t('వాట్సాప్ లైవ్ అలర్ట్స్ కాన్ఫిగర్ చేయండి', 'Configure WhatsApp real-time trade alerts')}
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>{t('📱 వాట్సాప్ అలర్ట్స్', '📱 WhatsApp Alerts')}</span>
-                {portfolio?.whatsapp_phone && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                )}
-              </button>
 
               {/* Broker Bridge Trigger Button */}
               <button
@@ -1139,12 +1123,6 @@ export const OptionsDeskView: React.FC = () => {
       )}
 
       {/* Advanced Modals */}
-      <WhatsAppSettingsModal
-        isOpen={isWhatsAppModalOpen}
-        onClose={() => setIsWhatsAppModalOpen(false)}
-        onConfigSaved={fetchData}
-      />
-
       <BrokerBridgeModal
         isOpen={isBrokerModalOpen}
         onClose={() => setIsBrokerModalOpen(false)}
