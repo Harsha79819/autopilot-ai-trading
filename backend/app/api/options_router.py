@@ -1,6 +1,8 @@
 """Options Trading Desk API Router."""
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response, FileResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
@@ -29,6 +31,7 @@ from backend.app.schemas.options_schemas import (
 from backend.app.auth.dependencies import get_current_user
 from backend.app.services.options_engine import OptionsEngine, LOT_SIZE
 from backend.app.services.whatsapp_service import WhatsAppAlertService
+from backend.app.services.options_audit_archiver import OptionsAuditArchiver
 
 router = APIRouter(prefix="/api/options", tags=["Options Desk"])
 
@@ -109,15 +112,21 @@ def get_options_portfolio(
             created_at=pos.created_at
         ))
 
-    # 4. Fetch closed trades
-    trades = db.query(OptionTrade).filter(
-        OptionTrade.portfolio_id == portfolio.id
-    ).order_by(OptionTrade.exit_time.desc()).all()
-
-    total_trades = len(trades)
-    winning_trades = sum(1 for t in trades if t.realized_pnl > 0)
-    losing_trades = sum(1 for t in trades if t.realized_pnl < 0)
+    # 4. Fetch closed trades (Windowed to 20 for ultra-low memory & fast polling)
+    total_trades = db.query(func.count(OptionTrade.id)).filter(OptionTrade.portfolio_id == portfolio.id).scalar() or 0
+    winning_trades = db.query(func.count(OptionTrade.id)).filter(
+        OptionTrade.portfolio_id == portfolio.id,
+        OptionTrade.realized_pnl > 0
+    ).scalar() or 0
+    losing_trades = db.query(func.count(OptionTrade.id)).filter(
+        OptionTrade.portfolio_id == portfolio.id,
+        OptionTrade.realized_pnl < 0
+    ).scalar() or 0
     win_rate = round((winning_trades / total_trades * 100.0), 1) if total_trades > 0 else 0.0
+
+    recent_trades = db.query(OptionTrade).filter(
+        OptionTrade.portfolio_id == portfolio.id
+    ).order_by(OptionTrade.exit_time.desc()).limit(20).all()
 
     trade_schemas = [
         OptionTradeSchema(
@@ -138,7 +147,7 @@ def get_options_portfolio(
             exit_time=t.exit_time,
             exit_reason=t.exit_reason,
             trade_notes=t.trade_notes
-        ) for t in trades
+        ) for t in recent_trades
     ]
 
     total_portfolio_value = round(portfolio.cash_balance + total_invested_margin + total_unrealized_pnl, 2)
@@ -672,6 +681,68 @@ def test_whatsapp_schedule_slot(
             detail=f"Invalid slot_key '{slot_key}'. Valid options: {list(DailySchedulerService.SLOTS_CONFIG.keys())}"
         )
     return DailySchedulerService.dispatch_slot(slot_key=slot_key, db=db, force=True)
+
+
+# -------------------------------------------------------------
+# 7. Compressed Cold Storage & Audit Archive Exports
+# -------------------------------------------------------------
+@router.get("/audit/weeks")
+def get_audit_weekly_archives(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List all available weekly compressed archives (.csv.gz) with trade counts and file sizes.
+    Backfills automatically from DB if archive directory is empty.
+    """
+    archives = OptionsAuditArchiver.list_weekly_archives()
+    if not archives:
+        OptionsAuditArchiver.backfill_from_db(db)
+        archives = OptionsAuditArchiver.list_weekly_archives()
+    return {"status": "SUCCESS", "archives": archives}
+
+
+@router.get("/audit/download/csv")
+def download_full_audit_csv(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Stream full historical uncompressed CSV of all closed option trades for Excel / tax audit.
+    """
+    from datetime import datetime as dt_now
+    csv_content = OptionsAuditArchiver.export_full_csv_string(db, user_id=None)
+    filename = f"options_audit_ledger_{dt_now.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-cache"
+        }
+    )
+
+
+@router.get("/audit/download/week")
+def download_weekly_archive(
+    week: str = Query(..., description="ISO week identifier, e.g. '2026-W48' or '2026_W48'"),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Download a specific week's compressed cold storage archive (.csv.gz).
+    """
+    file_path = OptionsAuditArchiver.get_weekly_archive_path(week)
+    if not file_path or not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Weekly archive for '{week}' not found."
+        )
+    return FileResponse(
+        path=str(file_path),
+        media_type="application/gzip",
+        filename=file_path.name,
+        headers={"Content-Disposition": f'attachment; filename="{file_path.name}"'}
+    )
 
 
 

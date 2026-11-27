@@ -702,6 +702,41 @@ export const api = {
     return res.json();
   },
 
+  // 7. Compressed Cold Storage & Audit Archive Exports
+  async getOptionsAuditWeeks(): Promise<{ status: string; archives: Array<{ week: string; filename: string; trade_count: number; file_size_kb: number; modified_at: string }> }> {
+    const res = await authFetch(`${BASE_URL}/options/audit/weeks`);
+    if (!res.ok) throw new Error('Failed to fetch audit weeks');
+    return res.json();
+  },
+
+  async downloadOptionsAuditCsv(): Promise<void> {
+    const res = await authFetch(`${BASE_URL}/options/audit/download/csv`);
+    if (!res.ok) throw new Error('Failed to download audit CSV');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `options_audit_ledger_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  async downloadOptionsAuditWeek(week: string): Promise<void> {
+    const res = await authFetch(`${BASE_URL}/options/audit/download/week?week=${encodeURIComponent(week)}`);
+    if (!res.ok) throw new Error(`Failed to download weekly archive ${week}`);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `options_audit_${week.replace('-', '_')}.csv.gz`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
   // 6. 1-Click Real Broker Bridge Gateway
   async getBrokerBridgeConfig(): Promise<BrokerBridgeConfig> {
     const res = await authFetch(`${BASE_URL}/options/broker/config`);

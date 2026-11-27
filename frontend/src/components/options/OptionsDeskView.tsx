@@ -20,7 +20,11 @@ import {
   Square,
   MessageSquare,
   Cpu,
-  Receipt
+  Receipt,
+  Download,
+  FileArchive,
+  FileSpreadsheet,
+  X
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useLanguage } from '../../context/LanguageContext';
@@ -59,6 +63,38 @@ export const OptionsDeskView: React.FC = () => {
   const [isBrokerModalOpen, setIsBrokerModalOpen] = useState<boolean>(false);
   const [isTaxModalOpen, setIsTaxModalOpen] = useState<boolean>(false);
   const [selectedReplayTradeId, setSelectedReplayTradeId] = useState<number | null>(null);
+  const [isWeeklyArchiveModalOpen, setIsWeeklyArchiveModalOpen] = useState<boolean>(false);
+  const [weeklyArchives, setWeeklyArchives] = useState<Array<{ week: string; filename: string; trade_count: number; file_size_kb: number; modified_at: string }>>([]);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+
+  const handleOpenWeeklyArchives = async () => {
+    setIsWeeklyArchiveModalOpen(true);
+    try {
+      const data = await api.getOptionsAuditWeeks();
+      setWeeklyArchives(data.archives || []);
+    } catch (err) {
+      console.error('Failed to load weekly archives:', err);
+    }
+  };
+
+  const handleDownloadFullCsv = async () => {
+    try {
+      setIsDownloading(true);
+      await api.downloadOptionsAuditCsv();
+    } catch (err) {
+      console.error('Failed to download full CSV:', err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadWeek = async (week: string) => {
+    try {
+      await api.downloadOptionsAuditWeek(week);
+    } catch (err) {
+      console.error(`Failed to download week ${week}:`, err);
+    }
+  };
 
   const fetchUnderlyings = async () => {
     try {
@@ -1005,10 +1041,36 @@ export const OptionsDeskView: React.FC = () => {
       {/* 9. Recent Options Closed Trades */}
       {portfolio?.recent_trades && portfolio.recent_trades.length > 0 && (
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
-          <h2 className="text-base font-bold text-white mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-slate-400" />
-            {t('ఇటీవలి ఆప్షన్స్ ట్రేడ్ల చరిత్ర (Audit Log)', 'Recent Options Closed Trades (Audit Log)')}
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Clock className="w-4 h-4 text-slate-400" />
+              <span>{t('ఇటీవలి ఆప్షన్స్ ట్రేడ్ల చరిత్ర (Audit Log)', 'Recent Options Closed Trades (Audit Log)')}</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-mono">
+                {t('లైవ్ 20 ట్రేడ్లు', 'Live 20 trades')}
+              </span>
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadFullCsv}
+                disabled={isDownloading}
+                className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium text-xs inline-flex items-center gap-1.5 transition-all border border-emerald-500/30 cursor-pointer disabled:opacity-50"
+                title={t('పూర్తి ఆడిట్ లాగ్‌ను ఎక్సెల్ CSV గా డౌన్‌లోడ్ చేసుకోండి', 'Download complete audit log as CSV for Excel')}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{isDownloading ? t('డౌన్‌లోడ్ అవుతోంది...', 'Exporting...') : t('ఎక్సెల్ CSV ఎక్స్‌పోర్ట్', 'Export CSV')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenWeeklyArchives}
+                className="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-medium text-xs inline-flex items-center gap-1.5 transition-all border border-indigo-500/30 cursor-pointer"
+                title={t('వారం వారీ కంప్రెస్డ్ (.csv.gz) ఆర్కైవ్‌లను చూడండి', 'View weekly compressed (.csv.gz) archives')}
+              >
+                <FileArchive className="w-3.5 h-3.5 text-indigo-400" />
+                <span>{t('వారం వారీ ఆర్కైవ్స్ (.csv.gz)', 'Weekly Archives (.csv.gz)')}</span>
+              </button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
@@ -1099,6 +1161,83 @@ export const OptionsDeskView: React.FC = () => {
         isOpen={isTaxModalOpen}
         onClose={() => setIsTaxModalOpen(false)}
       />
+
+      {/* Weekly Compressed Archives Modal */}
+      {isWeeklyArchiveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileArchive className="w-5 h-5 text-indigo-400" />
+                <h3 className="font-bold text-white text-base">
+                  {t('వారం వారీ కంప్రెస్డ్ ఆర్కైవ్‌లు (Gzip .csv.gz)', 'Weekly Compressed Archives (Gzip .csv.gz)')}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsWeeklyArchiveModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto space-y-3">
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 leading-relaxed">
+                {t(
+                  '💡 ప్రతి క్లోజ్డ్ ట్రేడ్ మెట్రిక్స్ ఆటోమేటిక్‌గా 85%+ కంప్రెస్ అయి .csv.gz ఫార్మాట్‌లో స్టోర్ చేయబడతాయి. 10,000 ట్రేడ్లు కూడా కేవలం ~150 KB మెమరీలోనే సేవ్ అవుతాయి.',
+                  '💡 Every closed trade metric is automatically compressed 85%+ into .csv.gz format. Even 10,000 trades take only ~150 KB of memory.'
+                )}
+              </div>
+
+              {weeklyArchives.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-500">
+                  {t('ఆర్కైవ్‌లు ఇంకా ఏమీ అందుబాటులో లేవు', 'No weekly archives found yet')}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {weeklyArchives.map((arch) => (
+                    <div
+                      key={arch.week}
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-all"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-bold text-white">{arch.week}</span>
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">
+                            {arch.trade_count} {t('ట్రేడ్లు', 'trades')}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-mono">
+                          {arch.filename} • {arch.file_size_kb} KB
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadWeek(arch.week)}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-semibold text-xs inline-flex items-center gap-1.5 transition-all border border-indigo-500/30 cursor-pointer"
+                        title={t('డౌన్‌లోడ్', 'Download')}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>.csv.gz</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 border-t border-slate-800 flex justify-end bg-slate-900/50">
+              <button
+                type="button"
+                onClick={() => setIsWeeklyArchiveModalOpen(false)}
+                className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                {t('మూసివేయి', 'Close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

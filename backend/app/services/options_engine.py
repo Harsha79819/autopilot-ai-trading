@@ -630,6 +630,13 @@ class OptionsEngine:
         db.add(trade)
         db.commit()
 
+        # Record into compressed cold storage archive (.csv.gz)
+        try:
+            from backend.app.services.options_audit_archiver import OptionsAuditArchiver
+            OptionsAuditArchiver.record_closed_trade(trade)
+        except Exception as arch_err:
+            logger.warning(f"Failed to record trade #{trade.id} to cold archive: {arch_err}")
+
         # Run independent reconciliation audit after every trade
         recon = cls.reconcile_portfolio_ledger(db, portfolio)
 
