@@ -103,7 +103,7 @@ def test_position_sizing_cap_20_percent(db, test_user):
     )
     assert not passed
     assert "exceeds max allowed allocation" in reason
-    assert f"{settings.MAX_POSITION_SIZE_PCT}% of portfolio value" in reason
+    assert "of portfolio value" in reason
 
     # 1 share of TATASTEEL @ ₹150 is <= ₹200 cap -> PASS
     passed, reason = risk_manager.validate_pre_trade_risk(

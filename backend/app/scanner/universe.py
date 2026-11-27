@@ -9,7 +9,7 @@ NSE_STOCKS: Dict[str, Dict[str, Any]] = {
         "symbol": "INFY",
         "yahoo_ticker": "INFY.NS",
         "smartapi_token": "1594",
-        "base_price": 1475.00,
+        "base_price": 1155.00,
         "tick_size": 0.05,
         "lot_size": 1,
         "volatility": 0.011
@@ -19,7 +19,7 @@ NSE_STOCKS: Dict[str, Dict[str, Any]] = {
         "symbol": "TCS",
         "yahoo_ticker": "TCS.NS",
         "smartapi_token": "11536",
-        "base_price": 3850.00,
+        "base_price": 2570.00,
         "tick_size": 0.05,
         "lot_size": 1,
         "volatility": 0.010
@@ -79,7 +79,7 @@ NSE_STOCKS: Dict[str, Dict[str, Any]] = {
         "symbol": "SBIN",
         "yahoo_ticker": "SBIN.NS",
         "smartapi_token": "3045",
-        "base_price": 765.00,
+        "base_price": 1130.00,
         "tick_size": 0.05,
         "lot_size": 1,
         "volatility": 0.012
@@ -89,7 +89,7 @@ NSE_STOCKS: Dict[str, Dict[str, Any]] = {
         "symbol": "RELIANCE",
         "yahoo_ticker": "RELIANCE.NS",
         "smartapi_token": "2885",
-        "base_price": 2850.00,
+        "base_price": 1380.00,
         "tick_size": 0.05,
         "lot_size": 1,
         "volatility": 0.010
@@ -109,7 +109,7 @@ NSE_STOCKS: Dict[str, Dict[str, Any]] = {
         "symbol": "HDFCBANK",
         "yahoo_ticker": "HDFCBANK.NS",
         "smartapi_token": "1333",
-        "base_price": 1650.00,
+        "base_price": 860.00,
         "tick_size": 0.05,
         "lot_size": 1,
         "volatility": 0.011
