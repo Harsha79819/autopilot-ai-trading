@@ -44,7 +44,7 @@ SUPPORTED_UNDERLYINGS: Dict[str, Dict[str, Any]] = {
     "RELIANCE": {
         "name": "Reliance Industries",
         "type": "STOCK",
-        "base_spot": 1280.0,
+        "base_spot": 1380.0,
         "lot_size": 250,
         "strike_step": 20,
         "iv_base": 0.220
@@ -52,7 +52,7 @@ SUPPORTED_UNDERLYINGS: Dict[str, Dict[str, Any]] = {
     "TCS": {
         "name": "Tata Consultancy Services",
         "type": "STOCK",
-        "base_spot": 4150.0,
+        "base_spot": 2570.0,
         "lot_size": 175,
         "strike_step": 50,
         "iv_base": 0.200
@@ -60,7 +60,7 @@ SUPPORTED_UNDERLYINGS: Dict[str, Dict[str, Any]] = {
     "INFY": {
         "name": "Infosys Ltd",
         "type": "STOCK",
-        "base_spot": 1850.0,
+        "base_spot": 1155.0,
         "lot_size": 400,
         "strike_step": 20,
         "iv_base": 0.240
@@ -68,7 +68,7 @@ SUPPORTED_UNDERLYINGS: Dict[str, Dict[str, Any]] = {
     "SBIN": {
         "name": "State Bank of India",
         "type": "STOCK",
-        "base_spot": 810.0,
+        "base_spot": 1130.0,
         "lot_size": 750,
         "strike_step": 10,
         "iv_base": 0.260
@@ -76,7 +76,7 @@ SUPPORTED_UNDERLYINGS: Dict[str, Dict[str, Any]] = {
     "HDFCBANK": {
         "name": "HDFC Bank Ltd",
         "type": "STOCK",
-        "base_spot": 1720.0,
+        "base_spot": 860.0,
         "lot_size": 550,
         "strike_step": 20,
         "iv_base": 0.210
@@ -194,6 +194,7 @@ def calculate_greeks(
 class OptionsEngine:
     """Manages Multi-Asset Option Chains, Greeks, AutoPilot Execution, and Telemetry."""
     _consecutive_spike_counts: Dict[int, int] = {}
+    _spot_cache: Dict[str, Tuple[float, float]] = {}
 
     @classmethod
     def get_supported_underlyings(cls) -> List[Dict[str, Any]]:
@@ -223,9 +224,15 @@ class OptionsEngine:
         if cfg["type"] == "STOCK" and sym in UNIVERSE_SYMBOLS:
             try:
                 quote = demo_provider.get_quote(sym)
-                return round(quote.current_price, 2), round(quote.change_pct, 2)
-            except Exception:
-                pass
+                if quote and quote.current_price > 0:
+                    cls._spot_cache[sym] = (round(quote.current_price, 2), round(quote.change_pct, 2))
+                    return cls._spot_cache[sym]
+            except Exception as e:
+                logger.debug(f"Failed to fetch live quote for {sym}: {e}")
+
+        # If live quote fetch failed, fall back to last known cached spot first
+        if sym in cls._spot_cache:
+            return cls._spot_cache[sym]
 
         # For Indices or fallback stocks:
         quotes = demo_provider.get_quotes(UNIVERSE_SYMBOLS)
@@ -235,7 +242,8 @@ class OptionsEngine:
             avg_change = 0.0
 
         spot = round(cfg["base_spot"] * (1.0 + avg_change / 100.0), 2)
-        return spot, round(avg_change, 2)
+        cls._spot_cache[sym] = (spot, round(avg_change, 2))
+        return cls._spot_cache[sym]
 
     @classmethod
     def get_upcoming_expiry(cls) -> Tuple[date, float]:
